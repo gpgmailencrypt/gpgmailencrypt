@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*- 
 #based on gpg-mailgate
 #License GPL v3
-#Author Horst Knorr 
+#Author Horst Knorr <gpgmailencryt@gmx.de>
 from ConfigParser import ConfigParser
 from email import Encoders
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
@@ -1915,14 +1915,12 @@ def scriptmode():
 ###########
 #daemonmode
 ###########
-def sigtermhandler(signum, frame):
-		exit(0)
-	
 def daemonmode():
 	import smtpd
 	import asyncore
 	import signal
 	signal.signal(signal.SIGTERM, sigtermhandler)
+	signal.signal(signal.SIGHUP,  sighuphandler)
 	log("gpgmailencrypt starts as daemon on %s:%s"%(SERVERHOST,SERVERPORT) )
 	class gpgmailencryptserver(smtpd.SMTPServer):
 		def process_message(self, peer, mailfrom, receiver, data):
@@ -1940,9 +1938,19 @@ def daemonmode():
 	try:
 		asyncore.loop()
 	except SystemExit,m:
+		log("SIGSYSTEMEXIT")
 		exit(0)
 	except:
 	  	log("Bug:Exception in '%(m1)s %(m2)s' occured!"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
+###############
+#sigtermhandler
+###############
+def sigtermhandler(signum, frame):
+		exit(0)
+def sighuphandler(signum, frame):
+	log("Signal SIGHUP: reload configuration")
+	init()
+	read_configfile()
 ##############################
 # gpgmailencrypt main program
 ##############################
