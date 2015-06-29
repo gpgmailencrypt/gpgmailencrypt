@@ -14,8 +14,8 @@ from email.generator import Generator
 from cStringIO import StringIO
 from os.path import expanduser
 
-VERSION="1.1.0beta"
-DATE="26.06.2015"
+VERSION="1.1.0delta"
+DATE="28.06.2015"
 #################################
 #Definition of general functions#
 #################################
@@ -231,7 +231,7 @@ that should be encrypted, empty is all")
 	print ("[encryptionmap]    ")
 	print ("user@domain.com = PGPMIME		;PGPMIME|PGPINLINE|SMIME|NONE\n")
 	print ("")
-	print ("[server]")
+	print ("[daemon]")
 	print ("host = 127.0.0.1				;smtp host")
 	print ("port = 10025    				;smtp port")
 ###############
@@ -331,11 +331,11 @@ def read_configfile():
 	if _cfg.has_section('encryptionmap'):
 		for (name, value) in _cfg.items('encryptionmap'):
 				encryptionmap[name] = value
-	if _cfg.has_section('server'):
-		if _cfg.has_option('server','host'):
-			SERVERHOST=_cfg.get('server','host')
-		if _cfg.has_option('server','port'):
-			SERVERPORT=_cfg.getint('server','port')
+	if _cfg.has_section('daemon'):
+		if _cfg.has_option('daemon','host'):
+			SERVERHOST=_cfg.get('daemon','host')
+		if _cfg.has_option('daemon','port'):
+			SERVERPORT=_cfg.getint('daemon','port')
 
 	# smime extra
 	if _cfg.has_section('smime'):
@@ -626,6 +626,8 @@ def send_textmsg(message, from_addr,to_addr):
 def do_finally_at_exit():
 	global logfile,tempfiles
 	debug("do_finally")
+	if RUNMODE==m_daemon:
+		log("gpgmailencrypt daemon shutdown")
 	for f in tempfiles:
 		try:
 			os.remove(f)
@@ -634,10 +636,12 @@ def do_finally_at_exit():
 			pass
 	if LOGGING and logfile!=None:
 		logfile.close()
-
-###################
+###################################
+#Definition of encryption functions
+###################################
+##########
 #CLASS GPG
-###################
+##########
 GPGkeys=list()
 class GPG:
 	def __init__(self, keyhome=None, recipient = None):
@@ -967,9 +971,6 @@ class SMIME:
 	        				fdst.write(buf)
 		except:
 			log("Class smime._copyfile: Couldn't copy file, error '%(m1)s %(m2)s' occured!"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")	
-####################################
-#Definition of encryption functions
-####################################
 #############
 #is_encrypted
 #############
@@ -1484,7 +1485,7 @@ def encrypt_pgpmime(message,gpguser):
 	c=newmsg.get("Content-Type")
 
 	if c==None:
-		log("Content-Type not set, set default 'text/plain'.","w")
+		debug("Content-Type not set, set default 'text/plain'.","w")
 		newmsg.set_type("text/plain")
 
 	boundary=make_boundary(message)
@@ -1655,11 +1656,11 @@ def encrypt_gpg_mail(mailtext,use_pgpmime, gpguser,from_addr,to_addr):
 	if raw_message.has_key("Subject") and len(SPAMSUBJECT.strip())>0 and SPAMSUBJECT in raw_message["Subject"]:
 		debug("message is SPAM, don't encrypt")
 		send_rawmsg(mailtext,"Spammail",from_addr,to_addr)
-		exit(0)
+		return
 	if is_smimeencrypted( mailtext ) or is_pgpmimeencrypted(mailtext):
 		debug("encrypt_gpg_mail, is already smime or pgpmime encrypted")
 		send_rawmsg(mailtext,'Mail was already encrypted',from_addr,to_addr)
-		exit(0)
+		return
 	
 	if use_pgpmime:
 		mail = encrypt_pgpmime( mailtext,gpguser )
@@ -1667,7 +1668,7 @@ def encrypt_gpg_mail(mailtext,use_pgpmime, gpguser,from_addr,to_addr):
 		#PGP Inline
 		mail = encrypt_pgpinline( mailtext,gpguser )
 		if mail==None:
-			exit(0)
+			return
 		#mail.set_payload( encrypted_payloads )
 	if ADDHEADER and raw_message!=None:
 		if raw_message.has_key(encryptheader):
@@ -1824,6 +1825,7 @@ def encrypt_smime_mail(mailtext,smimeuser,from_addr,to_addr):
 def encrypt_mails(mailtext,receiver):
 	global mailcount,PREFER_GPG,PGPMIME
 	debug("encrypt_mails")
+	_pgpmime=PGPMIME
 	if SMIMEAUTOMATICEXTRACTKEYS:
 		debug("SMIMEAUTOMATICEXTRACTKEYS")
 		f=new_tempfile()
@@ -1880,7 +1882,9 @@ def encrypt_mails(mailtext,receiver):
 #######################################
 #END definition of encryption functions
 #######################################
-
+###########
+#scriptmode
+###########
 def scriptmode():
 	try:
 		#read message
@@ -1914,16 +1918,23 @@ def scriptmode():
 	else:
 		debug("Program exits without errors")
 		exit(0)	
+###########
+#daemonmode
+###########
 def daemonmode():
 	import smtpd
 	import asyncore
-	log("Daemonmode")
+	log("gpgmailencrypt starts as daemon on %s:%s"%(SERVERHOST,SERVERPORT) )
 	class gpgmailencryptserver(smtpd.SMTPServer):
-		def process_message(self, peer, mailfrom, rcpttos, data):
-			debug("gpgmailencryptserver from '%s' to '%s'"%(mailfrom,rcpttos))
-			encrypt_mails(data,rcpttos)
+		def process_message(self, peer, mailfrom, receiver, data):
+			debug("gpgmailencryptserver from '%s' to '%s'"%(mailfrom,receiver))
+			encrypt_mails(data,receiver)
 			return
-	server = gpgmailencryptserver((SERVERHOST, SERVERPORT), None)
+	try:
+		server = gpgmailencryptserver((SERVERHOST, SERVERPORT), None)
+	except:
+		log("Couldn't start mail server '%(m1)s %(m2)s'"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
+		exit(1)
 	try:
 		asyncore.loop()
 	except:
@@ -1931,7 +1942,6 @@ def daemonmode():
 ##############################
 # gpgmailencrypt main program
 ##############################
-#PARSE Config file and command line
 init()
 read_configfile()
 if __name__ == "__main__":
@@ -1942,3 +1952,4 @@ if __name__ == "__main__":
 		daemonmode()
 	else:
 		scriptmode()
+
