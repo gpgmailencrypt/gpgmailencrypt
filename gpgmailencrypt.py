@@ -14,8 +14,8 @@ from email.generator import Generator
 from cStringIO import StringIO
 from os.path import expanduser
 
-VERSION="1.1.0delta"
-DATE="28.06.2015"
+VERSION="1.1.0epsilon"
+DATE="29.06.2015"
 #################################
 #Definition of general functions#
 #################################
@@ -1667,16 +1667,10 @@ def encrypt_gpg_mail(mailtext,use_pgpmime, gpguser,from_addr,to_addr):
 	else:
 		#PGP Inline
 		mail = encrypt_pgpinline( mailtext,gpguser )
-		if mail==None:
-			return
-		#mail.set_payload( encrypted_payloads )
-	if ADDHEADER and raw_message!=None:
-		if raw_message.has_key(encryptheader):
-			del raw_message[encryptheader]
-		raw_message[encryptheader] = encryptgpgcomment
-	if raw_message!=None:
-		debug("vor sendmsg")
-		send_msg( mail, from_addr, to_addr )
+	if mail==None:
+		return
+	debug("vor sendmsg")
+	send_msg( mail, from_addr, to_addr )
 #####################
 #check_smimerecipient
 #####################
@@ -1937,8 +1931,11 @@ def daemonmode():
 		exit(1)
 	try:
 		asyncore.loop()
-	except:
+	except SystemExit,m:
 		log("gpgmailencrypt server shutdown")
+		exit(0)
+	except:
+	  	log("Bug:Exception in '%(m1)s %(m2)s' occured!"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
 ##############################
 # gpgmailencrypt main program
 ##############################
