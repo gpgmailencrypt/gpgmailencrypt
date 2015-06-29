@@ -1940,12 +1940,9 @@ def daemonmode():
 	try:
 		asyncore.loop()
 	except SystemExit,m:
-		log("gpgmailencrypt server shutdown")
 		exit(0)
 	except:
 	  	log("Bug:Exception in '%(m1)s %(m2)s' occured!"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
-	finally:
-		log("gpgmailencrypt server finally shutdown")
 ##############################
 # gpgmailencrypt main program
 ##############################
