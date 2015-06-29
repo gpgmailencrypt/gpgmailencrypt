@@ -1485,7 +1485,7 @@ def encrypt_pgpmime(message,gpguser):
 	c=newmsg.get("Content-Type")
 
 	if c==None:
-		debug("Content-Type not set, set default 'text/plain'.","w")
+		debug("Content-Type not set, set default 'text/plain'.")
 		newmsg.set_type("text/plain")
 
 	boundary=make_boundary(message)
@@ -1924,6 +1924,9 @@ def daemonmode():
 			debug("gpgmailencryptserver from '%s' to '%s'"%(mailfrom,receiver))
 			encrypt_mails(data,receiver)
 			return
+		def handle_close(self):
+			log("gpgmailencrypt handle server shutdown")
+			self.close()
 	try:
 		server = gpgmailencryptserver((SERVERHOST, SERVERPORT), None)
 	except:
