@@ -1915,9 +1915,14 @@ def scriptmode():
 ###########
 #daemonmode
 ###########
+def sigtermhandler(signum, frame):
+		exit(0)
+	
 def daemonmode():
 	import smtpd
 	import asyncore
+	import signal
+	signal.signal(signal.SIGTERM, sigtermhandler)
 	log("gpgmailencrypt starts as daemon on %s:%s"%(SERVERHOST,SERVERPORT) )
 	class gpgmailencryptserver(smtpd.SMTPServer):
 		def process_message(self, peer, mailfrom, receiver, data):
@@ -1939,6 +1944,8 @@ def daemonmode():
 		exit(0)
 	except:
 	  	log("Bug:Exception in '%(m1)s %(m2)s' occured!"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
+	finally:
+		log("gpgmailencrypt server finally shutdown")
 ##############################
 # gpgmailencrypt main program
 ##############################
