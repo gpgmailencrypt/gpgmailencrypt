@@ -14,8 +14,8 @@ from email.generator import Generator
 from cStringIO import StringIO
 from os.path import expanduser
 
-VERSION="1.1.0epsilon"
-DATE="29.06.2015"
+VERSION="1.1.0zeta"
+DATE="30.06.2015"
 #################################
 #Definition of general functions#
 #################################
@@ -983,12 +983,18 @@ def is_pgpinlineencrypted(msg):
 		return False
 
 def is_pgpmimeencrypted(msg):
-	if "\nContent-Type: application/pgp-encrypted" in msg:
+	if type(msg)==str:
+		msg=email.message_from_string(msg)
+	contenttype=msg.get_content_type()
+	if contenttype=="application/pgp-encrypted":
 		return True
 	else:
 		return False
 def is_smimeencrypted(msg):
-	if "\nContent-Type: application/pkcs7-mime" in msg:
+	if type(msg)==str:
+		msg=email.message_from_string(msg)
+	contenttype=msg.get_content_type()
+	if contenttype=="application/pkcs7-mime":
 		return True
 	else:
 		return False
@@ -1402,7 +1408,7 @@ def encrypt_payload( payload,gpguser,counter=0 ):
 ##################
 #encrypt_pgpinline
 ##################
-def encrypt_pgpinline(mail,gpguser):
+def encrypt_pgpinline(mail,gpguser,from_addr,to_addr):
 	debug("encrypt_pgpinline")
 	message=email.message_from_string(mail)
 	counter=0
@@ -1459,7 +1465,7 @@ def encrypt_pgpinline(mail,gpguser):
 ################
 #encrypt_pgpmime
 ################
-def encrypt_pgpmime(message,gpguser):
+def encrypt_pgpmime(message,gpguser,from_addr,to_addr):
 	global tempfiles
 	debug("encrypt_pgpmime")
 	raw_message=email.message_from_string(message)
@@ -1663,10 +1669,10 @@ def encrypt_gpg_mail(mailtext,use_pgpmime, gpguser,from_addr,to_addr):
 		return
 	
 	if use_pgpmime:
-		mail = encrypt_pgpmime( mailtext,gpguser )
+		mail = encrypt_pgpmime( mailtext,gpguser,from_addr,to_addr )
 	else:
 		#PGP Inline
-		mail = encrypt_pgpinline( mailtext,gpguser )
+		mail = encrypt_pgpinline( mailtext,gpguser,from_addr,to_addr )
 	if mail==None:
 		return
 	debug("vor sendmsg")
@@ -1728,6 +1734,10 @@ def encrypt_smime_mail(mailtext,smimeuser,from_addr,to_addr):
 		log("creating new message failed","w")
 		log("'%(m1)s %(m2)s'"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
 		return 
+	m_id=""
+	if raw_message.has_key("Message-Id"):
+		m_id="Id:%s "%raw_message["Message-Id"]
+	log("Encrypting email %s to: %s" % (m_id, to_addr) )
 
 	res= re.search("boundary=.*\n",mailtext,re.IGNORECASE)
 	if res:
@@ -1858,7 +1868,7 @@ def encrypt_mails(mailtext,receiver):
 			log(m,"w")
 			send_rawmsg(mailtext,m,from_addr,to_addr)
 			continue
-		if PREFER_GPG:
+		if _prefer_gpg:
 			debug("PREFER GPG")
 			if g_r:
 				encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
@@ -1938,7 +1948,6 @@ def daemonmode():
 	try:
 		asyncore.loop()
 	except SystemExit,m:
-		log("SIGSYSTEMEXIT")
 		exit(0)
 	except:
 	  	log("Bug:Exception in '%(m1)s %(m2)s' occured!"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
@@ -1947,6 +1956,9 @@ def daemonmode():
 ###############
 def sigtermhandler(signum, frame):
 		exit(0)
+###############
+#sigthuphandler
+###############
 def sighuphandler(signum, frame):
 	log("Signal SIGHUP: reload configuration")
 	init()
