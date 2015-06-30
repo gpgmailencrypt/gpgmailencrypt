@@ -1926,9 +1926,7 @@ def scriptmode():
 #daemonmode
 ###########
 def daemonmode():
-	import smtpd
-	import asyncore
-	import signal
+	import smtpd,asyncore, signal
 	signal.signal(signal.SIGTERM, sigtermhandler)
 	signal.signal(signal.SIGHUP,  sighuphandler)
 	log("gpgmailencrypt starts as daemon on %s:%s"%(SERVERHOST,SERVERPORT) )
@@ -1937,9 +1935,6 @@ def daemonmode():
 			debug("gpgmailencryptserver from '%s' to '%s'"%(mailfrom,receiver))
 			encrypt_mails(data,receiver)
 			return
-		def handle_close(self):
-			log("gpgmailencrypt handle server shutdown")
-			self.close()
 	try:
 		server = gpgmailencryptserver((SERVERHOST, SERVERPORT), None)
 	except:
