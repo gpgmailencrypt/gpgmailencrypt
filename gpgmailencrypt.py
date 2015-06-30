@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*- 
 #based on gpg-mailgate
 #License GPL v3
-#Author Horst Knorr <gpgmailencryt@gmx.de>
+#Author Horst Knorr <gpgmailencrypt@gmx.de>
 from ConfigParser import ConfigParser
 from email import Encoders
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
