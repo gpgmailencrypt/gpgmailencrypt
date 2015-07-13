@@ -625,12 +625,10 @@ def send_textmsg(message, from_addr,to_addr):
 def do_finally_at_exit():
 	global _logfile,_tempfiles
 	debug("do_finally")
-	
 	if _RUNMODE==m_daemon:
 		log("gpgmailencrypt daemon shutdown")
 		_now=datetime.datetime.now()
-		log("Server did run %s"%(_now-_daemonstarttime))
-
+		log("gpgmailencrypt server did run %s"%(_now-_daemonstarttime))
 	for f in _tempfiles:
 		try:
 			os.remove(f)
@@ -1406,7 +1404,7 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 		else:
 			log("Error during encryption: payload will be unencrypted!","m")	
 	del_tempfile(fp.name)
-	debug("_encrypt_payload ENDE")
+	debug("_encrypt_payload END")
 	return payload
 ##################
 #_encrypt_pgpinline
@@ -1438,7 +1436,7 @@ def _encrypt_pgpinline(mail,gpguser,from_addr,to_addr):
 				pl.set_payload(None)
 				pl.set_type("multipart/mixed")
 				pl.attach(CAL)
-			debug("encrypt_pgpinlie: type( message.get_payload() ) == str ENDE")
+			debug("encrypt_pgpinlie: type( message.get_payload() ) == str END")
 			return pl
 	for payload in msg:
 		content=payload.get_content_maintype()
@@ -1463,7 +1461,7 @@ def _encrypt_pgpinline(mail,gpguser,from_addr,to_addr):
  				counter+=1
 	for a in attach_list:
 		message.attach(a)
-	debug("encrypt_pgpinline ENDE")
+	debug("encrypt_pgpinline END")
 	return message
 ################
 #_encrypt_pgpmime
@@ -1477,12 +1475,6 @@ def _encrypt_pgpmime(message,gpguser,from_addr,to_addr):
 		splitmsg=re.split("\r\n\r\n",message,1)
 	if len(splitmsg)!=2:
 		log("Mail could not be split in header and body part (mailsize=%i)"%len(message),"e")
-		try:
-			splitfile = open("/tmp/splitfile.eml", 'a')
-			splitfile.write(message)
-			splitfile.close()
-		except:
-			log("splitfile could not be saved")
 		send_rawmsg(message,"Error parsing email",from_addr,to_addr)
 		return None
 	header,body=splitmsg 
@@ -1974,7 +1966,6 @@ def _sighuphandler(signum, frame):
 	_daemonstarttime=_now
 	log("Signal SIGHUP: reload configuration")
 	init()
-
 ##############################
 # gpgmailencrypt main program
 ##############################
