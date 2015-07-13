@@ -27,7 +27,7 @@ def init():
 	global _mailcount
 	global _encryptgpgcomment,_encryptheader
 	global _DEBUG,_LOGGING,_LOGFILE,_ADDHEADER,_HOST,_PORT,_DOMAINS,_CONFIGFILE
-	global _INFILE,_OUTFILE,_PREFERED_ENCRYPTION,_GPGKEYHOME,_ALLOWGPGCOMMENT,_GPGCMD
+	global _INFILE,_OUTFILE,_PREFERRED_ENCRYPTION,_GPGKEYHOME,_ALLOWGPGCOMMENT,_GPGCMD
 	global _SMIMEKEYHOME,_SMIMECMD,_SMIMECIPHER,_SMIMEKEYEXTRACTDIR,_SMIMEAUTOMATICEXTRACTKEYS
 	global _SPAMSUBJECT,_OUTPUT, _DEBUGSEARCHTEXT,_DEBUGEXCLUDETEXT,_LOCALE,_LOCALEDB
 	global _RUNMODE,_SERVERHOST,_SERVERPORT
@@ -65,7 +65,7 @@ def init():
 	_CONFIGFILE='/etc/gpgmailencrypt.conf'
 	_INFILE=""
 	_OUTFILE=""
-	_PREFERED_ENCRYPTION="PGPINLINE"
+	_PREFERRED_ENCRYPTION="PGPINLINE"
 	_GPGKEYHOME="~/.gnupg"
 	_ALLOWGPGCOMMENT=False
 	_GPGCMD='/usr/bin/gpg2'
@@ -148,7 +148,7 @@ def debug(msg):
 	if _DEBUG:
 		ln=inspect.currentframe().f_back.f_lineno
 		log(msg,"d",ln)
-################print_exampleconfig
+################
 #_debug_keepmail
 ################
 def _debug_keepmail(mailtext):
@@ -175,7 +175,7 @@ def show_usage():
 	print ("-a --addheader:  adds %s header to the mail"%_encryptheader)
 	print ("-c f --config f: use configfile 'f'. Default is /etc/gpgmailencrypt.conf")
 	print ("-d --daemon :    start gpgmailencrypt as smtpserver")
-	print ("-e pgpinline :         preferred encryption method, either 'pgpinline','pgpmime' or 'smime'")
+	print ("-e pgpinline :   preferred encryption method, either 'pgpinline','pgpmime' or 'smime'")
 	print ("-f mail :        reads email file 'mail', otherwise from stdin")
 	print ("-h --help :      print this help")
 	print ("-k f --keyhome f:sets gpg key directory to 'f'")
@@ -192,7 +192,7 @@ def show_usage():
 ####################
 def print_exampleconfig():
 	print ("[default]")
-	print ("preferred_encryption = gpginline 		; valid values are 'gpginline','gpgmime' or 'smime'")
+	print ("prefered_encryption = gpginline 		; valid values are 'gpginline','gpgmime' or 'smime'")
 	print ("add_header = no         			; adds a %s header to the mail"%_encryptheader)
 	print ("domains =    		     			; comma separated list of domain names, \
 that should be encrypted, empty is all")
@@ -210,6 +210,7 @@ that should be encrypted, empty is all")
 	print ("file = /tmp/gpgmailencrypt.log")
 	print ("debug = no")
 	print ("")
+	print ("[mailserver]")
 	print ("host = 127.0.0.1				;smtp host")
 	print ("port = 25	    				;smtp port")
 	print ("")
@@ -226,8 +227,8 @@ that should be encrypted, empty is all")
 	print ("[smimeuser]")
 	print ("smime.user@domain.com = user.pem[,cipher]	;public S/MIME key file [,used cipher, see defaultcipher]\n")
 	print ("")
-	print ("[_encryptionmap]    ")
-	print ("user@domain.com = _PGPMIME		;_PGPMIME|PGPINLINE|SMIME|NONE\n")
+	print ("[encryptionmap]    ")
+	print ("user@domain.com = PGPMIME		;PGPMIME|PGPINLINE|SMIME|NONE\n")
 	print ("")
 	print ("[daemon]")
 	print ("host = 127.0.0.1				;smtp host")
@@ -243,7 +244,7 @@ def _prepare_syslog():
 #_read_configfile
 ################	
 def _read_configfile():
-	global _addressmap,_encryptionmap,_GPGCMD,_DEBUG,_DOMAINS,_LOGGING,_LOGFILE,_GPGKEYHOME,_PREFERED_ENCRYPTION
+	global _addressmap,_encryptionmap,_GPGCMD,_DEBUG,_DOMAINS,_LOGGING,_LOGFILE,_GPGKEYHOME,_PREFERRED_ENCRYPTION
 	global _ADDHEADER,_HOST,_PORT,_ALLOWGPGCOMMENT,_CONFIGFILE,_SPAMSUBJECT,_OUTPUT
 	global _smimeuser,_SMIMEKEYHOME,_SMIMECMD,_SMIMECIPHER,_SMIMEKEYEXTRACTDIR,_SMIMEAUTOMATICEXTRACTKEYS
 	global _DEBUGEXCLUDETEXT,_DEBUGSEARCHTEXT
@@ -277,11 +278,11 @@ def _read_configfile():
 		if _cfg.has_option('default','preferred_encryption'):
 			p=_cfg.get('default','preferred_encryption').lower()
 			if p=="smime":
-				_PREFERED_ENCRYPTION="SMIME"
+				_PREFERRED_ENCRYPTION="SMIME"
 			elif p=="pgpmime":
-				_PREFERED_ENCRYPTION="PGPMIME"
+				_PREFERRED_ENCRYPTION="PGPMIME"
 			else:
-				_PREFERED_ENCRYPTION="PGPINLINE"
+				_PREFERRED_ENCRYPTION="PGPINLINE"
 
 	if _cfg.has_section('logging'):
 		if _cfg.has_option('logging','log'):
@@ -326,8 +327,8 @@ def _read_configfile():
 	if _cfg.has_section('usermap'):
 		for (name, value) in _cfg.items('usermap'):
 				_addressmap[name] = value
-	if _cfg.has_section('_encryptionmap'):
-		for (name, value) in _cfg.items('_encryptionmap'):
+	if _cfg.has_section('encryptionmap'):
+		for (name, value) in _cfg.items('encryptionmap'):
 				_encryptionmap[name] = value
 	if _cfg.has_section('daemon'):
 		if _cfg.has_option('daemon','host'):
@@ -374,7 +375,7 @@ def _read_configfile():
 def _parse_commandline():
 	receiver=[]
 	global _DEBUG,_CONFIGFILE,_LOGGING,_LOGFILE,_GPGKEYHOME,_ADDHEADER,_HOST,_PORT,_INFILE,_OUTFILE,_OUTPUT
-	global _PREFERED_ENCRYPTION,_RUNMODE
+	global _PREFERRED_ENCRYPTION,_RUNMODE
 	try:
 		cl=sys.argv[1:]
 		_opts,_remainder=getopt.gnu_getopt(cl,'ac:de:f:hk:l:m:n:o:pvxy',
@@ -410,12 +411,12 @@ def _parse_commandline():
 	   		_DEBUG=True
 		if _opt  =='-e':
 			if _arg=="smime":
-				_PREFERED_ENCRYPTION="SMIME"
+				_PREFERRED_ENCRYPTION="SMIME"
 			elif _arg=="pgpmime":
-				_PREFERED_ENCRYPTION="PGPMIME"
+				_PREFERRED_ENCRYPTION="PGPMIME"
 			else:
-				_PREFERED_ENCRYPTION="PGPINLINE"
-		debug("Set _PREFERED_ENCRYPTION to '%s'"%_PREFERED_ENCRYPTION)
+				_PREFERRED_ENCRYPTION="PGPINLINE"
+		debug("Set _PREFERRED_ENCRYPTION to '%s'"%_PREFERRED_ENCRYPTION)
 		if _opt  =='-f':
 	   		_INFILE=expanduser(_arg)
 	   		debug("Set _INFILE to '%s'"%_INFILE)
@@ -1583,8 +1584,8 @@ def _encrypt_pgpmime(message,gpguser,from_addr,to_addr):
 ##############################	
 def get_preferredencryptionmethod(user):
 	debug("get_preferredencryptionmethod :'%s'"%user)
-	global _PREFERED_ENCRYPTION
-	method=_PREFERED_ENCRYPTION
+	global _PREFERRED_ENCRYPTION
+	method=_PREFERRED_ENCRYPTION
 
 	_m=""
 	_u=user
@@ -1808,9 +1809,9 @@ def _encrypt_smime_mail(mailtext,smimeuser,from_addr,to_addr):
 # encrypt_mails 
 ###############
 def encrypt_mails(mailtext,receiver):
-	global _mailcount,_PREFERED_ENCRYPTION
+	global _mailcount,_PREFERRED_ENCRYPTION
 	debug("encrypt_mails")
-	if _PREFERED_ENCRYPTION=="PGPMIME":
+	if _PREFERRED_ENCRYPTION=="PGPMIME":
 		_pgpmime=True
 	else:
 		_pgpmime=False
