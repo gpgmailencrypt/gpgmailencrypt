@@ -13,8 +13,8 @@ import re,sys,tempfile,os,subprocess,atexit,time,datetime,getopt,random,syslog,i
 from email.generator import Generator
 from cStringIO import StringIO
 from os.path import expanduser
-VERSION="1.1.0theta"
-DATE="12.07.2015"
+VERSION="1.1.0iota"
+DATE="13.07.2015"
 #################################
 #Definition of general functions#
 #################################
@@ -410,9 +410,10 @@ def _parse_commandline():
 		if _opt  =='-v' or  _opt == '--verbose':
 	   		_DEBUG=True
 		if _opt  =='-e':
-			if _arg=="smime":
+			a=_arg.lower()
+			if a=="smime":
 				_PREFERRED_ENCRYPTION="SMIME"
-			elif _arg=="pgpmime":
+			elif a=="pgpmime":
 				_PREFERRED_ENCRYPTION="PGPMIME"
 			else:
 				_PREFERRED_ENCRYPTION="PGPINLINE"
