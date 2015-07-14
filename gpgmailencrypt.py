@@ -3,18 +3,31 @@
 #based on gpg-mailgate
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
+"""
+gpgmailencrypt can encrypt e-mails.
+It supports
+* PGP/Inline
+* PGP/Mime
+* SMime
+
+It can be used normally as a script doing everything on command line or in daemon mode, where gpgmailencrypt acts as an encrypting smtp server. 
+It takes emails and if a encryption key exists for this user it will return the e-mail encrypted to another e-mail server. 
+Usage:
+Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
+and copy this file into the directory /etc
+"""
 from ConfigParser import ConfigParser
-from email import Encoders
+from email import Encoders as _Encoders
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import HTMLParser 
 import re,sys,tempfile,os,subprocess,atexit,time,datetime,getopt,random,syslog,inspect,gzip
 from email.generator import Generator
-from cStringIO import StringIO
+from cStringIO import StringIO as _StringIO
 from os.path import expanduser
-VERSION="1.1.0iota"
-DATE="13.07.2015"
+VERSION="1.1.0kappa"
+DATE="14.07.2015"
 #################################
 #Definition of general functions#
 #################################
@@ -22,6 +35,7 @@ DATE="13.07.2015"
 #init
 #####
 def init():
+	"initiales the module and reads the config file"
 	global o_mail,o_stdout,o_file,l_none,l_syslog,l_file,l_stderr,m_daemon,m_script
 	global _logfile,_addressmap,_encryptionmap,_smimeuser,_tempfiles
 	global _mailcount
@@ -33,7 +47,7 @@ def init():
 	global _RUNMODE,_SERVERHOST,_SERVERPORT
 
 	#Internal variables
-	atexit.register(do_finally_at_exit)
+	atexit.register(_do_finally_at_exit)
 	_logfile=None
 	_addressmap = dict()
 	_encryptionmap = dict()
@@ -94,6 +108,7 @@ def init():
 #_set_logmode
 ############
 def _set_logmode():
+	""
 	global _logfile,_LOGGING,_LOGFILE
 	try:
 		if _LOGGING==l_file and len(_LOGFILE)>0:
@@ -106,6 +121,7 @@ def _set_logmode():
 #log
 ####
 def log(msg,infotype="m",ln=-1):
+	"prints logging information"
 	global _logfile
 	if _LOGGING!=l_none:
 		if ln==-1:
@@ -145,6 +161,7 @@ def log(msg,infotype="m",ln=-1):
 #debug
 ######
 def debug(msg):
+	"prints debugging information"
 	if _DEBUG:
 		ln=inspect.currentframe().f_back.f_lineno
 		log(msg,"d",ln)
@@ -163,6 +180,7 @@ def _debug_keepmail(mailtext):
 #show_usage
 ###########
 def show_usage():
+	"shows the command line options to stdout"
 	print ("gpgmailencrypt")
 	print ("===============")
 	print ("based on gpg-mailgate")
@@ -191,6 +209,7 @@ def show_usage():
 #print_exampleconfig
 ####################
 def print_exampleconfig():
+	"prints an example config file to stdout"
 	print ("[default]")
 	print ("prefered_encryption = gpginline 		; valid values are 'gpginline','gpgmime' or 'smime'")
 	print ("add_header = no         			; adds a %s header to the mail"%_encryptheader)
@@ -353,7 +372,7 @@ def _read_configfile():
 			k=_cfg.get('smime','keyextractdir')
 			if k!=None:
 				_SMIMEKEYEXTRACTDIR=k.strip()
-	s=SMIME(_SMIMEKEYHOME)
+	s=_SMIME(_SMIMEKEYHOME)
 	_smimeuser.update(s.create_keylist(_SMIMEKEYHOME))
 	if _cfg.has_section('smimeuser'):
 		for (name, value) in _cfg.items('smimeuser'):
@@ -471,25 +490,31 @@ def _parse_commandline():
 #set_output2mail
 ################
 def set_output2mail():
+	"outgoing email will be sent to email server"
 	global _OUTFILE,_OUTPUT
 	_OUTPUT=o_mail
 ################
 #set_output2file
 ################
-def set_output2mail(mailfile=None):
+def set_output2file(mailfile):
+	"outgoing email will be written to file 'mailfile'"
 	global _OUTFILE,_OUTPUT
-	_OUTFILE=expanduser(_arg)
+	if type(mailefile) != str:
+		return
+	_OUTFILE=expanduser(mailfile)
 	_OUTPUT=o_file
 ##################
 #set_output2stdout
 ##################
 def set_output2stdout():
+	"outgoing email will be written to stdout"
 	global _OUTFILE,_OUTPUT
 	_OUTPUT=o_stdout
 ##########
 #set_debug
 ##########
 def set_debug(dbg):
+	"set debug mode"
 	global _DEBUG
 	if dbg:
 		_DEBUG=True
@@ -530,23 +555,25 @@ def _find_charset(msg):
 	charset=str(res[1]).replace('"','').replace("'","")
 	return charset
 #############
-#new_tempfile
+#_new_tempfile
 #############
-def new_tempfile():
+def _new_tempfile():
+	"creates a new tempfile"
 	global _tempfiles
 	f=tempfile.NamedTemporaryFile(mode='wb',delete=False,prefix='mail-')
 	_tempfiles.append(f.name)
-	debug("new_tempfile %s"%f.name)
+	debug("_new_tempfile %s"%f.name)
 	return f
 #############
-#del_tempfile
+#_del_tempfile
 #############
-def del_tempfile(f):
+def _del_tempfile(f):
+	"deletes the tempfile, f is the name of the file"
 	global _tempfiles
 	n=""
 	if type(f)!=str:
 		return
-	debug("del_tempfile:%s"%f)
+	debug("_del_tempfile:%s"%f)
 	try:
 		_tempfiles.remove(f)
 	except:
@@ -556,30 +583,30 @@ def del_tempfile(f):
 	except:
 		pass
 #########
-#send_msg
+#_send_msg
 #########
-def send_rawmsg(mailtext,msg,from_addr, to_addr):
-	debug("send_rawmsg")
+def _send_rawmsg(mailtext,msg,from_addr, to_addr):
+	debug("_send_rawmsg")
 	try:
 		message = email.message_from_string( mailtext )
 		if _ADDHEADER and not message.has_key(_encryptheader) and msg:
 			message.add_header(_encryptheader,msg)
-		send_msg(message,from_addr,to_addr)
+		_send_msg(message,from_addr,to_addr)
 	except:
-		debug("send_rawmsg: exception send_textmsg")
-		send_textmsg(mailtext,from_addr,to_addr)
+		debug("_send_rawmsg: exception _send_textmsg")
+		_send_textmsg(mailtext,from_addr,to_addr)
 
-def send_msg( message,from_addr,to_addr ):
+def _send_msg( message,from_addr,to_addr ):
 	global _OUTPUT,_mailcount
-	debug("send_msg output %i"%_OUTPUT)
+	debug("_send_msg output %i"%_OUTPUT)
 	if type(message)==str:
-		send_textmsg(message,from_addr,to_addr)
+		_send_textmsg(message,from_addr,to_addr)
 	else:
-		send_textmsg(message.as_string(),from_addr,to_addr)
+		_send_textmsg(message.as_string(),from_addr,to_addr)
 
-def send_textmsg(message, from_addr,to_addr):
+def _send_textmsg(message, from_addr,to_addr):
 	global _OUTPUT,_mailcount
-	debug("send_textmsg output %i"%_OUTPUT)
+	debug("_send_textmsg output %i"%_OUTPUT)
 
 	if _OUTPUT==o_mail:
 		if len(to_addr) == 0:
@@ -609,9 +636,9 @@ def send_textmsg(message, from_addr,to_addr):
 	else:
 		print (message)
 ###################
-#do_finally_at_exit
+#_do_finally_at_exit
 ###################
-def do_finally_at_exit():
+def _do_finally_at_exit():
 	global _logfile,_tempfiles
 	debug("do_finally")
 	if _RUNMODE==m_daemon:
@@ -630,12 +657,12 @@ def do_finally_at_exit():
 #Definition of encryption functions
 ###################################
 ##########
-#CLASS GPG
+#CLASS _GPG
 ##########
-GPGkeys=list()
-class GPG:
+_GPGkeys=list()
+class _GPG:
 	def __init__(self, keyhome=None, recipient = None):
-		debug("GPG.__init__")
+		debug("_GPG.__init__")
 		if type(keyhome)==str:
 			self._keyhome = expanduser(keyhome)
 		else:
@@ -644,7 +671,7 @@ class GPG:
 		self._filename=''	
 		if type(recipient) == str:
 			self.set_recipient(recipient)
-		debug("GPG.__init__ end")
+		debug("_GPG.__init__ end")
 
 			
 	def set_filename(self, fname):
@@ -662,35 +689,35 @@ class GPG:
 	def set_recipient(self, recipient):
 		if type(recipient) == str:
 			self._recipient=recipient
-			global GPGkeys
-			GPGkeys = list()
+			global _GPGkeys
+			_GPGkeys = list()
 	def recipient(self):
 		return self._recipient	
 
 	def public_keys(self):
-		if len(GPGkeys)==0:
+		if len(_GPGkeys)==0:
 			self._get_public_keys()
-		return GPGkeys
+		return _GPGkeys
 
 	def has_key(self,key):
 		debug("gpg.has_key")
-		if len(GPGkeys)==0:
+		if len(_GPGkeys)==0:
 			self._get_public_keys()
 		if type(key)!=str:
 			debug("has_key, key not of type str")
 			return False
-		if key in GPGkeys:	
+		if key in _GPGkeys:	
 			return True
 		else:
-			debug("has_key, key not in GPGkeys")
-			debug("GPGkeys '%s'"%str(GPGkeys))
+			debug("has_key, key not in _GPGkeys")
+			debug("_GPGkeys '%s'"%str(_GPGkeys))
 			return False
 			
 	def _get_public_keys( self ):
-		global GPGkeys
-		GPGkeys = list()
+		global _GPGkeys
+		_GPGkeys = list()
 		cmd = '%s --homedir %s --list-keys --with-colons' % (_GPGCMD, self._keyhome.replace("%user",self._recipient))
-		debug("GPG.public_keys command: '%s'"%cmd)
+		debug("_GPG.public_keys command: '%s'"%cmd)
 		try:
 			p = subprocess.Popen( cmd.split(' '), stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
 			p.wait()
@@ -712,9 +739,9 @@ class GPG:
 							log("splitting email didn't work","e")
 							email=""
 						email=email.lower()
-						if len(email)>0 and GPGkeys.count(email) == 0:
+						if len(email)>0 and _GPGkeys.count(email) == 0:
 							#debug("add email address '%s'"%email)
-							GPGkeys.append(email)
+							_GPGkeys.append(email)
 						#else:
 							#debug("Email '%s' already added"%email)
 		except:
@@ -728,8 +755,8 @@ class GPG:
 		if len(self._filename) == 0:
 			log( 'Error: GPGEncryptor: filename not set',"m")
 			return ''
-		f=new_tempfile()
-		debug("GPG.encrypt_file new_tempfile %s"%f.name)
+		f=_new_tempfile()
+		debug("_GPG.encrypt_file _new_tempfile %s"%f.name)
 		f.close()
 		_result = subprocess.call( ' '.join(self._command_fromfile(f.name,binary)),shell=True ) 
 		debug("Encryption command: '%s'" %' '.join(self._command_fromfile(f.name,binary)))
@@ -738,7 +765,7 @@ class GPG:
 		res=open(f.name)
 		encdata=res.read()
 		res.close()
-		del_tempfile(f.name)
+		_del_tempfile(f.name)
 		return _result,encdata
 
 	def _command_fromfile(self,sourcefile,binary):
@@ -753,7 +780,7 @@ class GPG:
 #############################
 #CLASS GPGENCRYPTEDATTACHMENT
 #############################
-class GPGEncryptedAttachment(email.message.Message):
+class _GPGEncryptedAttachment(email.message.Message):
 
     def  __init__(self):
     	email.message.Message. __init__(self)
@@ -762,7 +789,7 @@ class GPGEncryptedAttachment(email.message.Message):
     	self.set_type("text/plain")
 
     def as_string(self, unixfrom=False):
-        fp = StringIO()
+        fp = _StringIO()
         g = Generator(fp)
         g.flatten(self, unixfrom=unixfrom)
         return fp.getvalue()
@@ -790,12 +817,12 @@ class GPGEncryptedAttachment(email.message.Message):
         print >> g._fp,'Content-Description: OpenPGP encrypted message'
         print >> g._fp,'Content-Disposition: inline; filename="%s"\n'%fname
 ############
-#CLASS SMIME
+#CLASS _SMIME
 ############
-class SMIME:
+class _SMIME:
 	def __init__(self, keyhome=None, recipient = None):
 		global _SMIMEKEYHOME
-		debug("SMIME.__init__ %s"%_SMIMEKEYHOME)
+		debug("_SMIME.__init__ %s"%_SMIMEKEYHOME)
 		if type(keyhome)==str:
 			self._keyhome = expanduser(keyhome)
 		else:
@@ -804,7 +831,7 @@ class SMIME:
 		self._filename=''	
 		if type(recipient) == str:
 			self._recipient=recipient
-		debug("SMIME.__init__ end")
+		debug("_SMIME.__init__ end")
 
 	def set_filename(self, fname):
 		if type(fname)==str:
@@ -843,10 +870,10 @@ class SMIME:
 		if filename:
 			set_filename(filename)
 		if len(self._filename) == 0:
-			log( 'Error: SMIME: filename not set',"m")
+			log( 'Error: _SMIME: filename not set',"m")
 			return ''
-		f=new_tempfile()
-		debug("SMIME.encrypt_file new_tempfile %s"%f.name)
+		f=_new_tempfile()
+		debug("_SMIME.encrypt_file _new_tempfile %s"%f.name)
 		f.close()
 		_result = subprocess.call( ' '.join(self._command_fromfile(f.name,binary)),shell=True ) 
 		debug("Encryption command: '%s'" %' '.join(self._command_fromfile(f.name,binary)))
@@ -855,7 +882,7 @@ class SMIME:
 		res=open(f.name)
 		encdata=res.read()
 		res.close()
-		del_tempfile(f.name)
+		_del_tempfile(f.name)
 		m=email.message_from_string(encdata)
 		return _result,m.get_payload()
 
@@ -932,7 +959,7 @@ class SMIME:
 		try:
 			_udir=os.listdir(directory)
 		except:
-			log("class SMIME.create_keylist, couldn't read directory '%s'"%directory)
+			log("class _SMIME.create_keylist, couldn't read directory '%s'"%directory)
 			return result
 		_match="^(.*?).pem"
 		for _i in _udir:
@@ -965,6 +992,7 @@ class SMIME:
 #is_encrypted
 #############
 def is_pgpinlineencrypted(msg):
+	"returns whether or not the email is already PGPINLINE encrypted"
 	if msg ==None:
 		return False
 	if "\n-----BEGIN PGP MESSAGE-----" in msg and "\n-----END PGP MESSAGE-----" in msg:
@@ -973,6 +1001,7 @@ def is_pgpinlineencrypted(msg):
 		return False
 
 def is_pgpmimeencrypted(msg):
+	"returns whether or not the email is already PGPMIME encrypted"
 	if type(msg)==str:
 		msg=email.message_from_string(msg)
 	contenttype=msg.get_content_type()
@@ -981,6 +1010,7 @@ def is_pgpmimeencrypted(msg):
 	else:
 		return False
 def is_smimeencrypted(msg):
+	"returns whether or not the email is already SMIME encrypted"
 	if type(msg)==str:
 		msg=email.message_from_string(msg)
 	contenttype=msg.get_content_type()
@@ -990,6 +1020,7 @@ def is_smimeencrypted(msg):
 		return False
 
 def is_encrypted(msg):
+	"returns whether or not the email is already encrypted"
 	if is_pgpmimeencrypted(msg) or is_pgpinlineencrypted(msg) or is_smimeencrypted(msg):
 		return True
 	else:
@@ -1185,6 +1216,7 @@ def _split_html(html):
 #guess_fileextension
 ####################
 def guess_fileextension(ct):
+	"returns a filetype based on its contenttype/mimetype 'ct'"
 	try:
 		maintype,subtype=ct.split("/")
 	except:
@@ -1306,9 +1338,9 @@ def guess_fileextension(ct):
 	else:
 		return "bin"
 ##########
-#asciiname
+#_asciiname
 ##########
-def asciiname(name):
+def _asciiname(name):
 	return re.sub(r'[^\x00-\x7F]','_', name)
 ################
 #_encrypt_payload
@@ -1319,12 +1351,12 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 	htmlheader=""
 	htmlbody=""
 	htmlfooter=""
-	gpg = GPG( _GPGKEYHOME, gpguser)
+	gpg = _GPG( _GPGKEYHOME, gpguser)
 	raw_payload = payload.get_payload(decode=True)
 	contenttype=payload.get_content_type()		
 	debug("Content-Type:'%s'"%contenttype)
-	fp=new_tempfile()
-	debug("_encrypt_payload new_tempfile %s"%fp.name)
+	fp=_new_tempfile()
+	debug("_encrypt_payload _new_tempfile %s"%fp.name)
 	filename = payload.get_filename()
 	if contenttype=="text/html":
 		res,htmlheader,htmlbody,htmlfooter=_split_html(raw_payload)
@@ -1343,7 +1375,7 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 			debug("Mail was already encrypted")
 		if len(_OUTFILE) >0:
 			return None	
-		del_tempfile(fp.name)
+		_del_tempfile(fp.name)
 		return payload
 	contentmaintype=payload.get_content_maintype() 
 	if isAttachment or (isInline and contentmaintype not in ("text") ):
@@ -1354,7 +1386,7 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 				count="%i"%counter
 			filename=('%s%s.'%(_LOCALEDB[_LOCALE][1],count))+guess_fileextension(contenttype)
 		else:
-			filename=asciiname(filename)
+			filename=_asciiname(filename)
 			f,e=os.path.splitext(filename)
 			addPGPextension=(e.lower()!=".pgp")
 		debug("Filename:'%s'"%filename)
@@ -1371,7 +1403,7 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 				pgpFilename=filename
 			payload.set_type( 'application/octet-stream')
 			if isBinaryattachment:
-				Encoders.encode_base64(payload)
+				_Encoders.encode_base64(payload)
 			else:
 				if payload.has_key('Content-Transfer-Encoding'):
 					del payload['Content-Transfer-Encoding']
@@ -1392,7 +1424,7 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 			payload.set_payload(pl)
 		else:
 			log("Error during encryption: payload will be unencrypted!","m")	
-	del_tempfile(fp.name)
+	_del_tempfile(fp.name)
 	debug("_encrypt_payload END")
 	return payload
 ##################
@@ -1463,8 +1495,8 @@ def _encrypt_pgpmime(message,gpguser,from_addr,to_addr):
 	if len(splitmsg)!=2:
 		splitmsg=re.split("\r\n\r\n",message,1)
 	if len(splitmsg)!=2:
-		log("Mail could not be split in header and body part (mailsize=%i)"%len(message),"e")
-		send_rawmsg(message,"Error parsing email",from_addr,to_addr)
+		debug("Mail could not be split in header and body part (mailsize=%i)"%len(message))
+		_send_rawmsg(message,"Error parsing email",from_addr,to_addr)
 		return None
 	header,body=splitmsg 
 	header+="\n\n"
@@ -1512,8 +1544,8 @@ def _encrypt_pgpmime(message,gpguser,from_addr,to_addr):
 	if newmsg.has_key('Content-Transfer-Encoding'):
 		del newmsg['Content-Transfer-Encoding']
 
-	gpg = GPG( _GPGKEYHOME, gpguser)
-	fp=new_tempfile()
+	gpg = _GPG( _GPGKEYHOME, gpguser)
+	fp=_new_tempfile()
 	debug("encrypt_mime new tempfile %s"%fp.name)
 	if contenttype ==None:
 		contenttype="multipart/mixed"
@@ -1563,10 +1595,10 @@ def _encrypt_pgpmime(message,gpguser,from_addr,to_addr):
 	fp.write(body)
 	fp.close()
 	gpg.set_filename( fp.name )
-	attachment=GPGEncryptedAttachment()
+	attachment=_GPGEncryptedAttachment()
 	if is_encrypted(message):
-		send_rawmsg(message,'Mail was already encrypted',from_addr,to_addr)
-		del_tempfile(fp)
+		_send_rawmsg(message,'Mail was already encrypted',from_addr,to_addr)
+		_del_tempfile(fp)
 		return None
 	result,pl=gpg.encrypt_file(binary=False) 
 	if result==0:
@@ -1578,12 +1610,13 @@ def _encrypt_pgpmime(message,gpguser,from_addr,to_addr):
 	attachment.set_boundary(contentboundary)
 	attachment.set_masterboundary(boundary)
 	debug("encrypt_pgpmime END")
-	del_tempfile(fp.name)
+	_del_tempfile(fp.name)
 	return newmsg
 ##############################
 #get_preferredencryptionmethod
 ##############################	
 def get_preferredencryptionmethod(user):
+	"returns the preferenced encryption method for user 'user'"
 	debug("get_preferredencryptionmethod :'%s'"%user)
 	global _PREFERRED_ENCRYPTION
 	method=_PREFERRED_ENCRYPTION
@@ -1616,7 +1649,7 @@ def _check_gpgrecipient(gaddr):
 	if len(addr)==2:
 		domain = gaddr.split('@')[1]
 	found =False
-	gpg = GPG( _GPGKEYHOME)
+	gpg = _GPG( _GPGKEYHOME)
 	try:
 		gpg_to_addr=_addressmap[gaddr]
 	except:
@@ -1641,16 +1674,15 @@ def _encrypt_gpg_mail(mailtext,use_pgpmime, gpguser,from_addr,to_addr):
 	m_id=""
 	if raw_message.has_key("Message-Id"):
 		m_id="Id:%s "%raw_message["Message-Id"]
-	log("Encrypting email %s to: %s" % (m_id, to_addr) )
 	if raw_message.has_key("Subject") and len(_SPAMSUBJECT.strip())>0 and _SPAMSUBJECT in raw_message["Subject"]:
 		debug("message is SPAM, don't encrypt")
-		send_rawmsg(mailtext,"Spammail",from_addr,to_addr)
+		_send_rawmsg(mailtext,"Spammail",from_addr,to_addr)
 		return
 	if is_smimeencrypted( mailtext ) or is_pgpmimeencrypted(mailtext):
 		debug("encrypt_gpg_mail, is already smime or pgpmime encrypted")
-		send_rawmsg(mailtext,'Mail was already encrypted',from_addr,to_addr)
+		_send_rawmsg(mailtext,'Mail was already encrypted',from_addr,to_addr)
 		return
-	
+	log("Encrypting email %s to: %s" % (m_id, to_addr) )
 	if use_pgpmime:
 		mail = _encrypt_pgpmime( mailtext,gpguser,from_addr,to_addr )
 	else:
@@ -1659,7 +1691,7 @@ def _encrypt_gpg_mail(mailtext,use_pgpmime, gpguser,from_addr,to_addr):
 	if mail==None:
 		return
 	debug("vor sendmsg")
-	send_msg( mail, from_addr, to_addr )
+	_send_msg( mail, from_addr, to_addr )
 #####################
 #_check_smimerecipient
 #####################
@@ -1671,7 +1703,7 @@ def _check_smimerecipient(saddr):
 	if len(addr)==2:
 		domain = saddr.split('@')[1]
 	found =False
-	smime = SMIME(_SMIMEKEYHOME)
+	smime = _SMIME(_SMIMEKEYHOME)
 	try:
 		smime_to_addr=_addressmap[saddr]
 	except:
@@ -1699,15 +1731,15 @@ def _encrypt_smime_mail(mailtext,smimeuser,from_addr,to_addr):
 	contentboundary=None
 	if is_smimeencrypted(mailtext) or is_pgpmimeencrypted(mailtext):
 		log("encrypt_smime_mail:mail is already smime or pgpmime encrypted")
-		send_rawmsg(mailtext,"Mail was already encrypted",from_addr,to_addr)
+		_send_rawmsg(mailtext,"Mail was already encrypted",from_addr,to_addr)
 		return
 		
 	splitmsg=re.split("\n\n",mailtext,1)
 	if len(splitmsg)!=2:
 		splitmsg=re.split("\r\n\r\n",mailtext,1)
 	if len(splitmsg)!=2:
-		log("Mail could not be split in header and body part (mailsize=%i)"%len(mailtext),"e")
-		send_rawmsg(mailtext,"Not encrypted",from_addr,to_addr)
+		debug("Mail could not be split in header and body part (mailsize=%i)"%len(mailtext))
+		_send_rawmsg(mailtext,"Not encrypted",from_addr,to_addr)
 		return
 	header,body=splitmsg 
 	header+="\n\n"
@@ -1748,10 +1780,10 @@ def _encrypt_smime_mail(mailtext,smimeuser,from_addr,to_addr):
 	if newmsg["Content-Transfer-Encoding"]:
 		del newmsg["Content-Transfer-Encoding"]
 	newmsg.add_header('Content-Transfer-Encoding', 'base64')
-	smime = SMIME( _SMIMEKEYHOME)
+	smime = _SMIME( _SMIMEKEYHOME)
 	smime.set_recipient(smimeuser)
-	fp=new_tempfile()
-	debug("encrypt_smime_mail new_tempfile %s"%fp.name)
+	fp=_new_tempfile()
+	debug("encrypt_smime_mail _new_tempfile %s"%fp.name)
 	bodymsg=email.message.Message()
 	if "multipart" in contenttype:
 		bodymsg["Content-Type"]=contenttype
@@ -1800,16 +1832,24 @@ def _encrypt_smime_mail(mailtext,smimeuser,from_addr,to_addr):
 				del newmsg[_encryptheader]
 			newmsg[_encryptheader] = _encryptgpgcomment
 		newmsg.set_payload( pl )
-		send_msg( newmsg,from_addr,to_addr )
+		_send_msg( newmsg,from_addr,to_addr )
 	else:
 		debug("encrypt_smime_mail: error encrypting mail, send unencrypted")
 		m=None
-		send_rawmsg(mailtext,m,from_addr,to_addr)
-	del_tempfile(fp.name)
+		_send_rawmsg(mailtext,m,from_addr,to_addr)
+	_del_tempfile(fp.name)
 ###############
 # encrypt_mails 
 ###############
 def encrypt_mails(mailtext,receiver):
+	"""
+	Main function of this library: 
+		mailtext is the mail as a string
+		receiver is a list of receivers
+	The emails will be encrypted if possible and sent as defined  in /etc/gpgmailencrypt.conf
+	example:
+	encrypt_mails(myemailtext,['agentj@mib','agentk@mib'])
+	"""
 	global _mailcount,_PREFERRED_ENCRYPTION
 	debug("encrypt_mails")
 	if _PREFERRED_ENCRYPTION=="PGPMIME":
@@ -1818,12 +1858,12 @@ def encrypt_mails(mailtext,receiver):
 		_pgpmime=False
 	if _SMIMEAUTOMATICEXTRACTKEYS:
 		debug("_SMIMEAUTOMATICEXTRACTKEYS")
-		f=new_tempfile()
+		f=_new_tempfile()
 		f.write(mailtext)
 		f.close()
-		s=SMIME(_SMIMEKEYHOME)
+		s=_SMIME(_SMIMEKEYHOME)
 		s.extract_publickey_from_mail(f.name,_SMIMEKEYEXTRACTDIR)
-		del_tempfile(f.name)
+		_del_tempfile(f.name)
 	for to_addr in receiver:
 		debug("encrypt_mail for user '%s'"%to_addr)
 		g_r,to_gpg=_check_gpgrecipient(to_addr)
@@ -1852,7 +1892,7 @@ def encrypt_mails(mailtext,receiver):
 		if not s_r and not g_r:
 			m="Email not encrypted, public key for '%s' not found"%to_addr
 			log(m,"w")
-			send_rawmsg(mailtext,m,from_addr,to_addr)
+			_send_rawmsg(mailtext,m,from_addr,to_addr)
 			continue
 		if _prefer_gpg:
 			debug("PREFER GPG")
@@ -1876,6 +1916,7 @@ def encrypt_mails(mailtext,receiver):
 #scriptmode
 ###########
 def scriptmode():
+	"run gpgmailencrypt a script"
 	try:
 		#read message
 		if len(_INFILE)>0:
@@ -1912,6 +1953,7 @@ def scriptmode():
 #daemonmode
 ###########
 def daemonmode():
+	"starts the smtpd daemon"
 	import smtpd,asyncore, signal
 	global _daemonstarttime
 	_daemonstarttime=datetime.datetime.now()
