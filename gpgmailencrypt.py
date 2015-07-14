@@ -8,10 +8,11 @@ gpgmailencrypt can encrypt e-mails.
 It supports
 * PGP/Inline
 * PGP/Mime
-* SMime
+* S/Mime
 
-It can be used normally as a script doing everything on command line or in daemon mode, where gpgmailencrypt acts as an encrypting smtp server. 
-It takes emails and if a encryption key exists for this user it will return the e-mail encrypted to another e-mail server. 
+It can be used normally as a script doing everything on command line, in daemon mode, where gpgmailencrypt acts as an encrypting smtp server or as a module for programmers. 
+It takes e-mails and  returns the e-mail encrypted to another e-mail server if a encryption key exists for the receiver. Otherwise it returns the e-mail unencrypted.
+The encryption method can be selected per user.
 Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
@@ -1901,13 +1902,12 @@ def encrypt_mails(mailtext,receiver):
 			else:
 				_encrypt_smime_mail(mailtext,to_smime,from_addr,to_addr)
 		else:
-			debug("PREFER SMIME")
+			debug("PREFER S/MIME")
 			if s_r:
 				_encrypt_smime_mail(mailtext,to_smime,from_addr,to_addr)
 			else:
 				_encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
 		_mailcount+=1
-			
 	debug("END encrypt_mails")
 #######################################
 #END definition of encryption functions
