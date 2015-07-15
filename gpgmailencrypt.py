@@ -27,8 +27,8 @@ import re,sys,tempfile,os,subprocess,atexit,time,datetime,getopt,random,syslog,i
 from email.generator import Generator
 from cStringIO import StringIO as _StringIO
 from os.path import expanduser
-VERSION="1.1.0kappa"
-DATE="14.07.2015"
+VERSION="1.1.0"
+DATE="15.07.2015"
 #################################
 #Definition of general functions#
 #################################
@@ -186,7 +186,7 @@ def show_usage():
 	print ("===============")
 	print ("based on gpg-mailgate")
 	print ("License: GPL 3")
-	print ("Author:  Horst Knorr")
+	print ("Author:  Horst Knorr <gpgmailencrypt@gmx.de>")
 	print ("Version: %s from %s"%(VERSION,DATE))
 	print ("\nUsage:\n")
 	print ("gpgmailencrypt [options] receiver@email.address < Inputfile_from_stdin")
