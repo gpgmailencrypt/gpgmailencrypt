@@ -27,8 +27,8 @@ import re,sys,tempfile,os,subprocess,atexit,time,datetime,getopt,random,syslog,i
 from email.generator import Generator
 from cStringIO import StringIO as _StringIO
 from os.path import expanduser
-VERSION="1.2.0"
-DATE="21.07.2015"
+VERSION="1.2.0alpha"
+DATE="22.07.2015"
 #################################
 #Definition of general functions#
 #################################
@@ -47,6 +47,7 @@ def init():
 	global _SPAMSUBJECT,_OUTPUT, _DEBUGSEARCHTEXT,_DEBUGEXCLUDETEXT,_LOCALE,_LOCALEDB
 	global _RUNMODE,_SERVERHOST,_SERVERPORT
 	global _SMTPD_USE_SMTPS,_SMTPD_USE_AUTH,_SMTPD_PASSWORDFILE,_SMTPD_SSL_KEYFILE,_SMTPD_SSL_CERTFILE,_smtpd_passwords
+	global _AUTHENTICATE,_SMTP_CREDENTIAL,_SMTP_USER,_SMTP_PASSWORD
 
 	#Internal variables
 	atexit.register(_do_finally_at_exit)
@@ -78,6 +79,10 @@ def init():
 	_PORT=25
 	_SERVERHOST="127.0.0.1"
 	_SERVERPORT=1025
+	_AUTHENTICATE=False
+	_SMTP_CREDENTIAL=""
+	_SMTP_USER=""
+	_SMTP_PASSWORD=""
 	_DOMAINS=""
 	_CONFIGFILE='/etc/gpgmailencrypt.conf'
 	_INFILE=""
@@ -184,6 +189,16 @@ def _debug_keepmail(mailtext):
 					return False
 			return True
 	return False
+
+def _store_temporaryfile(message):
+	try:
+		f=tempfile.NamedTemporaryFile(mode='wb',delete=False,prefix='mail-')
+		f.write(message)
+		f.close()
+		log("Message in temporary file '%s'"%f.name)
+	except:
+		log("Couldn't save email in temporary file, write error")
+
 ###########
 #show_usage
 ###########
@@ -240,9 +255,12 @@ that should be encrypted, empty is all")
 	print ("[mailserver]")
 	print ("host = 127.0.0.1				;smtp host")
 	print ("port = 25	    				;smtp port")
+	print ("authenticate = False    			;user must authenticate")
+	print ("smtpcredential =/etc/gpgmailencrypt.cfg		;file that keeps user and password information")	
+	print("						;file format 'user=password'")
 	print ("")
 	print ("[encryptionmap]    ")
-	print ("user@domain.com = PGPMIME		;PGPMIME|PGPINLINE|SMIME|NONE")
+	print ("user@domain.com = PGPMIME			;PGPMIME|PGPINLINE|SMIME|NONE")
 	print ("")
 	print ("[usermap]")
 	print (";user_nokey@domain.com = user_key@otherdomain.com")
@@ -261,10 +279,11 @@ that should be encrypted, empty is all")
 	print ("host = 127.0.0.1				;smtp host")
 	print ("port = 10025    				;smtp port")
 	print ("smtps = False    				;use smtps encryption")
-	print ("sslkeyfile = '/etc/gpgsmtp.key'			;the x509 certificate key file")
-	print ("sslcertfile = '/etc/gpgsmtp.crt'		;the x509 certificate cert file")
+	print ("sslkeyfile = /etc/gpgsmtp.key			;the x509 certificate key file")
+	print ("sslcertfile = /etc/gpgsmtp.crt			;the x509 certificate cert file")
 	print ("authenticate = False    			;users must authenticate")
-	print ("smtppasswords = '/etc/gpgmailencrypt.pw'	;use smtps encryption")
+	print ("smtppasswords = /etc/gpgmailencrypt.pw		;file that includes users and passwords")
+	print("						;file format 'user=password'")
 
 ###############
 #_prepare_syslog
@@ -282,6 +301,7 @@ def _read_configfile():
 	global _smimeuser,_SMIMEKEYHOME,_SMIMECMD,_SMIMECIPHER,_SMIMEKEYEXTRACTDIR,_SMIMEAUTOMATICEXTRACTKEYS
 	global _DEBUGEXCLUDETEXT,_DEBUGSEARCHTEXT
 	global _LOCALE,_SERVERHOST,_SERVERPORT
+	global _AUTHENTICATE,_SMTP_CREDENTIAL
 	global _SMTPD_USE_SMTPS,_SMTPD_USE_AUTH,_SMTPD_PASSWORDFILE,_SMTPD_SSL_KEYFILE,_SMTPD_SSL_CERTFILE
 	
 	_cfg = ConfigParser()
@@ -358,6 +378,10 @@ def _read_configfile():
 			_HOST=_cfg.get('mailserver','host')
 		if _cfg.has_option('mailserver','port'):
 			_PORT=_cfg.getint('mailserver','port')
+		if _cfg.has_option('mailserver','authenticate'):
+			_AUTHENTICATE=_cfg.getboolean('mailserver','authenticate')
+		if _cfg.has_option('mailserver','smtpcredential'):
+			_SMTP_CREDENTIAL=_cfg.get('mailserver','smtpcredential')
 
 	if _cfg.has_section('usermap'):
 		for (name, value) in _cfg.items('usermap'):
@@ -413,6 +437,33 @@ def _read_configfile():
 	if _DEBUG:
 		for u in _smimeuser:
 			debug("SMimeuser: '%s %s'"%(u,_smimeuser[u]))
+	if _AUTHENTICATE:
+		_read_smtpcredentials(_SMTP_CREDENTIAL)
+######################
+#_read_smtpcredentials
+######################	
+def _read_smtpcredentials(pwfile):
+	global _SMTP_USER,_SMTP_PASSWORD
+	if not _AUTHENTICATE:
+		return
+	debug("_read_smtpcredentials")
+	try:
+		f=open(pwfile)
+	except:
+		debug("hksmtpserver: Config file could not be read '%s'"%sys.exc_info()[1])
+		exit(5)
+	txt=f.read()
+	f.close()
+	c=0
+	for l in txt.splitlines():
+		try:
+			name,passwd=l.split("=",1)
+			_SMTP_USER=name.strip()
+			_SMTP_PASSWORD=passwd.strip()
+			c+=1
+		except:
+			pass
+	debug("_read_smtpcredentials END read lines: %i"%c)
 
 #################
 #_parse_commandline
@@ -632,6 +683,7 @@ def _send_msg( message,from_addr,to_addr ):
 
 def _send_textmsg(message, from_addr,to_addr):
 	global _OUTPUT,_mailcount
+	global _AUTHENTICATE,_SMTP_USER,_SMTP_PASSWORD
 	debug("_send_textmsg output %i"%_OUTPUT)
 
 	if _OUTPUT==o_mail:
@@ -641,10 +693,23 @@ def _send_textmsg(message, from_addr,to_addr):
 		debug("Sending email to: <%s>" % to_addr)
 		try:
 			smtp = smtplib.SMTP(_HOST, _PORT)
+			try:
+				smtp.starttls()
+			except:
+				debug("smtp.starttls on server failed")
+			if _AUTHENTICATE:
+				debug("Authenticate at smtp server with user %s"%_SMTP_USER)
+				try:
+					smtp.login(_SMTP_USER,_SMTP_PASSWORD)
+				except smtplib.SMTPAuthenticationError:
+					log("Could not send email, could not authenticate","e")
+					return
+			debug("smtp.sendmail")
 			smtp.sendmail( from_addr, to_addr, message )
 		except:
 			log("Error sending email, smtp connection was not possible ''%(m1)s %(m2)s''"\
 			%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
+			_store_temporaryfile(message)
 	
 	
 	elif _OUTPUT==o_file and _OUTFILE and len(_OUTFILE)>0:
@@ -1958,10 +2023,7 @@ def scriptmode():
 
 		if _debug_keepmail(raw): #DEBUG
 			_DEBUG=True
-			f=tempfile.NamedTemporaryFile(mode='wb',delete=False,prefix='mail-')
-			f.write(raw)
-			f.close()
-			log("Message in temporary file '%s'"%f.name)
+			_store_temporaryfile(raw)
 
 		#do the magic
 		encrypt_mails(raw,receiver)
