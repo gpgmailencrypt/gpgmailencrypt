@@ -22,6 +22,7 @@ from email import encoders as _Encoders
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+import email.utils as emailutils
 import html.parser,base64
 import re,sys,tempfile,os,subprocess,atexit,time,datetime,getopt,random,syslog,inspect,gzip
 from email.generator import Generator
@@ -1467,12 +1468,11 @@ def guess_fileextension(ct):
 		return e
 	else:
 		return "bin"
-###########
-#_asciiname
-###########
-def _asciiname(name):
-	return re.sub(r'[^\x00-\x7F]','_', name)
-
+################
+#_encodefilename
+################
+def _encodefilename(name):
+	return(emailutils.encode_rfc2231(name,"UTF-8"))
 #################
 #_encrypt_payload
 #################
@@ -1525,7 +1525,7 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 				count="%i"%counter
 			filename=('%s%s.'%(_LOCALEDB[_LOCALE][1],count))+guess_fileextension(contenttype)
 		else:
-			filename=_asciiname(filename)
+			filename=_encodefilename(filename)
 			f,e=os.path.splitext(filename)
 			addPGPextension=(e.lower()!=".pgp")
 		debug("Filename:'%s'"%filename)
@@ -1553,7 +1553,7 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 
 			if payload["Content-Disposition"]:
 				del payload["Content-Disposition"]
-			payload.add_header('Content-Disposition', 'attachment; filename="%s"' % pgpFilename)
+			payload.add_header('Content-Disposition', 'attachment; filename*="%s"' % pgpFilename)
 			payload.set_param( 'name', pgpFilename )
 	else:
 		if 'Content-Transfer-Encoding' in payload:
