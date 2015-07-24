@@ -18,7 +18,7 @@ Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
 from configparser import ConfigParser
-from email import encoders as _Encoders
+#from email import encoders as _Encoders
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -470,7 +470,7 @@ def _read_configfile():
 				_LOGGING=l_none
 		if _cfg.has_option('logging','file'):
 			_LOGFILE=_cfg.get('logging','file')
-		if _cfg.has_option('logging','debug'):
+		if _cfg.has_option('logging','debug') and  __name__ == "__main__":
 			_DEBUG=_cfg.getboolean('logging','debug')
 		if _cfg.has_option('logging','debugsearchtext'):
 			s=_cfg.get('logging','debugsearchtext')
@@ -687,7 +687,68 @@ def _make_boundary(text=None):
         b = boundary + '.' + str(counter)
         counter += 1
     return b
-	
+################
+#set_output2mail
+################
+def set_output2mail():
+	"outgoing email will be sent to email server"
+	global _OUTFILE,_OUTPUT
+	_OUTPUT=o_mail
+################
+#set_output2file
+################
+def set_output2file(mailfile):
+	"outgoing email will be written to file 'mailfile'"
+	global _OUTFILE,_OUTPUT
+	if type(mailefile) != str:
+		return
+	_OUTFILE=expanduser(mailfile)
+	_OUTPUT=o_file
+##################
+#set_output2stdout
+##################
+def set_output2stdout():
+	"outgoing email will be written to stdout"
+	global _OUTFILE,_OUTPUT
+	_OUTPUT=o_stdout
+###########
+#get_output
+###########
+def get_output():
+	"returns the output way"
+	return _OUTPUT
+##########
+#set_debug
+##########
+def set_debug(dbg):
+	"set debug mode"
+	global _DEBUG
+	if dbg:
+		_DEBUG=True
+	else:
+		_DEBUG=False
+#############
+#is_debugging
+#############
+def is_debugging():
+	"returns True if gpgmailencrypt is in debuggin mode"
+	return _DEBUG
+################################
+#set_default_preferredencryption
+################################
+def set_default_preferredencryption(mode):
+	"set the default preferred encryption. Valid values are SMIME,PGPMIME,PGPINLINE"
+	global _PREFERRED_ENCRYPTION
+	if type(mode)==str:
+		m=mode.upper()
+		if m in ["SMIME","PGPMIME","PGPINLINE"]:
+			_PREFERRED_ENCRYPTION=mode.upper()
+################################
+#get_default_preferredencryption
+################################
+def get_default_preferredencryption():
+	"returns the default preferred encryption method"
+	return _PREFERRED_ENCRYPTION
 ###################################
 #Definition of encryption functions
 ###################################
@@ -1125,7 +1186,6 @@ def is_pgpinlineencrypted(msg):
 		return True
 	else:
 		return False
-
 def is_pgpmimeencrypted(msg):
 	"returns whether or not the email is already PGPMIME encrypted"
 	if type(msg)==bytes:
@@ -1148,14 +1208,12 @@ def is_smimeencrypted(msg):
 		return True
 	else:
 		return False
-
 def is_encrypted(msg):
 	"returns whether or not the email is already encrypted"
 	if is_pgpmimeencrypted(msg) or is_pgpinlineencrypted(msg) or is_smimeencrypted(msg):
 		return True
 	else:
 		return False
-
 #############
 #_decode_html
 #############
@@ -1163,7 +1221,6 @@ def _decode_html(msg):
 	h=_htmldecode()
 	h.feed(msg)
 	return h.mydata()
-
 _htmlname={"Acirc":"Â","acirc":"â","acute":"´","AElig":"Æ","aelig":"æ","Agrave":"À","agrave":"à","alefsym":"ℵ","Alpha":"Α",
 "alpha":"α","amp":"&","and":"∧","ang":"∠","apos":"'","Aring":"Å","aring":"å","asymp":"≈","Atilde":"Ã","atilde":"ã","Auml":"Ä",
 "auml":"ä","bdquo":"„","Beta":"Β","beta":"β","brvbar":"¦","bull":"•","cap":"∩","Ccedil":"Ç","ccedil":"ç","cedil":"¸","cent":"¢",
@@ -2174,7 +2231,6 @@ def daemonmode():
 			if self.use_authentication and (not self.force_tls or (self.force_tls and self.tls_active)):
 				self.push('250-AUTH PLAIN')
 			self.push('250 %s' % self.fqdn)
-	
 		def smtp_RSET(self, arg):
 			debug("hksmtpserver: RSET")
 			self.reset_values()
@@ -2221,7 +2277,6 @@ def daemonmode():
 					self.push("454 Temporary authentication failure.")
 			else:
 				self.push("454 Temporary authentication failure.")
-	
 		def found_terminator(self):
 			line = "".join(self._SMTPChannel__line)
 			i = line.find(' ')
