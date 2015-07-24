@@ -27,8 +27,8 @@ import re,sys,tempfile,os,subprocess,atexit,time,datetime,getopt,random,syslog,i
 from email.generator import Generator
 from cStringIO import StringIO as _StringIO
 from os.path import expanduser
-VERSION="1.2.0alpha"
-DATE="22.07.2015"
+VERSION="1.2.0"
+DATE="24.07.2015"
 #################################
 #Definition of general functions#
 #################################
