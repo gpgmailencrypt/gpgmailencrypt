@@ -318,7 +318,6 @@ def _set_logmode():
 		_logfile=None
 		_LOGGING=l_stderr
 		log("'%(m1)s %(m2)s'"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
-
 ####
 #log
 ####
@@ -378,17 +377,41 @@ def _debug_keepmail(mailtext):
 					return False
 			return True
 	return False
-
-###############
+################
 #_prepare_syslog
-###############
+################
 def _prepare_syslog():
 		global _LOGGING
 		_LOGGING=l_syslog
 		syslog.openlog("gpgmailencrypt",syslog.LOG_PID,syslog.LOG_MAIL)
-################
+######################
+#_read_smtpcredentials
+######################	
+def _read_smtpcredentials(pwfile):
+	global _SMTP_USER,_SMTP_PASSWORD
+	if not _AUTHENTICATE:
+		return
+	debug("_read_smtpcredentials")
+	try:
+		f=open(pwfile)
+	except:
+		debug("hksmtpserver: Config file could not be read '%s'"%sys.exc_info()[1])
+		exit(5)
+	txt=f.read()
+	f.close()
+	c=0
+	for l in txt.splitlines():
+		try:
+			name,passwd=l.split("=",1)
+			_SMTP_USER=name.strip()
+			_SMTP_PASSWORD=passwd.strip()
+			c+=1
+		except:
+			pass
+	debug("_read_smtpcredentials END read lines: %i"%c)
+#################
 #_read_configfile
-################	
+#################	
 def _read_configfile():
 	global _addressmap,_encryptionmap,_GPGCMD,_DEBUG,_DOMAINS,_LOGGING,_LOGFILE,_GPGKEYHOME,_PREFERRED_ENCRYPTION
 	global _ADDHEADER,_HOST,_PORT,_ALLOWGPGCOMMENT,_CONFIGFILE,_SPAMSUBJECT,_OUTPUT
@@ -432,7 +455,6 @@ def _read_configfile():
 				_PREFERRED_ENCRYPTION="PGPMIME"
 			else:
 				_PREFERRED_ENCRYPTION="PGPINLINE"
-
 	if _cfg.has_section('logging'):
 		if _cfg.has_option('logging','log'):
 			l=_cfg.get('logging','log').lower()
@@ -466,7 +488,6 @@ def _read_configfile():
 			_GPGCMD=_cfg.get('gpg','gpgcommand')
 		if _cfg.has_option('gpg','allowgpgcomment'):
 			_ALLOWGPGCOMMENT=_cfg.getboolean('gpg','allowgpgcomment')
-
 	if _cfg.has_section('mailserver'):
 		if _cfg.has_option('mailserver','host'):
 			_HOST=_cfg.get('mailserver','host')
@@ -476,7 +497,6 @@ def _read_configfile():
 			_AUTHENTICATE=_cfg.getboolean('mailserver','authenticate')
 		if _cfg.has_option('mailserver','smtpcredential'):
 			_SMTP_CREDENTIAL=_cfg.get('mailserver','smtpcredential')
-
 	if _cfg.has_section('usermap'):
 		for (name, value) in _cfg.items('usermap'):
 				_addressmap[name] = value
@@ -498,8 +518,6 @@ def _read_configfile():
 			_SMTPD_USE_AUTH=_cfg.getboolean('daemon','authenticate')
 		if _cfg.has_option('daemon','smtppasswords'):
 			_SMTPD_PASSWORDFILE=_cfg.get('daemon','smtppasswords')
-
-	# smime extra
 	if _cfg.has_section('smime'):
 		if _cfg.has_option('smime','opensslcommand'):
 			_SMIMECMD=_cfg.get('smime','opensslcommand')
@@ -511,7 +529,6 @@ def _read_configfile():
 				_SMIMEKEYHOME=k.strip()
 		if _cfg.has_option('smime','extractkey'):
 			_SMIMEAUTOMATICEXTRACTKEYS=_cfg.getboolean('smime','extractkey')
-	
 		if _cfg.has_option('smime','keyextractdir'):
 			k=_cfg.get('smime','keyextractdir')
 			if k!=None:
@@ -559,7 +576,6 @@ def _send_textmsg(message, from_addr,to_addr):
 	global _OUTPUT,_mailcount
 	global _AUTHENTICATE,_SMTP_USER,_SMTP_PASSWORD
 	debug("_send_textmsg output %i"%_OUTPUT)
-
 	if _OUTPUT==o_mail:
 		if len(to_addr) == 0:
 			log("Couldn't send email, recipient list is empty!","e")
@@ -567,12 +583,16 @@ def _send_textmsg(message, from_addr,to_addr):
 		debug("Sending email to: <%s>" % to_addr)
 		try:
 			smtp = smtplib.SMTP(_HOST, _PORT)
+			smtp.ehlo_or_helo_if_needed()
 			try:
-				smtp.starttls()
+				if smtp.has_extn("starttls"):
+					debug("_send_textmsg starttls")
+					smtp.starttls()
+					smtp.ehlo_or_helo_if_needed()
 			except:
 				debug("smtp.starttls on server failed")
-			if _AUTHENTICATE:
-				debug("Authenticate at smtp server with user %s"%_SMTP_USER)
+			if _AUTHENTICATE and smtp.has_extn("auth"):
+				debug("_send_textmsg: authenticate at smtp server with user %s"%_SMTP_USER)
 				try:
 					smtp.login(_SMTP_USER,_SMTP_PASSWORD)
 				except smtplib.SMTPAuthenticationError:
@@ -600,7 +620,6 @@ def _send_textmsg(message, from_addr,to_addr):
 			return
 	else:
 		print (message)
-
 ####################
 #_do_finally_at_exit
 ####################
@@ -648,9 +667,9 @@ def _del_tempfile(f):
 		os.remove(f)
 	except:
 		pass
-##############
+###############
 #_make_boundary
-##############
+###############
 def _make_boundary(text=None):
     _width = len(repr(sys.maxsize-1))
     _fmt = '%%0%dd' % _width    
@@ -864,9 +883,9 @@ def get_preferredencryptionmethod(user):
 	else:
 		debug("get_preferredencryptionmethod: Method '%s' for user '%s' unknown" % (_m,_u))
 		return method
-#####################
+######################
 #_check_gpgprecipients
-#####################
+######################
 def _check_gpgrecipient(gaddr):
 	global _DOMAINS
 	debug("check_gpgrecipient: start '%s'"%gaddr)
@@ -892,9 +911,9 @@ def _check_gpgrecipient(gaddr):
 			debug("gpg key exists, but '%s' is not in _DOMAINS [%s]"%(domain,_DOMAINS))
 	debug("check_gpgrecipient: end")
 	return found,gpg_to_addr
-#####################
+######################
 #_check_smimerecipient
-#####################
+######################
 def _check_smimerecipient(saddr):
 	global _DOMAINS,_SMIMEKEYHOME
 	debug("check_smimerecipient: start")
@@ -919,10 +938,9 @@ def _check_smimerecipient(saddr):
 			debug("smime key exists, but '%s' is not in _DOMAINS [%s]"%(domain,_DOMAINS))
 			found=False
 	return found, smime_to_addr
-	
-############
+#############
 #CLASS _SMIME
-############
+#############
 class _SMIME:
 	def __init__(self, keyhome=None, recipient = None):
 		global _SMIMEKEYHOME
@@ -1137,9 +1155,9 @@ def is_encrypted(msg):
 	else:
 		return False
 
-############
+#############
 #_decode_html
-############
+#############
 def _decode_html(msg):
 	h=_htmldecode()
 	h.feed(msg)
@@ -1302,10 +1320,9 @@ class _htmldecode(html.parser.HTMLParser):
 				self.attrtitle=None
 	def mydata(self):
 		return self.data
-
-###########
+############
 #_split_html
-###########
+############
 def _split_html(html):
 	_r=re.sub(r"(?ims)<STYLE(.*?)</STYLE>","",html)
 	res=re.search('(?sim)<BODY(.*?)>',_r,re.IGNORECASE)
@@ -1450,9 +1467,9 @@ def guess_fileextension(ct):
 		return e
 	else:
 		return "bin"
-##########
+###########
 #_asciiname
-##########
+###########
 def _asciiname(name):
 	return re.sub(r'[^\x00-\x7F]','_', name)
 
@@ -1553,9 +1570,9 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 	debug("_encrypt_payload END")
 	return payload
 
-##################
+###################
 #_encrypt_pgpinline
-##################
+###################
 def _encrypt_pgpinline(mail,gpguser,from_addr,to_addr):
 	debug("encrypt_pgpinline")
 	message=email.message_from_string(mail)
@@ -1615,9 +1632,6 @@ def _encrypt_pgpinline(mail,gpguser,from_addr,to_addr):
 		message.attach(a)
 	debug("encrypt_pgpinline END")
 	return message
-
-
-
 #################
 #_encrypt_pgpmime
 #################
@@ -1772,9 +1786,9 @@ def get_preferredencryptionmethod(user):
 	else:
 		debug("get_preferredencryptionmethod: Method '%s' for user '%s' unknown" % (_m,_u))
 		return method
-#################
+##################
 #_encrypt_gpg_mail 
-#################
+##################
 def _encrypt_gpg_mail(mailtext,use_pgpmime, gpguser,from_addr,to_addr):
 	raw_message=email.message_from_string(mailtext)
 	m_id=""
@@ -1798,10 +1812,9 @@ def _encrypt_gpg_mail(mailtext,use_pgpmime, gpguser,from_addr,to_addr):
 		return
 	debug("vor sendmsg")
 	_send_msg( mail, from_addr, to_addr )
-
-####################
+#####################
 # _encrypt_smime_mail 
-####################
+#####################
 def _encrypt_smime_mail(mailtext,smimeuser,from_addr,to_addr):
 	debug("encrypt_smime_mail")
 	raw_message=email.message_from_string(mailtext)
@@ -1995,7 +2008,8 @@ def encrypt_mails(mailtext,receiver):
 #scriptmode
 ###########
 def scriptmode():
-		"run gpgmailencrypt a script"
+	"run gpgmailencrypt a script"
+	try:
 		#read message
 		if len(_INFILE)>0:
 			try:
@@ -2017,6 +2031,14 @@ def scriptmode():
 
 		#do the magic
 		encrypt_mails(raw,receiver)
+	except SystemExit as m:
+		debug("Exitcode:'%s'"%m)
+		exit(int(m.code))
+	except:
+	  	log("Bug:Exception in '%(m1)s %(m2)s' occured!"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
+	  	exit(4)	
+	else:
+		debug("Program exits without errors")
 		exit(0)	
 ###########
 #daemonmode
@@ -2032,13 +2054,18 @@ def daemonmode():
 	smtpd.__version__="gpgmailencrypt smtp server %s"%VERSION
 	log("gpgmailencrypt starts as daemon on %s:%s"%(_SERVERHOST,_SERVERPORT) )
 	class gpgmailencryptserver(smtpd.SMTPServer):
-		def __init__(self, localaddr,sslcertfile=None,sslkeyfile=None,sslversion=ssl.PROTOCOL_SSLv23,use_smtps=False,use_auth=False,authenticate_function=None):
+		def __init__(self, 
+				localaddr,sslcertfile=None,
+				sslkeyfile=None,
+				sslversion=ssl.PROTOCOL_SSLv23,
+				use_smtps=False,
+				use_auth=False,
+				authenticate_function=None):
 			try:
 				smtpd.SMTPServer.__init__(self, localaddr, None)
 			except socket.error as e:
 				debug("hksmtpserver: error",e)
 				exit(5)
-				
 			self.sslcertfile=sslcertfile
 			self.sslkeyfile=sslkeyfile
 			self.sslversion=sslversion
@@ -2051,7 +2078,7 @@ def daemonmode():
 				conn, addr = pair
 				self.socket.setblocking(0)
 				if self.use_smtps:
-					#try:
+					try:
 						conn=ssl.wrap_socket(conn,
 							server_side=True,
 							certfile=self.sslcertfile,
@@ -2067,11 +2094,9 @@ def daemonmode():
 								select.select([conn], [], [])
 							except ssl.SSLWantWriteError:
 								select.select([], [conn], [])
-
-							
-					#except:
-					#	debug("hksmtpserver: Exception: Could not start SSL connection\n%s"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]})
-					
+					except:
+						debug("hksmtpserver: Exception: Could not start SSL connection\n%s"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]})
+						return
 				debug('hksmtpserver: Incoming connection from %s' % repr(addr))
 				channel = hksmtpchannel(self, 
 							conn, 
@@ -2089,11 +2114,17 @@ def daemonmode():
 				log("hksmtpserver: Bug:Exception in '%(m1)s %(m2)s' occured!"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
 			return
 
-
-
-
 	class hksmtpchannel(smtpd.SMTPChannel):
-		def __init__(self, smtp_server, newsocket, 	fromaddr,use_auth,authenticate_function=None,use_tls=False,force_tls=False,sslcertfile=None,sslkeyfile=None,sslversion=None):
+		def __init__(self, smtp_server, 
+					newsocket, 	
+					fromaddr,					
+					use_auth,
+					authenticate_function=None,
+					use_tls=False,
+					force_tls=False,
+					sslcertfile=None,
+					sslkeyfile=None,
+					sslversion=None):
 			smtpd.SMTPChannel.__init__(self, smtp_server, newsocket, fromaddr)
 			asynchat.async_chat.__init__(self, newsocket)
 			self.sslcertfile=sslcertfile
@@ -2215,7 +2246,6 @@ def daemonmode():
 				self.push('502 Error: command "STARTTLS" not implemented' )
 				self._SMTPChannel__line=[]
 				return
-
 	def get_hash(txt):
 		i=0
 		r=txt
@@ -2287,7 +2317,6 @@ def _sighuphandler(signum, frame):
 	_daemonstarttime=_now
 	log("Signal SIGHUP: reload configuration")
 	init()
-
 ##############################
 # gpgmailencrypt main program
 ##############################
@@ -2295,7 +2324,6 @@ init()
 if __name__ == "__main__":
 	receiver=_parse_commandline()
 	_set_logmode()
-	debug("after _parse_commandline %s"%_SMIMEKEYHOME)
 	if _RUNMODE==m_daemon:
 		daemonmode()
 	else:
