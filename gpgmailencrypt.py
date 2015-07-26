@@ -576,9 +576,9 @@ def _read_configfile():
 			debug("SMimeuser: '%s %s'"%(u,_smimeuser[u]))
 	if _AUTHENTICATE:
 		_read_smtpcredentials(_SMTP_CREDENTIAL)
-##########
-#_send_msg
-##########
+#############
+#_send_rawmsg
+#############
 def _send_rawmsg(mailtext,msg,from_addr, to_addr):
 	debug("_send_rawmsg")
 	try:
@@ -589,7 +589,9 @@ def _send_rawmsg(mailtext,msg,from_addr, to_addr):
 	except:
 		debug("_send_rawmsg: exception _send_textmsg")
 		_send_textmsg(mailtext,from_addr,to_addr)
-
+##########
+#_send_msg
+##########
 def _send_msg( message,from_addr,to_addr ):
 	global _OUTPUT,_mailcount
 	debug("_send_msg output %i"%_OUTPUT)
@@ -599,7 +601,9 @@ def _send_msg( message,from_addr,to_addr ):
 		if _ADDHEADER and not _encryptheader in message:
 			message.add_header(_encryptheader,_encryptgpgcomment)
 		_send_textmsg(message.as_string(),from_addr,to_addr)
-
+##############
+#_send_textmsg
+##############
 def _send_textmsg(message, from_addr,to_addr,store_deferred=True):
 	global _OUTPUT,_mailcount
 	global _AUTHENTICATE,_SMTP_USER,_SMTP_PASSWORD
@@ -767,9 +771,9 @@ def _del_tempfile(f):
 		os.remove(f)
 	except:
 		pass
-#############
+##############
 #_find_charset
-#############
+##############
 def _find_charset(msg):
 	if type(msg) != str:
 		return None
@@ -1819,29 +1823,23 @@ def _encrypt_pgpmime(message,gpguser,from_addr,to_addr):
 		return None
 	header,body=splitmsg 
 	header+="\n\n"
-
 	try:
 		newmsg=email.message_from_string( header)
 	except:
 		log("creating new message failed","w")
 		log("'%(m1)s %(m2)s'"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
-
 	contenttype="text/plain"
 	contenttransferencoding=None
 	contentboundary=None
 	c=newmsg.get("Content-Type")
-
 	if c==None:
 		debug("Content-Type not set, set default 'text/plain'.")
 		newmsg.set_type("text/plain")
-
 	boundary=_make_boundary(message)
-
 	try:
 		newmsg.set_boundary(boundary)
 	except:
 		log("Error setting boundary: %(m1)s %(m2)s"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]})
-
 	res= re.search("boundary=.*\n",message,re.IGNORECASE)
 	if res:
 		_b=message[res.start():res.end()]
@@ -1855,14 +1853,11 @@ def _encrypt_pgpmime(message,gpguser,from_addr,to_addr):
 	except:
 		log("contenttype and/or transerfencoding could not be found")
 		log("'%(m1)s %(m2)s'"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
-
 	newmsg.set_type("multipart/encrypted")
 	newmsg.set_param("protocol","application/pgp-encrypted")
 	newmsg.preamble='This is an OpenPGP/MIME encrypted message (RFC 4880 and 3156)'
-
 	if 'Content-Transfer-Encoding' in newmsg:
 		del newmsg['Content-Transfer-Encoding']
-
 	gpg = _GPG( _GPGKEYHOME, gpguser)
 	fp=_new_tempfile()
 	debug("encrypt_mime new tempfile %s"%fp.name)
@@ -1939,7 +1934,6 @@ def get_preferredencryptionmethod(user):
 	debug("get_preferredencryptionmethod :'%s'"%user)
 	global _PREFERRED_ENCRYPTION
 	method=_PREFERRED_ENCRYPTION
-
 	_m=""
 	_u=user
 	try:
@@ -2193,11 +2187,9 @@ def scriptmode():
 				exit(2)
 		else:
 			raw = sys.stdin.read()
-
 		if _debug_keepmail(raw): #DEBUG
 			_DEBUG=True
 			_store_temporaryfile(raw)
-
 		#do the magic
 		encrypt_mails(raw,receiver)
 	except SystemExit as m:
@@ -2215,22 +2207,15 @@ def scriptmode():
 def daemonmode():
 	"starts the smtpd daemon"
 	import smtpd,asyncore, signal,ssl,hashlib,asynchat,binascii,socket,select
-	global _daemonstarttime
-	_RUNMODE==m_daemon
-	_daemonstarttime=datetime.datetime.now()
-
+	#####################
+	#_deferredlisthandler
+	#####################
 	def _deferredlisthandler(signum, frame):
 		check_deferred_list()
 		signal.alarm(3600) # once every hour
-
-	signal.signal(signal.SIGALRM, _deferredlisthandler)
-	signal.alarm(5)
-	signal.signal(signal.SIGTERM, _sigtermhandler)
-	signal.signal(signal.SIGHUP,  _sighuphandler)
-	load_deferred_list()
-	smtpd.__version__="gpgmailencrypt smtp server %s"%VERSION
-	log("gpgmailencrypt starts as daemon on %s:%s"%(_SERVERHOST,_SERVERPORT) )
-
+	#####################
+	#gpgmailencryptserver
+	#####################
 	class gpgmailencryptserver(smtpd.SMTPServer):
 		def __init__(self, 
 				localaddr,sslcertfile=None,
@@ -2292,7 +2277,9 @@ def daemonmode():
 			except:
 				log("hksmtpserver: Bug:Exception in '%(m1)s %(m2)s' occured!"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
 			return
-
+	##############
+	#hksmtpchannel
+	##############
 	class hksmtpchannel(smtpd.SMTPChannel):
 		def __init__(self, smtp_server, 
 					newsocket, 	
@@ -2460,7 +2447,17 @@ def daemonmode():
 			debug("hksmtpserver: No such user '%s'"%user)
 			pass
 		return False
-
+	##################
+	global _daemonstarttime
+	_RUNMODE==m_daemon
+	_daemonstarttime=datetime.datetime.now()
+	signal.signal(signal.SIGALRM, _deferredlisthandler)
+	signal.alarm(5)
+	signal.signal(signal.SIGTERM, _sigtermhandler)
+	signal.signal(signal.SIGHUP,  _sighuphandler)
+	load_deferred_list()
+	smtpd.__version__="gpgmailencrypt smtp server %s"%VERSION
+	log("gpgmailencrypt starts as daemon on %s:%s"%(_SERVERHOST,_SERVERPORT) )
 	if _SMTPD_USE_AUTH:
 		_read_smtpdpasswordfile(_SMTPD_PASSWORDFILE)
 	try:
