@@ -29,8 +29,8 @@ from email.generator import Generator
 from io import StringIO as _StringIO
 from os.path import expanduser
 import locale
-VERSION="2.0alpha"
-DATE="24.07.2015"
+VERSION="2.0beta"
+DATE="26.07.2015"
 #################################
 #Definition of general functions#
 #################################
@@ -50,7 +50,7 @@ def init():
 	global _SPAMSUBJECT,_OUTPUT, _DEBUGSEARCHTEXT,_DEBUGEXCLUDETEXT,_LOCALE,_LOCALEDB
 	global _RUNMODE,_SERVERHOST,_SERVERPORT
 	global _SMTPD_USE_SMTPS,_SMTPD_USE_AUTH,_SMTPD_PASSWORDFILE,_SMTPD_SSL_KEYFILE,_SMTPD_SSL_CERTFILE,_smtpd_passwords
-	global _AUTHENTICATE,_SMTP_CREDENTIAL,_SMTP_USER,_SMTP_PASSWORD,_DEFERLIST
+	global _AUTHENTICATE,_SMTP_CREDENTIAL,_SMTP_USER,_SMTP_PASSWORD,_deferlist
 
 	#Internal variables
 	atexit.register(_do_finally_at_exit)
@@ -73,6 +73,7 @@ def init():
 	_encryptheader="X-GPGMailencrypt"
 	_smtpd_passwords=dict()
 	_encoding = locale.getdefaultlocale()[1]
+	_deferlist=os.path.expanduser("~/deferlist.txt")
 	_deferdir=expanduser("~/gpgmaildirtmp")
 	if not os.path.exists(_deferdir):
 		os.makedirs(_deferdir)
@@ -120,7 +121,6 @@ def init():
 	_SMTPD_PASSWORDFILE="/etc/gpgmailencrypt.pw"
 	_SMTPD_SSL_KEYFILE="/etc/gpgsmtpd.key"
 	_SMTPD_SSL_CERTFILE="/etc/gpgsmtpd.cert"
-	_DEFERLIST="~/deferlist.txt"
 	if _DEBUG:
 		for a in _addressmap:
 			debug("_addressmap: '%s'='%s'"%(a,_addressmap[a]))
@@ -445,7 +445,7 @@ def _read_configfile():
 	global _DEBUGEXCLUDETEXT,_DEBUGSEARCHTEXT
 	global _LOCALE,_SERVERHOST,_SERVERPORT
 	global _AUTHENTICATE,_SMTP_CREDENTIAL
-	global _SMTPD_USE_SMTPS,_SMTPD_USE_AUTH,_SMTPD_PASSWORDFILE,_SMTPD_SSL_KEYFILE,_SMTPD_SSL_CERTFILE,_DEFERLIST
+	global _SMTPD_USE_SMTPS,_SMTPD_USE_AUTH,_SMTPD_PASSWORDFILE,_SMTPD_SSL_KEYFILE,_SMTPD_SSL_CERTFILE,_deferlist
 	
 	_cfg = ConfigParser()
 	try:
@@ -544,9 +544,6 @@ def _read_configfile():
 			_SMTPD_USE_AUTH=_cfg.getboolean('daemon','authenticate')
 		if _cfg.has_option('daemon','smtppasswords'):
 			_SMTPD_PASSWORDFILE=_cfg.get('daemon','smtppasswords')
-		if _cfg.has_option('daemon','deferfile'):
-			_DEFERLIST=_cfg.get('daemon','deferfile')
-		_DEFERLIST=os.path.expanduser(_DEFERLIST)
 	if _cfg.has_section('smime'):
 		if _cfg.has_option('smime','opensslcommand'):
 			_SMIMECMD=_cfg.get('smime','opensslcommand')
@@ -586,7 +583,7 @@ def _send_rawmsg(mailtext,msg,from_addr, to_addr):
 	debug("_send_rawmsg")
 	try:
 		message = email.message_from_string( mailtext )
-		if _ADDHEADER and not message.has_key(_encryptheader) and msg:
+		if _ADDHEADER and not _encryptheader in message and msg:
 			message.add_header(_encryptheader,msg)
 		_send_msg(message,from_addr,to_addr)
 	except:
@@ -599,6 +596,8 @@ def _send_msg( message,from_addr,to_addr ):
 	if type(message)==str:
 		_send_textmsg(message,from_addr,to_addr)
 	else:
+		if _ADDHEADER and not _encryptheader in message:
+			message.add_header(_encryptheader,_encryptgpgcomment)
 		_send_textmsg(message.as_string(),from_addr,to_addr)
 
 def _send_textmsg(message, from_addr,to_addr,store_deferred=True):
@@ -660,20 +659,20 @@ def load_deferred_list():
 	global _deferred_emails
 	_deferred_emails=[]
 	try:
-		f=open(_DEFERLIST)
+		f=open(_deferlist)
 		for l in f:
 			mail=l.split("|")
 			mail[3]=float(mail[3])
 			_deferred_emails.append(mail)
 		f.close()
 	except:
-		debug("Couldn't load defer list '%s'"%_DEFERLIST)
+		debug("Couldn't load defer list '%s'"%_deferlist)
 ####################
 #store_deferred_list
 ####################
 def store_deferred_list():
-		debug("store_deferred_list '%s'"%_DEFERLIST)
-		f=open(_DEFERLIST,"w")
+		debug("store_deferred_list '%s'"%_deferlist)
+		f=open(_deferlist,"w")
 		for mail in _deferred_emails:
 			mail[3]=str(mail[3])
 			f.write("|".join(mail))
@@ -1680,7 +1679,7 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 	gpg.set_filename( fp.name )
 	if is_encrypted(raw_payload):
 		if _ADDHEADER:
-			if not payload.has_key(_encryptheader):
+			if not _encryptheader in payload:
 				payload[_encryptheader] = 'Mail was already encrypted'
 			debug("Mail was already encrypted")
 		if len(_OUTFILE) >0:
@@ -2239,9 +2238,10 @@ def daemonmode():
 				sslversion=ssl.PROTOCOL_SSLv23,
 				use_smtps=False,
 				use_auth=False,
-				authenticate_function=None):
+				authenticate_function=None,
+				data_size_limit=smtpd.DATA_SIZE_DEFAULT):
 			try:
-				smtpd.SMTPServer.__init__(self, localaddr, None)
+				smtpd.SMTPServer.__init__(self, localaddr, None,data_size_limit=data_size_limit)
 			except socket.error as e:
 				debug("hksmtpserver: error",e)
 				exit(5)
