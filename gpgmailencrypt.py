@@ -40,7 +40,7 @@ DATE="24.07.2015"
 def init():
 	"initiales the module and reads the config file"
 	global o_mail,o_stdout,o_file,l_none,l_syslog,l_file,l_stderr,m_daemon,m_script
-	global _logfile,_addressmap,_encryptionmap,_smimeuser,_tempfiles
+	global _logfile,_addressmap,_encryptionmap,_smimeuser,_tempfiles,_deferdir
 	global _mailcount
 	global _encryptgpgcomment,_encryptheader
 	global _encoding
@@ -73,6 +73,9 @@ def init():
 	_encryptheader="X-GPGMailencrypt"
 	_smtpd_passwords=dict()
 	_encoding = locale.getdefaultlocale()[1]
+	_deferdir=expanduser("~/gpgmaildirtmp")
+	if not os.path.exists(_deferdir):
+		os.makedirs(_deferdir)
 
 	#GLOBAL CONFIG VARIABLES
 	_DEBUG=False
@@ -385,7 +388,10 @@ def _debug_keepmail(mailtext):
 def _store_temporaryfile(message,add_deferred=False,fromaddr="",toaddr=""):
 	global _deferred_emails
 	try:
-		f=tempfile.NamedTemporaryFile(mode='wb',delete=False,prefix='mail-')
+		tmpdir=None
+		if add_deferred:
+			tmpdir=_deferdir
+		f=tempfile.NamedTemporaryFile(mode='wb',delete=False,prefix='mail-',dir=tmpdir)
 		f.write(message.encode("UTF-8"))
 		f.close()
 		if add_deferred:
@@ -661,17 +667,17 @@ def load_deferred_list():
 			_deferred_emails.append(mail)
 		f.close()
 	except:
-		debug("Couldn't load defer list")
+		debug("Couldn't load defer list '%s'"%_DEFERLIST)
 ####################
 #store_deferred_list
 ####################
 def store_deferred_list():
 		debug("store_deferred_list '%s'"%_DEFERLIST)
-	
 		f=open(_DEFERLIST,"w")
 		for mail in _deferred_emails:
 			mail[3]=str(mail[3])
 			f.write("|".join(mail))
+			f.write("\n")
 		f.close()
 ######################
 #_is_old_deferred_mail
@@ -2182,8 +2188,6 @@ def scriptmode():
 				f=open(_INFILE,encoding="UTF-8")
 				raw=f.read()
 				f.close()
-				print ("read file raw",type(raw))
-
 			except:
 				log("Could not open Inputfile '%s'"%_INFILE,"e")
 				log("'%(m1)s %(m2)s'"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
@@ -2215,16 +2219,18 @@ def daemonmode():
 	global _daemonstarttime
 	_RUNMODE==m_daemon
 	_daemonstarttime=datetime.datetime.now()
+
+	def _deferredlisthandler(signum, frame):
+		check_deferred_list()
+		signal.alarm(3600) # once every hour
+
+	signal.signal(signal.SIGALRM, _deferredlisthandler)
+	signal.alarm(5)
 	signal.signal(signal.SIGTERM, _sigtermhandler)
 	signal.signal(signal.SIGHUP,  _sighuphandler)
 	load_deferred_list()
 	smtpd.__version__="gpgmailencrypt smtp server %s"%VERSION
 	log("gpgmailencrypt starts as daemon on %s:%s"%(_SERVERHOST,_SERVERPORT) )
-	def _deferredlisthandler(signum, frame):
-		check_deferred_list()
-		signal.alarm(3600) # once every hour
-	signal.signal(signal.SIGALRM, _deferredlisthandler)
-	signal.alarm(10)
 
 	class gpgmailencryptserver(smtpd.SMTPServer):
 		def __init__(self, 
