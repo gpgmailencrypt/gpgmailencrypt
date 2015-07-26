@@ -305,7 +305,7 @@ that should be encrypted, empty is all")
 	print ("authenticate = False    			#users must authenticate")
 	print ("smtppasswords = /etc/gpgmailencrypt.pw		#file that includes users and passwords")
 	print("						#file format 'user=password'")
-	print ("deferfile = ~/deferfile.txt   			#internal list where information about not yet send mails will stored")
+	#print ("deferfile = ~/deferfile.txt   			#internal list where information about not yet send mails will stored")
 
 #############
 #_set_logmode
@@ -762,6 +762,21 @@ def _del_tempfile(f):
 		os.remove(f)
 	except:
 		pass
+#############
+#_find_charset
+#############
+def _find_charset(msg):
+	if type(msg) != str:
+		return None
+	find=re.search("^Content-Type:.*charset=[-_\.\'\"0-9A-Za-z]+",msg,re.I|re.MULTILINE)
+	if find==None:
+		return None
+	charset=msg[find.start():find.end()]
+	res=charset.split("=")
+	if len(res)<2:
+		return None
+	charset=str(res[1]).replace('"','').replace("'","")
+	return charset
 ###############
 #_make_boundary
 ###############
