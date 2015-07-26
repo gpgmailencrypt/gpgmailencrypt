@@ -50,7 +50,7 @@ def init():
 	global _SPAMSUBJECT,_OUTPUT, _DEBUGSEARCHTEXT,_DEBUGEXCLUDETEXT,_LOCALE,_LOCALEDB
 	global _RUNMODE,_SERVERHOST,_SERVERPORT
 	global _SMTPD_USE_SMTPS,_SMTPD_USE_AUTH,_SMTPD_PASSWORDFILE,_SMTPD_SSL_KEYFILE,_SMTPD_SSL_CERTFILE,_smtpd_passwords
-	global _AUTHENTICATE,_SMTP_CREDENTIAL,_SMTP_USER,_SMTP_PASSWORD
+	global _AUTHENTICATE,_SMTP_CREDENTIAL,_SMTP_USER,_SMTP_PASSWORD,_DEFERLIST
 
 	#Internal variables
 	atexit.register(_do_finally_at_exit)
@@ -73,7 +73,6 @@ def init():
 	_encryptheader="X-GPGMailencrypt"
 	_smtpd_passwords=dict()
 	_encoding = locale.getdefaultlocale()[1]
-
 
 	#GLOBAL CONFIG VARIABLES
 	_DEBUG=False
@@ -118,6 +117,7 @@ def init():
 	_SMTPD_PASSWORDFILE="/etc/gpgmailencrypt.pw"
 	_SMTPD_SSL_KEYFILE="/etc/gpgsmtpd.key"
 	_SMTPD_SSL_CERTFILE="/etc/gpgsmtpd.cert"
+	_DEFERLIST="~/deferlist.txt"
 	if _DEBUG:
 		for a in _addressmap:
 			debug("_addressmap: '%s'='%s'"%(a,_addressmap[a]))
@@ -305,6 +305,7 @@ that should be encrypted, empty is all")
 	print ("authenticate = False    			#users must authenticate")
 	print ("smtppasswords = /etc/gpgmailencrypt.pw		#file that includes users and passwords")
 	print("						#file format 'user=password'")
+	print ("deferfile = ~/deferfile.txt   			#internal list where information about not yet send mails will stored")
 
 #############
 #_set_logmode
@@ -378,6 +379,24 @@ def _debug_keepmail(mailtext):
 					return False
 			return True
 	return False
+#####################
+#_store_temporaryfile
+#####################
+def _store_temporaryfile(message,add_deferred=False,fromaddr="",toaddr=""):
+	global _deferred_emails
+	try:
+		f=tempfile.NamedTemporaryFile(mode='wb',delete=False,prefix='mail-')
+		f.write(message.encode("UTF-8"))
+		f.close()
+		if add_deferred:
+			_deferred_emails.append([f.name,fromaddr,toaddr,time.time()])
+			debug("store_temporaryfile.append deferred email")
+		else:
+			log("Message in temporary file '%s'"%f.name)
+
+	except:
+		log("Couldn't save email in temporary file, write error")
+
 ################
 #_prepare_syslog
 ################
@@ -420,7 +439,7 @@ def _read_configfile():
 	global _DEBUGEXCLUDETEXT,_DEBUGSEARCHTEXT
 	global _LOCALE,_SERVERHOST,_SERVERPORT
 	global _AUTHENTICATE,_SMTP_CREDENTIAL
-	global _SMTPD_USE_SMTPS,_SMTPD_USE_AUTH,_SMTPD_PASSWORDFILE,_SMTPD_SSL_KEYFILE,_SMTPD_SSL_CERTFILE
+	global _SMTPD_USE_SMTPS,_SMTPD_USE_AUTH,_SMTPD_PASSWORDFILE,_SMTPD_SSL_KEYFILE,_SMTPD_SSL_CERTFILE,_DEFERLIST
 	
 	_cfg = ConfigParser()
 	try:
@@ -519,6 +538,9 @@ def _read_configfile():
 			_SMTPD_USE_AUTH=_cfg.getboolean('daemon','authenticate')
 		if _cfg.has_option('daemon','smtppasswords'):
 			_SMTPD_PASSWORDFILE=_cfg.get('daemon','smtppasswords')
+		if _cfg.has_option('daemon','deferfile'):
+			_DEFERLIST=_cfg.get('daemon','deferfile')
+		_DEFERLIST=os.path.expanduser(_DEFERLIST)
 	if _cfg.has_section('smime'):
 		if _cfg.has_option('smime','opensslcommand'):
 			_SMIMECMD=_cfg.get('smime','opensslcommand')
@@ -573,7 +595,7 @@ def _send_msg( message,from_addr,to_addr ):
 	else:
 		_send_textmsg(message.as_string(),from_addr,to_addr)
 
-def _send_textmsg(message, from_addr,to_addr):
+def _send_textmsg(message, from_addr,to_addr,store_deferred=True):
 	global _OUTPUT,_mailcount
 	global _AUTHENTICATE,_SMTP_USER,_SMTP_PASSWORD
 	debug("_send_textmsg output %i"%_OUTPUT)
@@ -601,12 +623,13 @@ def _send_textmsg(message, from_addr,to_addr):
 					return
 			debug("smtp.sendmail")
 			smtp.sendmail( from_addr, to_addr, message )
+			return True
 		except:
 			log("Error sending email, smtp connection was not possible ''%(m1)s %(m2)s''"\
 			%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
-			_store_temporaryfile(message)
-	
-	
+			if store_deferred:
+				_store_temporaryfile(message,add_deferred=True,fromaddr=from_addr,toaddr=to_addr)
+			return False
 	elif _OUTPUT==o_file and _OUTFILE and len(_OUTFILE)>0:
 		try:
 			fname=_OUTFILE
@@ -615,12 +638,81 @@ def _send_textmsg(message, from_addr,to_addr):
 			f=open(fname,mode='w',encoding="UTF-8")
 			f.write(message)
 			f.close()
+			return True
 		except:
 			log("Could not open Outputfile '%s'"%_OUTFILE,"e")
 			log("'%(m1)s %(m2)s'"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
-			return
+			return False
 	else:
 		print (message)
+		return True
+###################
+#load_deferred_list
+###################
+def load_deferred_list():
+	debug("load_deferred_list")
+	global _deferred_emails
+	_deferred_emails=[]
+	try:
+		f=open(_DEFERLIST)
+		for l in f:
+			mail=l.split("|")
+			mail[3]=float(mail[3])
+			_deferred_emails.append(mail)
+		f.close()
+	except:
+		debug("Couldn't load defer list")
+####################
+#store_deferred_list
+####################
+def store_deferred_list():
+		debug("store_deferred_list '%s'"%_DEFERLIST)
+	
+		f=open(_DEFERLIST,"w")
+		for mail in _deferred_emails:
+			mail[3]=str(mail[3])
+			f.write("|".join(mail))
+		f.close()
+######################
+#_is_old_deferred_mail
+######################
+def _is_old_deferred_mail(mail):
+	_maxage=3600*48 #48 hrs
+	now=time.time()
+	if (now - mail[3]) > _maxage:
+		log("Deferred mail '%s' will be removed because of age"%mail[0])
+		try:
+			os.remove(mail[0])
+		except:
+			pass	
+		return True
+	return False
+####################
+#check_deferred_list
+####################
+def check_deferred_list():
+	debug("check_deferred_list")
+	global _deferred_emails
+	new_list=[]
+	for mail in _deferred_emails:
+		try:
+			f=open(mail[0])
+			msg=f.read()
+			f.close()
+			if not _send_textmsg(msg.encode("UTF-8"),mail[1],mail[2],store_deferred=False):
+				if not _is_old_deferred_mail(mail):
+					new_list.append(mail)
+			else:
+				try:
+					os.remove(mail[0])
+				except:
+					pass	
+		except:
+			debug("Could not read file '%s'"%mail[0])
+			if not _is_old_deferred_mail(mail):
+				new_list.append(mail)	
+	_deferred_emails=new_list	
+	debug("End check_deferred_list")		
 ####################
 #_do_finally_at_exit
 ####################
@@ -639,6 +731,8 @@ def _do_finally_at_exit():
 			pass
 	if _LOGGING and _logfile!=None:
 		_logfile.close()
+	if _RUNMODE==m_daemon:
+		store_deferred_list()
 	
 ##############
 #_new_tempfile
@@ -2103,13 +2197,20 @@ def scriptmode():
 def daemonmode():
 	"starts the smtpd daemon"
 	import smtpd,asyncore, signal,ssl,hashlib,asynchat,binascii,socket,select
-
 	global _daemonstarttime
+	_RUNMODE==m_daemon
 	_daemonstarttime=datetime.datetime.now()
 	signal.signal(signal.SIGTERM, _sigtermhandler)
 	signal.signal(signal.SIGHUP,  _sighuphandler)
+	load_deferred_list()
 	smtpd.__version__="gpgmailencrypt smtp server %s"%VERSION
 	log("gpgmailencrypt starts as daemon on %s:%s"%(_SERVERHOST,_SERVERPORT) )
+	def _deferredlisthandler(signum, frame):
+		check_deferred_list()
+		signal.alarm(3600) # once every hour
+	signal.signal(signal.SIGALRM, _deferredlisthandler)
+	signal.alarm(10)
+
 	class gpgmailencryptserver(smtpd.SMTPServer):
 		def __init__(self, 
 				localaddr,sslcertfile=None,
@@ -2376,6 +2477,7 @@ def _sighuphandler(signum, frame):
 # gpgmailencrypt main program
 ##############################
 init()
+_deferred_emails=[]
 if __name__ == "__main__":
 	receiver=_parse_commandline()
 	_set_logmode()
