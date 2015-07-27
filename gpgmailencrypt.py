@@ -29,8 +29,8 @@ from email.generator import Generator
 from io import StringIO as _StringIO
 from os.path import expanduser
 import locale
-VERSION="2.0beta"
-DATE="26.07.2015"
+VERSION="2.0gamma"
+DATE="27.07.2015"
 #################################
 #Definition of general functions#
 #################################
@@ -643,7 +643,7 @@ def _send_textmsg(message, from_addr,to_addr,store_deferred=True):
 		try:
 			fname=_OUTFILE
 			if _mailcount>0:
-				fname=_OUTFILE+str(_mailcount)
+				fname=_OUTFILE+"."+str(_mailcount)
 			f=open(fname,mode='w',encoding="UTF-8")
 			f.write(message)
 			f.close()
@@ -818,7 +818,7 @@ def set_output2mail():
 def set_output2file(mailfile):
 	"outgoing email will be written to file 'mailfile'"
 	global _OUTFILE,_OUTPUT
-	if type(mailefile) != str:
+	if type(mailfile) != str:
 		return
 	_OUTFILE=expanduser(mailfile)
 	_OUTPUT=o_file
