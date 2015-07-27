@@ -51,6 +51,7 @@ def init():
 	global _RUNMODE,_SERVERHOST,_SERVERPORT
 	global _SMTPD_USE_SMTPS,_SMTPD_USE_AUTH,_SMTPD_PASSWORDFILE,_SMTPD_SSL_KEYFILE,_SMTPD_SSL_CERTFILE,_smtpd_passwords
 	global _AUTHENTICATE,_SMTP_CREDENTIAL,_SMTP_USER,_SMTP_PASSWORD,_deferlist
+	global _count_totalmails, _count_encryptedmails
 
 	#Internal variables
 	atexit.register(_do_finally_at_exit)
@@ -77,7 +78,8 @@ def init():
 	_deferdir=expanduser("~/gpgmaildirtmp")
 	if not os.path.exists(_deferdir):
 		os.makedirs(_deferdir)
-
+	_count_totalmails=0
+	_count_encryptedmails=0
 	#GLOBAL CONFIG VARIABLES
 	_DEBUG=False
 	_LOGGING=l_none
@@ -726,8 +728,9 @@ def check_deferred_list():
 #_do_finally_at_exit
 ####################
 def _do_finally_at_exit():
-	global _logfile,_tempfiles
+	global _logfile,_tempfiles,_count_totalmails,_count_encryptedmails
 	debug("do_finally")
+	log("totally send mails: %i, encrypted mails: %i"%(_count_totalmails,_count_encryptedmails))
 	if _RUNMODE==m_daemon:
 		log("gpgmailencrypt daemon shutdown")
 		_now=datetime.datetime.now()
@@ -1959,6 +1962,7 @@ def get_preferredencryptionmethod(user):
 #_encrypt_gpg_mail 
 ##################
 def _encrypt_gpg_mail(mailtext,use_pgpmime, gpguser,from_addr,to_addr):
+	global _count_encryptedmails
 	raw_message=email.message_from_string(mailtext)
 	m_id=""
 	if "Message-Id" in raw_message:
@@ -1980,6 +1984,7 @@ def _encrypt_gpg_mail(mailtext,use_pgpmime, gpguser,from_addr,to_addr):
 	if mail==None:
 		return
 	debug("vor sendmsg")
+	_count_encryptedmails+=1
 	_send_msg( mail, from_addr, to_addr )
 #####################
 # _encrypt_smime_mail 
@@ -1987,7 +1992,7 @@ def _encrypt_gpg_mail(mailtext,use_pgpmime, gpguser,from_addr,to_addr):
 def _encrypt_smime_mail(mailtext,smimeuser,from_addr,to_addr):
 	debug("encrypt_smime_mail")
 	raw_message=email.message_from_string(mailtext)
-	global _tempfiles
+	global _tempfiles, _count_encryptedmails
 	contenttype="text/plain"
 	contenttransferencoding=None
 	contentboundary=None
@@ -2089,6 +2094,7 @@ def _encrypt_smime_mail(mailtext,smimeuser,from_addr,to_addr):
 	result,pl=smime.encrypt_file()
 	if result==0:
 		debug("encrypt_smime_mail: send encrypted mail")
+		_count_encryptedmails+=1
 		if _ADDHEADER:
 			if _encryptheader in newmsg:
 				del newmsg[_encryptheader]
@@ -2112,7 +2118,7 @@ def encrypt_mails(mailtext,receiver):
 	example:
 	encrypt_mails(myemailtext,['agentj@mib','agentk@mib'])
 	"""
-	global _mailcount,_PREFERRED_ENCRYPTION
+	global _mailcount,_PREFERRED_ENCRYPTION,_count_totalmails
 	debug("encrypt_mails")
 	if _PREFERRED_ENCRYPTION=="PGPMIME":
 		_pgpmime=True
@@ -2133,6 +2139,7 @@ def encrypt_mails(mailtext,receiver):
 		method=get_preferredencryptionmethod(to_addr)
 		debug("GPG encrypt possible %i"%g_r)
 		debug("SMIME encrypt possible %i"%s_r)
+		_count_totalmails+=1
 		if method=="PGPMIME":
 			_prefer_gpg=True
 			_pgpmime=True
@@ -2177,8 +2184,8 @@ def encrypt_mails(mailtext,receiver):
 #scriptmode
 ###########
 def scriptmode():
-	"run gpgmailencrypt a script"
-	try:
+	#"run gpgmailencrypt a script"
+	#try:
 		#read message
 		if len(_INFILE)>0:
 			try:
@@ -2196,15 +2203,15 @@ def scriptmode():
 			_store_temporaryfile(raw)
 		#do the magic
 		encrypt_mails(raw,receiver)
-	except SystemExit as m:
-		debug("Exitcode:'%s'"%m)
-		exit(int(m.code))
-	except:
-	  	log("Bug:Exception in '%(m1)s %(m2)s' occured!"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
-	  	exit(4)	
-	else:
-		debug("Program exits without errors")
-		exit(0)	
+	#except SystemExit as m:
+	#	debug("Exitcode:'%s'"%m)
+	#	exit(int(m.code))
+	#except:
+	# 	log("Bug:Exception in '%(m1)s %(m2)s' occured!"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
+	#	exit(4)	
+	#else:
+	#	debug("Program exits without errors")
+	#	exit(0)	
 ###########
 #daemonmode
 ###########
