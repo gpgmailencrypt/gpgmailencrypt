@@ -1230,7 +1230,7 @@ class _SMIME:
 	def get_fingerprint(self,cert):
 		cmd=[_SMIMECMD,"x509","-fingerprint","-in",cert,"-noout"]
 		fingerprint,returncode=self.opensslcmd(" ".join(cmd))
-		found= re.search("(?<=SHA1 Fingerprint=)(.*)",fingerprint)
+		found= re.search("(?<=SHA1 Fingerprint=)(.*)",fingerprint.decode("UTF-8"))
 		if found != None:
 			try:
 				fingerprint=fingerprint[found.start():found.end()]
@@ -1658,9 +1658,13 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 	htmlbody=""
 	htmlfooter=""
 	gpg = _GPG( _GPGKEYHOME, gpguser,counter)
-	raw_payload = payload.get_payload(decode=True)
+	print("contenttype",payload.get_content_type(),"transferencoding",payload["Content-Transfer-Encoding"], "charset:",payload.get_content_charset())
+	decode=True
+	if payload["Content-Transfer-Encoding"]=="8bit" and payload.get_content_maintype().lower()=="text":
+		decode=False
+	raw_payload = payload.get_payload(decode=decode)
 	is_text=payload.get_content_maintype()=="text"
-	if is_text:
+	if is_text and decode:
 		raw_payload=raw_payload.decode("UTF-8")
 		debug("decode UTF raw payload")
 	contenttype=payload.get_content_type()	
