@@ -1962,7 +1962,7 @@ def _encrypt_pgpmime(message,gpguser,from_addr,to_addr):
 	attachment=_GPGEncryptedAttachment()
 	if is_encrypted(message):
 		_send_rawmsg(message,'Mail was already encrypted',from_addr,to_addr)
-		_del_tempfile(fp)
+		_del_tempfile(fp.name)
 		return None
 	result,pl=gpg.encrypt_file(binary=False) 
 	if result==0:
