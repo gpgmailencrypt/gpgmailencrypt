@@ -120,6 +120,9 @@ def init():
 	"EN":("appointment","file"),
 	"ES":("cita","fichero"),
 	"FR":("rendez-vous","fichier"),
+	"IT":("appuntamento","file"),
+	"PT":("hora","ficheiro"),
+	"RU":("срок","файл"),
 	}
 	_RUNMODE=m_script
 	_SMTPD_USE_SMTPS=False
@@ -270,7 +273,7 @@ def print_exampleconfig():
 that should be encrypted, empty is all")
 	print ("spamsubject =***SPAM				# Spam recognition string, spam will not be encrypted")
 	print ("output=mail 					# valid values are 'mail'or 'stdout'")
-	print ("locale=en 					# DE|EN|ES|FR'")
+	print ("locale=en 					# DE|EN|ES|FR|IT|PT|RU'")
 	print ("")
 	print ("[gpg]")
 	print ("keyhome = /var/lib/gpgmailencrypt/.gnupg   	# home directory of public  gpgkeyring")
@@ -313,9 +316,8 @@ that should be encrypted, empty is all")
 	print ("sslcertfile = /etc/gpgsmtp.crt			#the x509 certificate cert file")
 	print ("authenticate = False    			#users must authenticate")
 	print ("smtppasswords = /etc/gpgmailencrypt.pw		#file that includes users and passwords")
+	print ("						#file format 'user=password'")
 	print ("statistics=1					#how often per day should statistical data be logged (0=none) max is 24")
-	print("						#file format 'user=password'")
-	#print ("deferfile = ~/deferfile.txt   			#internal list where information about not yet send mails will stored")
 
 #############
 #_set_logmode
