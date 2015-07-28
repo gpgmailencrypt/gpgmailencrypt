@@ -29,8 +29,8 @@ from email.generator import Generator
 from io import StringIO as _StringIO
 from os.path import expanduser
 import locale
-VERSION="2.0gamma"
-DATE="27.07.2015"
+VERSION="2.0delta"
+DATE="28.07.2015"
 #################################
 #Definition of general functions#
 #################################
@@ -51,7 +51,7 @@ def init():
 	global _RUNMODE,_SERVERHOST,_SERVERPORT
 	global _SMTPD_USE_SMTPS,_SMTPD_USE_AUTH,_SMTPD_PASSWORDFILE,_SMTPD_SSL_KEYFILE,_SMTPD_SSL_CERTFILE,_smtpd_passwords
 	global _AUTHENTICATE,_SMTP_CREDENTIAL,_SMTP_USER,_SMTP_PASSWORD,_deferlist
-	global _count_totalmails, _count_encryptedmails
+	global _count_totalmails, _count_encryptedmails,_count_deferredmails,_count_alreadyencryptedmails
 
 	#Internal variables
 	atexit.register(_do_finally_at_exit)
@@ -80,6 +80,8 @@ def init():
 		os.makedirs(_deferdir)
 	_count_totalmails=0
 	_count_encryptedmails=0
+	_count_deferredmails=0
+	_count_alreadyencryptedmails=0
 	#GLOBAL CONFIG VARIABLES
 	_DEBUG=False
 	_LOGGING=l_none
@@ -388,7 +390,7 @@ def _debug_keepmail(mailtext):
 #_store_temporaryfile
 #####################
 def _store_temporaryfile(message,add_deferred=False,fromaddr="",toaddr=""):
-	global _deferred_emails
+	global _deferred_emails,_count_deferredmails
 	try:
 		tmpdir=None
 		if add_deferred:
@@ -398,6 +400,7 @@ def _store_temporaryfile(message,add_deferred=False,fromaddr="",toaddr=""):
 		f.close()
 		if add_deferred:
 			_deferred_emails.append([f.name,fromaddr,toaddr,time.time()])
+			_count_deferredmails+=1
 			debug("store_temporaryfile.append deferred email")
 		else:
 			log("Message in temporary file '%s'"%f.name)
@@ -589,7 +592,7 @@ def _send_rawmsg(mailtext,msg,from_addr, to_addr):
 			message.add_header(_encryptheader,msg)
 		_send_msg(message,from_addr,to_addr)
 	except:
-		debug("_send_rawmsg: exception _send_textmsg")
+		log("_send_rawmsg: exception _send_textmsg")
 		_send_textmsg(mailtext,from_addr,to_addr)
 ##########
 #_send_msg
@@ -661,6 +664,7 @@ def _send_textmsg(message, from_addr,to_addr,store_deferred=True):
 #load_deferred_list
 ###################
 def load_deferred_list():
+	"loads the list with deferred emails, that have to be sent later"
 	debug("load_deferred_list")
 	global _deferred_emails
 	_deferred_emails=[]
@@ -672,11 +676,13 @@ def load_deferred_list():
 			_deferred_emails.append(mail)
 		f.close()
 	except:
-		debug("Couldn't load defer list '%s'"%_deferlist)
+		log("Couldn't load defer list '%s'"%_deferlist)
 ####################
 #store_deferred_list
 ####################
 def store_deferred_list():
+	"stores the list with deferred emails, that have to be sent later"
+	try:
 		debug("store_deferred_list '%s'"%_deferlist)
 		f=open(_deferlist,"w")
 		for mail in _deferred_emails:
@@ -684,6 +690,8 @@ def store_deferred_list():
 			f.write("|".join(mail))
 			f.write("\n")
 		f.close()
+	except:
+		log("Couldn't store defer list '%s'"%_deferlist)
 ######################
 #_is_old_deferred_mail
 ######################
@@ -702,6 +710,7 @@ def _is_old_deferred_mail(mail):
 #check_deferred_list
 ####################
 def check_deferred_list():
+	"tries to re-send deferred emails"
 	debug("check_deferred_list")
 	global _deferred_emails
 	new_list=[]
@@ -719,7 +728,7 @@ def check_deferred_list():
 				except:
 					pass	
 		except:
-			debug("Could not read file '%s'"%mail[0])
+			log("Could not read file '%s'"%mail[0])
 			if not _is_old_deferred_mail(mail):
 				new_list.append(mail)	
 	_deferred_emails=new_list	
@@ -728,13 +737,14 @@ def check_deferred_list():
 #_do_finally_at_exit
 ####################
 def _do_finally_at_exit():
-	global _logfile,_tempfiles,_count_totalmails,_count_encryptedmails
+	global _logfile,_tempfiles,_count_totalmails,_count_encryptedmails,_count_deferredmails
 	debug("do_finally")
-	log("totally send mails: %i, encrypted mails: %i"%(_count_totalmails,_count_encryptedmails))
 	if _RUNMODE==m_daemon:
 		log("gpgmailencrypt daemon shutdown")
 		_now=datetime.datetime.now()
 		log("gpgmailencrypt server did run %s"%(_now-_daemonstarttime))
+		log("Statistic information:totally send mails: %i, encrypted mails: %i deferred mails: %i" %\
+		(_count_totalmails,_count_encryptedmails,_count_deferredmails))
 	for f in _tempfiles:
 		try:
 			os.remove(f)
@@ -848,6 +858,13 @@ def set_debug(dbg):
 		_DEBUG=True
 	else:
 		_DEBUG=False
+###############
+#get_statistics
+###############
+def get_statistics():
+	"returns how many mails were handeled"
+	global _count_totalmails,_count_encryptedmails,_count_deferredmails,_count_alreadyencryptedmails
+	return {"total":_count_totalmails,"encrypted":_count_encryptedmails,"deferred":_count_deferredmails,"already encrypted":_count_alreadyencryptedmails}
 #############
 #is_debugging
 #############
@@ -864,6 +881,31 @@ def set_default_preferredencryption(mode):
 		m=mode.upper()
 		if m in ["SMIME","PGPMIME","PGPINLINE"]:
 			_PREFERRED_ENCRYPTION=mode.upper()
+#########
+#set_smtp
+#########
+def set_smtp(host,port,auth=False,user="",password=""):
+	"sets the smtp setting for sending emails (don't mix it up with the daemon settings where the server listens)"
+	_HOST=host
+	_PORT=port
+	_AUTHENTICATE=auth
+	_SMTP_USER=user
+	_SMTP_PASSWORD=password
+###########
+#set_daemon
+###########
+def set_daemon(host,port,smtps=False,auth=False,sslkeyfile=None,sslcertfile=None,passwordfile=None):
+	"sets the smtpd daemon settings"
+	_SERVERHOST=host
+	_SERVERPORT=port
+	_SMTPD_USE_SMTPS=smtps
+	_SMTPD_USE_AUTH=auth
+	if sslkeyfile:
+		_SMTPD_SSL_KEYFILE=sslkeyfile
+	if sslcertfile:
+		_SMTPD_SSL_CERTFILE=sslcertfile
+	if passwordfile:
+		_SMTPD_PASSWORDFILE=passwordfile
 ################################
 #get_default_preferredencryption
 ################################
@@ -1066,10 +1108,11 @@ def get_preferredencryptionmethod(user):
 	else:
 		debug("get_preferredencryptionmethod: Method '%s' for user '%s' unknown" % (_m,_u))
 		return method
-######################
-#_check_gpgprecipients
-######################
-def _check_gpgrecipient(gaddr):
+###################
+#check_gpgrecipient
+###################
+def check_gpgrecipient(gaddr):
+	"returns True and the effective key-emailaddress if emails to address 'gaddr' can be GPG encrcrypted"
 	global _DOMAINS
 	debug("check_gpgrecipient: start '%s'"%gaddr)
 	addr=gaddr.split('@')
@@ -1085,7 +1128,6 @@ def _check_gpgrecipient(gaddr):
 		gpg_to_addr=gaddr
 	else:
 		found =True
-
 	if gpg.has_key(gaddr):
 		if (len(_DOMAINS)>0 and domain in _DOMAINS.split(',')) or len(_DOMAINS)==0:
 			found=True
@@ -1094,10 +1136,11 @@ def _check_gpgrecipient(gaddr):
 			debug("gpg key exists, but '%s' is not in _DOMAINS [%s]"%(domain,_DOMAINS))
 	debug("check_gpgrecipient: end")
 	return found,gpg_to_addr
-######################
-#_check_smimerecipient
-######################
-def _check_smimerecipient(saddr):
+#####################
+#check_smimerecipient
+#####################
+def check_smimerecipient(saddr):
+	"returns True and the effective key-emailaddress if emails to address 'saddr' can be SMIME encrcrypted"
 	global _DOMAINS,_SMIMEKEYHOME
 	debug("check_smimerecipient: start")
 	addr=saddr.split('@')
@@ -1693,9 +1736,9 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 			if not _encryptheader in payload:
 				payload[_encryptheader] = 'Mail was already encrypted'
 			debug("Mail was already encrypted")
+		_del_tempfile(fp.name)
 		if len(_OUTFILE) >0:
 			return None	
-		_del_tempfile(fp.name)
 		return payload
 	contentmaintype=payload.get_content_maintype() 
 	if isAttachment or (isInline and contentmaintype not in ("text") ):
@@ -1962,7 +2005,7 @@ def get_preferredencryptionmethod(user):
 #_encrypt_gpg_mail 
 ##################
 def _encrypt_gpg_mail(mailtext,use_pgpmime, gpguser,from_addr,to_addr):
-	global _count_encryptedmails
+	global _count_encryptedmails,_count_alreadyencryptedmails
 	raw_message=email.message_from_string(mailtext)
 	m_id=""
 	if "Message-Id" in raw_message:
@@ -1974,6 +2017,7 @@ def _encrypt_gpg_mail(mailtext,use_pgpmime, gpguser,from_addr,to_addr):
 	if is_smimeencrypted( mailtext ) or is_pgpmimeencrypted(mailtext):
 		debug("encrypt_gpg_mail, is already smime or pgpmime encrypted")
 		_send_rawmsg(mailtext,'Mail was already encrypted',from_addr,to_addr)
+		_count_alreadyencryptedmails+=1
 		return
 	log("Encrypting email %s to: %s" % (m_id, to_addr) )
 	if use_pgpmime:
@@ -1992,13 +2036,14 @@ def _encrypt_gpg_mail(mailtext,use_pgpmime, gpguser,from_addr,to_addr):
 def _encrypt_smime_mail(mailtext,smimeuser,from_addr,to_addr):
 	debug("encrypt_smime_mail")
 	raw_message=email.message_from_string(mailtext)
-	global _tempfiles, _count_encryptedmails
+	global _tempfiles, _count_encryptedmails,_count_alreadyencryptedmails
 	contenttype="text/plain"
 	contenttransferencoding=None
 	contentboundary=None
 	if is_smimeencrypted(mailtext) or is_pgpmimeencrypted(mailtext):
 		log("encrypt_smime_mail:mail is already smime or pgpmime encrypted")
 		_send_rawmsg(mailtext,"Mail was already encrypted",from_addr,to_addr)
+		_count_alreadyencryptedmails+=1
 		return
 		
 	splitmsg=re.split("\n\n",mailtext,1)
@@ -2134,8 +2179,8 @@ def encrypt_mails(mailtext,receiver):
 		_del_tempfile(f.name)
 	for to_addr in receiver:
 		debug("encrypt_mail for user '%s'"%to_addr)
-		g_r,to_gpg=_check_gpgrecipient(to_addr)
-		s_r,to_smime=_check_smimerecipient(to_addr)
+		g_r,to_gpg=check_gpgrecipient(to_addr)
+		s_r,to_smime=check_smimerecipient(to_addr)
 		method=get_preferredencryptionmethod(to_addr)
 		debug("GPG encrypt possible %i"%g_r)
 		debug("SMIME encrypt possible %i"%s_r)
@@ -2184,8 +2229,8 @@ def encrypt_mails(mailtext,receiver):
 #scriptmode
 ###########
 def scriptmode():
-	#"run gpgmailencrypt a script"
-	#try:
+	"run gpgmailencrypt a script"
+	try:
 		#read message
 		if len(_INFILE)>0:
 			try:
@@ -2203,15 +2248,15 @@ def scriptmode():
 			_store_temporaryfile(raw)
 		#do the magic
 		encrypt_mails(raw,receiver)
-	#except SystemExit as m:
-	#	debug("Exitcode:'%s'"%m)
-	#	exit(int(m.code))
-	#except:
-	# 	log("Bug:Exception in '%(m1)s %(m2)s' occured!"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
-	#	exit(4)	
-	#else:
-	#	debug("Program exits without errors")
-	#	exit(0)	
+	except SystemExit as m:
+		debug("Exitcode:'%s'"%m)
+		exit(int(m.code))
+	except:
+		log("Bug:Exception in '%(m1)s %(m2)s' occured!"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
+		exit(4)	
+	else:
+		debug("Program exits without errors")
+		exit(0)	
 ###########
 #daemonmode
 ###########
