@@ -51,7 +51,7 @@ def init():
 	global _RUNMODE,_SERVERHOST,_SERVERPORT
 	global _SMTPD_USE_SMTPS,_SMTPD_USE_AUTH,_SMTPD_PASSWORDFILE,_SMTPD_SSL_KEYFILE,_SMTPD_SSL_CERTFILE,_smtpd_passwords
 	global _AUTHENTICATE,_SMTP_CREDENTIAL,_SMTP_USER,_SMTP_PASSWORD,_deferlist
-	global _count_totalmails, _count_encryptedmails,_count_deferredmails,_count_alreadyencryptedmails
+	global _count_totalmails, _count_encryptedmails,_count_deferredmails,_count_alreadyencryptedmails,_count_alarms
 
 	#Internal variables
 	atexit.register(_do_finally_at_exit)
@@ -743,8 +743,7 @@ def _do_finally_at_exit():
 		log("gpgmailencrypt daemon shutdown")
 		_now=datetime.datetime.now()
 		log("gpgmailencrypt server did run %s"%(_now-_daemonstarttime))
-		log("Statistic information:totally send mails: %i, encrypted mails: %i deferred mails: %i" %\
-		(_count_totalmails,_count_encryptedmails,_count_deferredmails))
+		_log_statistics()
 	for f in _tempfiles:
 		try:
 			os.remove(f)
@@ -755,7 +754,12 @@ def _do_finally_at_exit():
 		_logfile.close()
 	if _RUNMODE==m_daemon:
 		store_deferred_list()
-	
+################
+#_log_statistics
+################
+def _log_statistics():
+	log("Statistic information:totally send mails: %i, encrypted mails: %i deferred mails: %i" %\
+	(_count_totalmails,_count_encryptedmails,_count_deferredmails))
 ##############
 #_new_tempfile
 ##############
@@ -864,7 +868,7 @@ def set_debug(dbg):
 def get_statistics():
 	"returns how many mails were handeled"
 	global _count_totalmails,_count_encryptedmails,_count_deferredmails,_count_alreadyencryptedmails
-	return {"total":_count_totalmails,"encrypted":_count_encryptedmails,"deferred":_count_deferredmails,"already encrypted":_count_alreadyencryptedmails}
+	return {"total":_count_totalmails,"encrypt":_count_encryptedmails,"deferred":_count_deferredmails,"already encrypted":_count_alreadyencryptedmails}
 #############
 #is_debugging
 #############
@@ -2267,7 +2271,13 @@ def daemonmode():
 	#_deferredlisthandler
 	#####################
 	def _deferredlisthandler(signum, frame):
+		global _count_alarms	
 		check_deferred_list()
+		if _count_alarms>1:
+			_count_alarms-=1
+		else:
+			_count_alarms=24
+			_log_statistics() #log statistics every 24 hours
 		signal.alarm(3600) # once every hour
 	#####################
 	#gpgmailencryptserver
@@ -2507,6 +2517,8 @@ def daemonmode():
 	global _daemonstarttime
 	_RUNMODE==m_daemon
 	_daemonstarttime=datetime.datetime.now()
+	global  _count_alarms
+	_count_alarms=24
 	signal.signal(signal.SIGALRM, _deferredlisthandler)
 	signal.alarm(5)
 	signal.signal(signal.SIGTERM, _sigtermhandler)
