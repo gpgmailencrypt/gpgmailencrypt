@@ -51,7 +51,7 @@ def init():
 	global _RUNMODE,_SERVERHOST,_SERVERPORT
 	global _SMTPD_USE_SMTPS,_SMTPD_USE_AUTH,_SMTPD_PASSWORDFILE,_SMTPD_SSL_KEYFILE,_SMTPD_SSL_CERTFILE,_smtpd_passwords
 	global _AUTHENTICATE,_SMTP_CREDENTIAL,_SMTP_USER,_SMTP_PASSWORD,_deferlist
-	global _count_totalmails, _count_encryptedmails,_count_deferredmails,_count_alreadyencryptedmails,_count_alarms
+	global _count_totalmails, _count_encryptedmails,_count_deferredmails,_count_alreadyencryptedmails,_count_alarms,_alarms_per_day
 
 	#Internal variables
 	atexit.register(_do_finally_at_exit)
@@ -82,6 +82,8 @@ def init():
 	_count_encryptedmails=0
 	_count_deferredmails=0
 	_count_alreadyencryptedmails=0
+	_count_alarms=0
+	_alarms_per_day=1
 	#GLOBAL CONFIG VARIABLES
 	_DEBUG=False
 	_LOGGING=l_none
@@ -2276,8 +2278,12 @@ def daemonmode():
 		if _count_alarms>1:
 			_count_alarms-=1
 		else:
-			_count_alarms=24
-			_log_statistics() #log statistics every 24 hours
+			try:
+				_count_alarms=24//_alarms_per_day
+			except:
+				_count_alarms=0
+			if _count_alarms>0:
+				_log_statistics() #log statistics every 24 hours
 		signal.alarm(3600) # once every hour
 	#####################
 	#gpgmailencryptserver
@@ -2517,8 +2523,11 @@ def daemonmode():
 	global _daemonstarttime
 	_RUNMODE==m_daemon
 	_daemonstarttime=datetime.datetime.now()
-	global  _count_alarms
-	_count_alarms=24
+	global  _count_alarms,_alarms_per_day
+	try:
+		_count_alarms=24//_alarms_per_day
+	except:
+		_count_alarms=0
 	signal.signal(signal.SIGALRM, _deferredlisthandler)
 	signal.alarm(5)
 	signal.signal(signal.SIGTERM, _sigtermhandler)
