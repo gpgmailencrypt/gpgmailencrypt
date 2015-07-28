@@ -48,10 +48,10 @@ def init():
 	global _INFILE,_OUTFILE,_PREFERRED_ENCRYPTION,_GPGKEYHOME,_ALLOWGPGCOMMENT,_GPGCMD
 	global _SMIMEKEYHOME,_SMIMECMD,_SMIMECIPHER,_SMIMEKEYEXTRACTDIR,_SMIMEAUTOMATICEXTRACTKEYS
 	global _SPAMSUBJECT,_OUTPUT, _DEBUGSEARCHTEXT,_DEBUGEXCLUDETEXT,_LOCALE,_LOCALEDB
-	global _RUNMODE,_SERVERHOST,_SERVERPORT
+	global _RUNMODE,_SERVERHOST,_SERVERPORT,_STATISTICS_PER_DAY
 	global _SMTPD_USE_SMTPS,_SMTPD_USE_AUTH,_SMTPD_PASSWORDFILE,_SMTPD_SSL_KEYFILE,_SMTPD_SSL_CERTFILE,_smtpd_passwords
 	global _AUTHENTICATE,_SMTP_CREDENTIAL,_SMTP_USER,_SMTP_PASSWORD,_deferlist
-	global _count_totalmails, _count_encryptedmails,_count_deferredmails,_count_alreadyencryptedmails,_count_alarms,_alarms_per_day
+	global _count_totalmails, _count_encryptedmails,_count_deferredmails,_count_alreadyencryptedmails,_count_alarms
 
 	#Internal variables
 	atexit.register(_do_finally_at_exit)
@@ -83,7 +83,7 @@ def init():
 	_count_deferredmails=0
 	_count_alreadyencryptedmails=0
 	_count_alarms=0
-	_alarms_per_day=1
+	_STATISTICS_PER_DAY=1
 	#GLOBAL CONFIG VARIABLES
 	_DEBUG=False
 	_LOGGING=l_none
@@ -447,7 +447,7 @@ def _read_smtpcredentials(pwfile):
 #################	
 def _read_configfile():
 	global _addressmap,_encryptionmap,_GPGCMD,_DEBUG,_DOMAINS,_LOGGING,_LOGFILE,_GPGKEYHOME,_PREFERRED_ENCRYPTION
-	global _ADDHEADER,_HOST,_PORT,_ALLOWGPGCOMMENT,_CONFIGFILE,_SPAMSUBJECT,_OUTPUT
+	global _ADDHEADER,_HOST,_PORT,_ALLOWGPGCOMMENT,_CONFIGFILE,_SPAMSUBJECT,_OUTPUT,_STATISTICS_PER_DAY
 	global _smimeuser,_SMIMEKEYHOME,_SMIMECMD,_SMIMECIPHER,_SMIMEKEYEXTRACTDIR,_SMIMEAUTOMATICEXTRACTKEYS
 	global _DEBUGEXCLUDETEXT,_DEBUGSEARCHTEXT
 	global _LOCALE,_SERVERHOST,_SERVERPORT
@@ -551,6 +551,10 @@ def _read_configfile():
 			_SMTPD_USE_AUTH=_cfg.getboolean('daemon','authenticate')
 		if _cfg.has_option('daemon','smtppasswords'):
 			_SMTPD_PASSWORDFILE=_cfg.get('daemon','smtppasswords')
+		if _cfg.has_option('daemon','statistics'):
+			_STATISTICS_PER_DAY=_cfg.getint('daemon','statistics')
+			if _STATISTICS_PER_DAY >24:
+				_STATISTICS_PER_DAY=24
 	if _cfg.has_section('smime'):
 		if _cfg.has_option('smime','opensslcommand'):
 			_SMIMECMD=_cfg.get('smime','opensslcommand')
@@ -2279,7 +2283,7 @@ def daemonmode():
 			_count_alarms-=1
 		else:
 			try:
-				_count_alarms=24//_alarms_per_day
+				_count_alarms=24//_STATISTICS_PER_DAY
 			except:
 				_count_alarms=0
 			if _count_alarms>0:
@@ -2434,7 +2438,6 @@ def daemonmode():
 			command,encoded=res	
 			if "PLAIN" in command.upper():
 				debug("hksmtpserver: PLAIN decoding")
-				print (encoded,type(encoded))
 				try:
 					d=binascii.a2b_base64(encoded).decode("UTF-8").split('\x00')
 				except:
@@ -2523,9 +2526,9 @@ def daemonmode():
 	global _daemonstarttime
 	_RUNMODE==m_daemon
 	_daemonstarttime=datetime.datetime.now()
-	global  _count_alarms,_alarms_per_day
+	global  _count_alarms,_STATISTICS_PER_DAY
 	try:
-		_count_alarms=24//_alarms_per_day
+		_count_alarms=24//_STATISTICS_PER_DAY
 	except:
 		_count_alarms=0
 	signal.signal(signal.SIGALRM, _deferredlisthandler)
