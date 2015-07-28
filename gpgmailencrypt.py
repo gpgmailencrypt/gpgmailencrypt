@@ -313,6 +313,7 @@ that should be encrypted, empty is all")
 	print ("sslcertfile = /etc/gpgsmtp.crt			#the x509 certificate cert file")
 	print ("authenticate = False    			#users must authenticate")
 	print ("smtppasswords = /etc/gpgmailencrypt.pw		#file that includes users and passwords")
+	print ("statistics=1					#how often per day should statistical data be logged (0=none) max is 24")
 	print("						#file format 'user=password'")
 	#print ("deferfile = ~/deferfile.txt   			#internal list where information about not yet send mails will stored")
 
