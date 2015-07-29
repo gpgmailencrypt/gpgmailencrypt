@@ -1720,7 +1720,6 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 	htmlbody=""
 	htmlfooter=""
 	gpg = _GPG( _GPGKEYHOME, gpguser,counter)
-	print("contenttype",payload.get_content_type(),"transferencoding",payload["Content-Transfer-Encoding"], "charset:",payload.get_content_charset())
 	decode=True
 	if payload["Content-Transfer-Encoding"]=="8bit" and payload.get_content_maintype().lower()=="text":
 		decode=False
