@@ -29,8 +29,8 @@ from email.generator import Generator
 from io import StringIO as _StringIO
 from os.path import expanduser
 import locale
-VERSION="2.0delta"
-DATE="28.07.2015"
+VERSION="2.0epsilon"
+DATE="29.07.2015"
 #################################
 #Definition of general functions#
 #################################
@@ -74,6 +74,8 @@ def init():
 	_encryptheader="X-GPGMailencrypt"
 	_smtpd_passwords=dict()
 	_encoding = locale.getdefaultlocale()[1]
+	if _encoding==None:
+		_encoding="UTF-8"
 	_deferlist=os.path.expanduser("~/deferlist.txt")
 	_deferdir=expanduser("~/gpgmaildirtmp")
 	if not os.path.exists(_deferdir):
@@ -998,7 +1000,6 @@ class _GPG:
 			for line in p.stdout.readlines():
 				res=line.decode(_encoding).split(":")
 				if res[0]=="pub" or res[0]=="uid":
-					
 					email=res[9]
 					mail_id=res[4]
 					try:
@@ -1706,7 +1707,9 @@ def guess_fileextension(ct):
 #_encodefilename
 ################
 def _encodefilename(name):
-	return(emailutils.encode_rfc2231(name,"UTF-8"))
+	n1=(emailutils.encode_rfc2231(name,"UTF-8"))
+	n2="?UTF-8?B?%s"%base64.encodebytes(name.encode("UTF-8")).decode("UTF-8")[0:-1]
+	return n1,n2
 #################
 #_encrypt_payload
 #################
@@ -1761,12 +1764,22 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 			count=""
 			if counter>0:
 				count="%i"%counter
-			filename=('%s%s.'%(_LOCALEDB[_LOCALE][1],count))+guess_fileextension(contenttype)
+			try:
+				f=_LOCALEDB[_LOCALE][1]
+			except:
+				log("wrong locale '%s'"%_LOCALE,"e")
+				f=_LOCALEDB["EN"][1]
+			filename=('%s%s.'%(f,count))+guess_fileextension(contenttype)
+		f,e=os.path.splitext(filename)
+		addPGPextension=(e.lower()!=".pgp")
+		if filename and addPGPextension:
+			pgpFilename = filename + ".pgp"
 		else:
-			filename=_encodefilename(filename)
-			f,e=os.path.splitext(filename)
-			addPGPextension=(e.lower()!=".pgp")
+			pgpFilename=filename
+			
 		debug("Filename:'%s'"%filename)
+		pgpFilenamecD,pgpFilenamecT=_encodefilename(pgpFilename)
+		
 		isBinaryattachment=(contentmaintype!="text")
 		if addPGPextension:
 			debug("addPGPextension gpg.encrypt_file")
@@ -1783,16 +1796,12 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 				if 'Content-Transfer-Encoding' in payload:
 					del payload['Content-Transfer-Encoding']
 				payload["Content-Transfer-Encoding"]="8bit"
-			if filename and addPGPextension:
-				pgpFilename = filename + ".pgp"
-			else:
-				pgpFilename=filename
 			payload.set_type( 'application/octet-stream')
 
 			if payload["Content-Disposition"]:
 				del payload["Content-Disposition"]
-			payload.add_header('Content-Disposition', 'attachment; filename*="%s"' % pgpFilename)
-			payload.set_param( 'name', pgpFilename )
+			payload.add_header('Content-Disposition', 'attachment; filename*="%s"' % pgpFilenamecD)
+			payload.set_param( 'name', pgpFilenamecT )
 	else:
 		if 'Content-Transfer-Encoding' in payload:
 			del payload['Content-Transfer-Encoding']
