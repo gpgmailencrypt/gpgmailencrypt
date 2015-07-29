@@ -118,13 +118,17 @@ def init():
 	_DEBUGEXCLUDETEXT=[]
 	_LOCALE="EN"
 	_LOCALEDB={
+	#"CN":("审读","文件"),
 	"DE":("Termin","Datei"),
 	"EN":("appointment","file"),
 	"ES":("cita","fichero"),
 	"FR":("rendez-vous","fichier"),
 	"IT":("appuntamento","file"),
+	"NL":("Termijn","Bestand"),
+	"PL":("termin","plik"),
 	"PT":("hora","ficheiro"),
 	"RU":("срок","файл"),
+	"SE":("möte","fil"),
 	}
 	_RUNMODE=m_script
 	_SMTPD_USE_SMTPS=False
@@ -275,7 +279,7 @@ def print_exampleconfig():
 that should be encrypted, empty is all")
 	print ("spamsubject =***SPAM				# Spam recognition string, spam will not be encrypted")
 	print ("output=mail 					# valid values are 'mail'or 'stdout'")
-	print ("locale=en 					# DE|EN|ES|FR|IT|PT|RU'")
+	print ("locale=en 					# DE|EN|ES|FR|IT|NL|PL|PT|RU|SE'")
 	print ("")
 	print ("[gpg]")
 	print ("keyhome = /var/lib/gpgmailencrypt/.gnupg   	# home directory of public  gpgkeyring")
@@ -723,7 +727,7 @@ def _is_old_deferred_mail(mail):
 def check_deferred_list():
 	"tries to re-send deferred emails"
 	debug("check_deferred_list")
-	global _deferred_emails
+	global _deferred_emails,_count_deferredmails
 	new_list=[]
 	for mail in _deferred_emails:
 		try:
@@ -742,7 +746,8 @@ def check_deferred_list():
 			log("Could not read file '%s'"%mail[0])
 			if not _is_old_deferred_mail(mail):
 				new_list.append(mail)	
-	_deferred_emails=new_list	
+	_deferred_emails=new_list
+	_count_deferredmails=len(_deferred_emails)
 	debug("End check_deferred_list")		
 ####################
 #_do_finally_at_exit
@@ -761,16 +766,16 @@ def _do_finally_at_exit():
 			debug("do_finally delete tempfile '%s'"%f)
 		except:
 			pass
-	if _LOGGING and _logfile!=None:
-		_logfile.close()
 	if _RUNMODE==m_daemon:
 		store_deferred_list()
+	if _LOGGING and _logfile!=None:
+		_logfile.close()
 ################
 #_log_statistics
 ################
 def _log_statistics():
-	log("Statistic information:totally send mails: %i, encrypted mails: %i deferred mails: %i" %\
-	(_count_totalmails,_count_encryptedmails,_count_deferredmails))
+	log("Statistic information:totally sent mails: %i, encrypt mails: %i deferred mails: %i, already encrypted mails: %i" %\
+	(_count_totalmails,_count_encryptedmails,_count_deferredmails,_count_alreadyencryptedmails))
 ##############
 #_new_tempfile
 ##############
@@ -873,6 +878,21 @@ def set_debug(dbg):
 		_DEBUG=True
 	else:
 		_DEBUG=False
+###########
+#set_locale
+###########
+def set_locale(l):
+	"sets the locale"
+	if type(l)==str:
+		l=l.strip()
+		if len(l)>0:
+			_LOCALE=l
+###########
+#get_locale
+###########
+def get_locale():
+	"returns the Locale"
+	return _LOCALE
 ###############
 #get_statistics
 ###############
@@ -1360,6 +1380,8 @@ def is_pgpinlineencrypted(msg):
 		return False
 	if type(msg)==bytes:
 		return False
+	if type(msg)==email.message.Message:
+		msg=msg.as_string()
 	if "\n-----BEGIN PGP MESSAGE-----" in msg and "\n-----END PGP MESSAGE-----" in msg:
 		return True
 	else:
@@ -2035,8 +2057,8 @@ def _encrypt_gpg_mail(mailtext,use_pgpmime, gpguser,from_addr,to_addr):
 		debug("message is SPAM, don't encrypt")
 		_send_rawmsg(mailtext,"Spammail",from_addr,to_addr)
 		return
-	if is_smimeencrypted( mailtext ) or is_pgpmimeencrypted(mailtext):
-		debug("encrypt_gpg_mail, is already smime or pgpmime encrypted")
+	if is_encrypted( raw_message ):
+		debug("encrypt_gpg_mail, is already encrypted")
 		_send_rawmsg(mailtext,'Mail was already encrypted',from_addr,to_addr)
 		_count_alreadyencryptedmails+=1
 		return
@@ -2061,8 +2083,8 @@ def _encrypt_smime_mail(mailtext,smimeuser,from_addr,to_addr):
 	contenttype="text/plain"
 	contenttransferencoding=None
 	contentboundary=None
-	if is_smimeencrypted(mailtext) or is_pgpmimeencrypted(mailtext):
-		log("encrypt_smime_mail:mail is already smime or pgpmime encrypted")
+	if is_encrypted(raw_message):
+		debug("encrypt_smime_mail:mail is already encrypted")
 		_send_rawmsg(mailtext,"Mail was already encrypted",from_addr,to_addr)
 		_count_alreadyencryptedmails+=1
 		return
@@ -2315,7 +2337,7 @@ def daemonmode():
 			try:
 				smtpd.SMTPServer.__init__(self, localaddr, None,data_size_limit=data_size_limit)
 			except socket.error as e:
-				debug("hksmtpserver: error",e)
+				log("hksmtpserver: error",e)
 				exit(5)
 			self.sslcertfile=sslcertfile
 			self.sslkeyfile=sslkeyfile
