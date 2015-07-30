@@ -28,9 +28,9 @@ import re,sys,tempfile,os,subprocess,atexit,time,datetime,getopt,random,syslog,i
 from email.generator import Generator
 from io import StringIO as _StringIO
 from os.path import expanduser
-import locale
-VERSION="2.0epsilon"
-DATE="29.07.2015"
+import locale,traceback
+VERSION="2.0zeta"
+DATE="30.07.2015"
 #################################
 #Definition of general functions#
 #################################
@@ -390,10 +390,11 @@ def debug(msg):
 #_debug_keepmail
 ################
 def _debug_keepmail(mailtext):
+	searchtext=mailtext.lower()
 	for txt in _DEBUGSEARCHTEXT:
-		if txt in mailtext:
+		if txt.lower() in searchtext:
 			for exclude in _DEBUGEXCLUDETEXT:
-				if exclude in mailtext:
+				if exclude.lower() in searchtext:
 					return False
 			return True
 	return False
@@ -649,13 +650,17 @@ def _send_textmsg(message, from_addr,to_addr,store_deferred=True):
 					smtp.login(_SMTP_USER,_SMTP_PASSWORD)
 				except smtplib.SMTPAuthenticationError:
 					log("Could not send email, could not authenticate","e")
+					if store_deferred:
+						_store_temporaryfile(message,add_deferred=True,fromaddr=from_addr,toaddr=to_addr)
 					return
 			debug("smtp.sendmail")
 			smtp.sendmail( from_addr, to_addr, message )
 			return True
 		except:
-			log("Error sending email, smtp connection was not possible ''%(m1)s %(m2)s''"\
-			%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
+			exc_type, exc_value, exc_tb = sys.exc_info()
+			error=traceback.format_exception(exc_type, exc_value, exc_tb)
+			log("Couldn't send mail!","e")
+			log("%s"%error,"e")
 			if store_deferred:
 				_store_temporaryfile(message,add_deferred=True,fromaddr=from_addr,toaddr=to_addr)
 			return False
@@ -2208,6 +2213,8 @@ def encrypt_mails(mailtext,receiver):
 	"""
 	global _mailcount,_PREFERRED_ENCRYPTION,_count_totalmails
 	debug("encrypt_mails")
+	if _debug_keepmail(mailtext): #DEBUG
+		_store_temporaryfile(mailtext)
 	if _PREFERRED_ENCRYPTION=="PGPMIME":
 		_pgpmime=True
 	else:
@@ -2273,6 +2280,7 @@ def encrypt_mails(mailtext,receiver):
 ###########
 def scriptmode():
 	"run gpgmailencrypt a script"
+	debug("scriptmode")
 	try:
 		#read message
 		if len(_INFILE)>0:
@@ -2286,16 +2294,16 @@ def scriptmode():
 				exit(2)
 		else:
 			raw = sys.stdin.read()
-		if _debug_keepmail(raw): #DEBUG
-			_DEBUG=True
-			_store_temporaryfile(raw)
 		#do the magic
 		encrypt_mails(raw,receiver)
 	except SystemExit as m:
 		debug("Exitcode:'%s'"%m)
 		exit(int(m.code))
 	except:
-		log("Bug:Exception in '%(m1)s %(m2)s' occured!"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
+		exc_type, exc_value, exc_tb = sys.exc_info()
+		error=traceback.format_exception(exc_type, exc_value, exc_tb)
+		log("Bug:Exception occured!","e")
+		log("%s"%error,"e")
 		exit(4)	
 	else:
 		debug("Program exits without errors")
@@ -2570,7 +2578,7 @@ def daemonmode():
 	signal.signal(signal.SIGHUP,  _sighuphandler)
 	load_deferred_list()
 	smtpd.__version__="gpgmailencrypt smtp server %s"%VERSION
-	log("gpgmailencrypt starts as daemon on %s:%s"%(_SERVERHOST,_SERVERPORT) )
+	log("gpgmailencrypt %s starts as daemon on %s:%s"%(VERSION,_SERVERHOST,_SERVERPORT) )
 	if _SMTPD_USE_AUTH:
 		_read_smtpdpasswordfile(_SMTPD_PASSWORDFILE)
 	try:
@@ -2588,7 +2596,10 @@ def daemonmode():
 	except SystemExit as m:
 		exit(0)
 	except:
-	  	log("Bug:Exception in '%(m1)s %(m2)s' occured!"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
+		exc_type, exc_value, exc_tb = sys.exc_info()
+		error=traceback.format_exception(exc_type, exc_value, exc_tb)
+		log("Bug:Exception occured!","e")
+		log("%s"%error,"e")
 ###############
 #_sigtermhandler
 ###############
