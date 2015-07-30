@@ -378,6 +378,14 @@ def log(msg,infotype="m",ln=-1):
 		else:
 			# print to stderr if nothing else works
 			sys.stdout.write("%s %s: %s\n"%(tm,prefix,msg ))
+##############
+#log_traceback
+##############
+def log_traceback():
+		exc_type, exc_value, exc_tb = sys.exc_info()
+		error=traceback.format_exception(exc_type, exc_value, exc_tb)
+		for e in error:
+			log(" ***%s"%e.replace("\n",""),"e")
 ######
 #debug
 ######
@@ -657,10 +665,8 @@ def _send_textmsg(message, from_addr,to_addr,store_deferred=True):
 			smtp.sendmail( from_addr, to_addr, message )
 			return True
 		except:
-			exc_type, exc_value, exc_tb = sys.exc_info()
-			error=traceback.format_exception(exc_type, exc_value, exc_tb)
 			log("Couldn't send mail!","e")
-			log("%s"%error,"e")
+			log_traceback()
 			if store_deferred:
 				_store_temporaryfile(message,add_deferred=True,fromaddr=from_addr,toaddr=to_addr)
 			return False
@@ -779,7 +785,7 @@ def _do_finally_at_exit():
 #_log_statistics
 ################
 def _log_statistics():
-	log("Statistic information:totally sent mails: %i, encrypt mails: %i deferred mails: %i, already encrypted mails: %i" %\
+	log("Statistics: totally sent mails: %i, encrypt mails: %i deferred mails: %i, already encrypted mails: %i" %\
 	(_count_totalmails,_count_encryptedmails,_count_deferredmails,_count_alreadyencryptedmails))
 ##############
 #_new_tempfile
@@ -2283,6 +2289,7 @@ def scriptmode():
 	debug("scriptmode")
 	try:
 		#read message
+		1/0
 		if len(_INFILE)>0:
 			try:
 				f=open(_INFILE,encoding="UTF-8")
@@ -2300,10 +2307,10 @@ def scriptmode():
 		debug("Exitcode:'%s'"%m)
 		exit(int(m.code))
 	except:
-		exc_type, exc_value, exc_tb = sys.exc_info()
-		error=traceback.format_exception(exc_type, exc_value, exc_tb)
+		#exc_type, exc_value, exc_tb = sys.exc_info()
+		#error=traceback.format_exception(exc_type, exc_value, exc_tb)
 		log("Bug:Exception occured!","e")
-		log("%s"%error,"e")
+		log_traceback()
 		exit(4)	
 	else:
 		debug("Program exits without errors")
@@ -2597,9 +2604,9 @@ def daemonmode():
 		exit(0)
 	except:
 		exc_type, exc_value, exc_tb = sys.exc_info()
-		error=traceback.format_exception(exc_type, exc_value, exc_tb)
+		#error=traceback.format_exception(exc_type, exc_value, exc_tb)
 		log("Bug:Exception occured!","e")
-		log("%s"%error,"e")
+		log_traceback()
 ###############
 #_sigtermhandler
 ###############
