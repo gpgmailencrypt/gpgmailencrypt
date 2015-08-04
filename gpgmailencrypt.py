@@ -29,8 +29,8 @@ from email.generator import Generator
 from io import StringIO as _StringIO
 from os.path import expanduser
 import locale,traceback
-VERSION="2.0zeta"
-DATE="30.07.2015"
+VERSION="2.0theta"
+DATE="04.08.2015"
 #################################
 #Definition of general functions#
 #################################
@@ -52,7 +52,7 @@ def init():
 	global _SMTPD_USE_SMTPS,_SMTPD_USE_AUTH,_SMTPD_PASSWORDFILE,_SMTPD_SSL_KEYFILE,_SMTPD_SSL_CERTFILE,_smtpd_passwords
 	global _AUTHENTICATE,_SMTP_CREDENTIAL,_SMTP_USER,_SMTP_PASSWORD,_deferlist
 	global _count_totalmails, _count_encryptedmails,_count_deferredmails,_count_alreadyencryptedmails,_count_alarms
-
+	global _unicodeerror
 	#Internal variables
 	atexit.register(_do_finally_at_exit)
 	_logfile=None
@@ -85,6 +85,7 @@ def init():
 	_count_deferredmails=0
 	_count_alreadyencryptedmails=0
 	_count_alarms=0
+	_unicodeerror="replace"
 	_STATISTICS_PER_DAY=1
 	#GLOBAL CONFIG VARIABLES
 	_DEBUG=False
@@ -375,6 +376,7 @@ def log(msg,infotype="m",ln=-1):
 		elif  _LOGGING==l_file and _logfile!=None:
 			#write to _logfile
 			_logfile.write("%s %s: %s\n"%(tm,prefix,msg ))
+			_logfile.flush()
 		else:
 			# print to stderr if nothing else works
 			sys.stdout.write("%s %s: %s\n"%(tm,prefix,msg ))
@@ -399,6 +401,7 @@ def debug(msg):
 ################
 def _debug_keepmail(mailtext):
 	searchtext=mailtext.lower()
+	#return True
 	for txt in _DEBUGSEARCHTEXT:
 		if txt.lower() in searchtext:
 			for exclude in _DEBUGEXCLUDETEXT:
@@ -411,22 +414,24 @@ def _debug_keepmail(mailtext):
 #####################
 def _store_temporaryfile(message,add_deferred=False,fromaddr="",toaddr=""):
 	global _deferred_emails,_count_deferredmails
+	debug("_store_temporaryfile add_deferred=%s"%add_deferred)
 	try:
 		tmpdir=None
 		if add_deferred:
 			tmpdir=_deferdir
 		f=tempfile.NamedTemporaryFile(mode='wb',delete=False,prefix='mail-',dir=tmpdir)
-		f.write(message.encode("UTF-8"))
+		f.write(message.encode("UTF-8",_unicodeerror))
 		f.close()
 		if add_deferred:
 			_deferred_emails.append([f.name,fromaddr,toaddr,time.time()])
 			_count_deferredmails+=1
-			debug("store_temporaryfile.append deferred email")
+			log("store_temporaryfile.append deferred email '%s'"%f.name)
 		else:
 			log("Message in temporary file '%s'"%f.name)
 
 	except:
 		log("Couldn't save email in temporary file, write error")
+		log_traceback()
 
 ################
 #_prepare_syslog
@@ -636,6 +641,8 @@ def _send_msg( message,from_addr,to_addr ):
 def _send_textmsg(message, from_addr,to_addr,store_deferred=True):
 	global _OUTPUT,_mailcount
 	global _AUTHENTICATE,_SMTP_USER,_SMTP_PASSWORD
+	dbg=_DEBUG
+	set_debug(True)
 	debug("_send_textmsg output %i"%_OUTPUT)
 	if _OUTPUT==o_mail:
 		if len(to_addr) == 0:
@@ -663,12 +670,16 @@ def _send_textmsg(message, from_addr,to_addr,store_deferred=True):
 					return
 			debug("smtp.sendmail")
 			smtp.sendmail( from_addr, to_addr, message )
+			set_debug(dbg)
 			return True
 		except:
+			
 			log("Couldn't send mail!","e")
 			log_traceback()
+			debug("store_deferred %s"%store_deferred)
 			if store_deferred:
 				_store_temporaryfile(message,add_deferred=True,fromaddr=from_addr,toaddr=to_addr)
+			set_debug(dbg)
 			return False
 	elif _OUTPUT==o_file and _OUTFILE and len(_OUTFILE)>0:
 		try:
@@ -678,13 +689,16 @@ def _send_textmsg(message, from_addr,to_addr,store_deferred=True):
 			f=open(fname,mode='w',encoding="UTF-8")
 			f.write(message)
 			f.close()
+			set_debug(dbg)
 			return True
 		except:
 			log("Could not open Outputfile '%s'"%_OUTFILE,"e")
 			log("'%(m1)s %(m2)s'"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
+			set_debug(dbg)
 			return False
 	else:
 		print (message)
+		set_debug(dbg)
 		return True
 ###################
 #load_deferred_list
@@ -745,7 +759,7 @@ def check_deferred_list():
 			f=open(mail[0])
 			msg=f.read()
 			f.close()
-			if not _send_textmsg(msg.encode("UTF-8"),mail[1],mail[2],store_deferred=False):
+			if not _send_textmsg(msg.encode("UTF-8",_unicodeerror),mail[1],mail[2],store_deferred=False):
 				if not _is_old_deferred_mail(mail):
 					new_list.append(mail)
 			else:
@@ -785,8 +799,8 @@ def _do_finally_at_exit():
 #_log_statistics
 ################
 def _log_statistics():
-	log("Statistics: totally sent mails: %i, encrypt mails: %i deferred mails: %i, already encrypted mails: %i" %\
-	(_count_totalmails,_count_encryptedmails,_count_deferredmails,_count_alreadyencryptedmails))
+	log("Statistics: totally sent mails: %i, encrypt mails: %i, already encrypted mails: %i, deferred mails: %i" %\
+	(_count_totalmails,_count_encryptedmails,_count_alreadyencryptedmails,_count_deferredmails))
 ##############
 #_new_tempfile
 ##############
@@ -898,6 +912,18 @@ def set_locale(l):
 		l=l.strip()
 		if len(l)>0:
 			_LOCALE=l
+###############
+#set_configfile
+###############
+def set_configfile(f):
+	"loads the configfile f without any init"
+	if not f:
+		return
+	cf=f.strip()
+	if len(cf)>0:
+		_CONFIGFILE=_arg
+		log("read new config file '%s'"%_CONFIGFILE)
+		_read_configfile()
 ###########
 #get_locale
 ###########
@@ -1016,7 +1042,7 @@ class _GPG:
 			return True
 		else:
 			debug("has_key, key not in _GPGkeys")
-			debug("_GPGkeys '%s'"%str(_GPGkeys))
+			#debug("_GPGkeys '%s'"%str(_GPGkeys))
 			return False
 			
 	def _get_public_keys( self ):
@@ -1029,15 +1055,14 @@ class _GPG:
 			p = subprocess.Popen( cmd.split(' '), stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
 			p.wait()
 			for line in p.stdout.readlines():
-				res=line.decode(_encoding).split(":")
+				res=line.decode(_encoding,_unicodeerror).split(":")
 				if res[0]=="pub" or res[0]=="uid":
 					email=res[9]
 					mail_id=res[4]
 					try:
 						found=re.search("[-a-zA-Z0-9_%\+\.]+@[-_0-9a-zA-Z\.]+\.[-_0-9a-zA-Z\.]+",email)
 					except:
-						log("re.exception reason '%(m1)s %(m2)s'"%{"m1":sys.exc_info()[0],
-						"m2":sys.exc_info()[1]},"e")
+						log_traceback()
 					if found != None:
 						try:
 							email=email[found.start():found.end()]
@@ -1046,13 +1071,13 @@ class _GPG:
 							email=""
 						email=email.lower()
 						if len(email)>0 and _GPGkeys.count(email) == 0:
-							debug("add email address '%s'"%email)
+							#debug("add email address '%s'"%email)
 							_GPGkeys.append(email)
 						#else:
 							#debug("Email '%s' already added"%email)
 		except:
 			log("Error opening keyring (Perhaps wrong directory '%s'?)"%self._keyhome,"e")
-			log("'%(m1)s %(m2)s'"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
+			log_traceback()
 
 	def encrypt_file(self,filename=None,binary=False):
 		global _tempfiles,_ALLOWGPGCOMMENT
@@ -1300,7 +1325,7 @@ class _SMIME:
 	def get_emailaddresses(self,certfile):
 		cmd=[_SMIMECMD,"x509","-in",certfile,"-text","-noout"]
 		cert,returncode=self.opensslcmd(" ".join(cmd))
-		cert=cert.decode()
+		cert=cert.decode("utf-8",_unicodeerror)
 		email=[]
 		found=re.search("(?<=emailAddress=)(.*)",cert)
 		if found != None:
@@ -1321,7 +1346,7 @@ class _SMIME:
 	def get_fingerprint(self,cert):
 		cmd=[_SMIMECMD,"x509","-fingerprint","-in",cert,"-noout"]
 		fingerprint,returncode=self.opensslcmd(" ".join(cmd))
-		found= re.search("(?<=SHA1 Fingerprint=)(.*)",fingerprint.decode("UTF-8"))
+		found= re.search("(?<=SHA1 Fingerprint=)(.*)",fingerprint.decode("UTF-8",_unicodeerror))
 		if found != None:
 			try:
 				fingerprint=fingerprint[found.start():found.end()]
@@ -1741,7 +1766,7 @@ def guess_fileextension(ct):
 ################
 def _encodefilename(name):
 	n1=(emailutils.encode_rfc2231(name,"UTF-8"))
-	n2="?UTF-8?B?%s"%base64.encodebytes(name.encode("UTF-8")).decode("UTF-8")[0:-1]
+	n2="?UTF-8?B?%s"%base64.encodebytes(name.encode("UTF-8",_unicodeerror)).decode("UTF-8",_unicodeerror)[0:-1]
 	return n1,n2
 #################
 #_encrypt_payload
@@ -1759,7 +1784,7 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 	raw_payload = payload.get_payload(decode=decode)
 	is_text=payload.get_content_maintype()=="text"
 	if is_text and decode:
-		raw_payload=raw_payload.decode("UTF-8")
+		raw_payload=raw_payload.decode("UTF-8",_unicodeerror)
 		debug("decode UTF raw payload")
 	contenttype=payload.get_content_type()	
 	debug("nach payload.get_content_typ")	
@@ -1770,10 +1795,10 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 	if contenttype=="text/html":
 		res,htmlheader,htmlbody,htmlfooter=_split_html(raw_payload)
 		payload.set_charset("UTF-8")
-		fp.write(htmlbody.encode("UTF-8"))
+		fp.write(htmlbody.encode("UTF-8",_unicodeerror))
 	else:
 		if is_text:
-			raw_payload=raw_payload.encode("UTF-8")
+			raw_payload=raw_payload.encode("UTF-8",_unicodeerror)
 		fp.write(raw_payload)
 	fp.close()
 	isAttachment = payload.get_param( 'attachment', None, 'Content-Disposition' ) is not None
@@ -2010,7 +2035,7 @@ def _encrypt_pgpmime(message,gpguser,from_addr,to_addr):
 		for p in rawpayload:
 			bodymsg.attach(p)
 		body=bodymsg.as_string()	
-	fp.write(body.encode("UTF-8"))
+	fp.write(body.encode("UTF-8",_unicodeerror))
 	fp.close()
 	gpg.set_filename( fp.name )
 	attachment=_GPGEncryptedAttachment()
@@ -2187,7 +2212,7 @@ def _encrypt_smime_mail(mailtext,smimeuser,from_addr,to_addr):
 		for p in rawpayload:
 			bodymsg.attach(p)
 		body=bodymsg.as_string()	
-	fp.write(body.encode("UTF-8"))
+	fp.write(body.encode("UTF-8",_unicodeerror))
 	fp.close()
 	smime.set_filename(fp.name)
 	result,pl=smime.encrypt_file()
@@ -2219,65 +2244,68 @@ def encrypt_mails(mailtext,receiver):
 	"""
 	global _mailcount,_PREFERRED_ENCRYPTION,_count_totalmails
 	debug("encrypt_mails")
-	if _debug_keepmail(mailtext): #DEBUG
-		_store_temporaryfile(mailtext)
-	if _PREFERRED_ENCRYPTION=="PGPMIME":
-		_pgpmime=True
-	else:
-		_pgpmime=False
-	if _SMIMEAUTOMATICEXTRACTKEYS:
-		debug("_SMIMEAUTOMATICEXTRACTKEYS")
-		f=_new_tempfile()
-		f.write(mailtext.encode("UTF-8"))
-		f.close()
-		s=_SMIME(_SMIMEKEYHOME)
-		s.extract_publickey_from_mail(f.name,_SMIMEKEYEXTRACTDIR)
-		_del_tempfile(f.name)
-	for to_addr in receiver:
-		debug("encrypt_mail for user '%s'"%to_addr)
-		g_r,to_gpg=check_gpgrecipient(to_addr)
-		s_r,to_smime=check_smimerecipient(to_addr)
-		method=get_preferredencryptionmethod(to_addr)
-		debug("GPG encrypt possible %i"%g_r)
-		debug("SMIME encrypt possible %i"%s_r)
-		_count_totalmails+=1
-		if method=="PGPMIME":
-			_prefer_gpg=True
+	try:
+		if _debug_keepmail(mailtext): #DEBUG
+			_store_temporaryfile(mailtext)
+		if _PREFERRED_ENCRYPTION=="PGPMIME":
 			_pgpmime=True
-		elif method=="PGPINLINE":
-			_prefer_gpg=True
-			_pgpmime=False
-		if method=="SMIME":
-			_prefer_gpg=False
-		if method=="NONE":
-			g_r=False
-			s_r=False
-		try:
-			raw_message = email.message_from_string( mailtext )
-		except:
-			log("Exception creating raw_message in '%(m1)s %(m2)s'occured!"\
-			%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
-			return
-		from_addr = raw_message['From']
-		if not s_r and not g_r:
-			m="Email not encrypted, public key for '%s' not found"%to_addr
-			log(m,"w")
-			_send_rawmsg(mailtext,m,from_addr,to_addr)
-			continue
-		if _prefer_gpg:
-			debug("PREFER GPG")
-			if g_r:
-				_encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
-			else:
-				_encrypt_smime_mail(mailtext,to_smime,from_addr,to_addr)
 		else:
-			debug("PREFER S/MIME")
-			if s_r:
-				_encrypt_smime_mail(mailtext,to_smime,from_addr,to_addr)
+			_pgpmime=False
+		if _SMIMEAUTOMATICEXTRACTKEYS:
+			debug("_SMIMEAUTOMATICEXTRACTKEYS")
+			f=_new_tempfile()
+			f.write(mailtext.encode("UTF-8",_unicodeerror))
+			f.close()
+			s=_SMIME(_SMIMEKEYHOME)
+			s.extract_publickey_from_mail(f.name,_SMIMEKEYEXTRACTDIR)
+			_del_tempfile(f.name)
+		for to_addr in receiver:
+			debug("encrypt_mail for user '%s'"%to_addr)
+			g_r,to_gpg=check_gpgrecipient(to_addr)
+			s_r,to_smime=check_smimerecipient(to_addr)
+			method=get_preferredencryptionmethod(to_addr)
+			debug("GPG encrypt possible %i"%g_r)
+			debug("SMIME encrypt possible %i"%s_r)
+			_count_totalmails+=1
+			if method=="PGPMIME":
+				_prefer_gpg=True
+				_pgpmime=True
+			elif method=="PGPINLINE":
+				_prefer_gpg=True
+				_pgpmime=False
+			if method=="SMIME":
+				_prefer_gpg=False
+			if method=="NONE":
+				g_r=False
+				s_r=False
+			try:
+				raw_message = email.message_from_string( mailtext )
+			except:
+				_store_temporaryfile(mailtext,add_deferred=True,fromaddr="UNKNOWN",toaddr=to_addr)
+				log_traceback()
+				return
+			from_addr = raw_message['From']
+			if not s_r and not g_r:
+				m="Email not encrypted, public key for '%s' not found"%to_addr
+				log(m,"w")
+				_send_rawmsg(mailtext,m,from_addr,to_addr)
+				continue
+			if _prefer_gpg:
+				debug("PREFER GPG")
+				if g_r:
+					_encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
+				else:
+					_encrypt_smime_mail(mailtext,to_smime,from_addr,to_addr)
 			else:
-				_encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
-		_mailcount+=1
-	debug("END encrypt_mails")
+				debug("PREFER S/MIME")
+				if s_r:
+					_encrypt_smime_mail(mailtext,to_smime,from_addr,to_addr)
+				else:
+					_encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
+			_mailcount+=1
+	except:
+		log_traceback()
+		debug("END encrypt_mails")
 #######################################
 #END definition of encryption functions
 #######################################
@@ -2289,7 +2317,6 @@ def scriptmode():
 	debug("scriptmode")
 	try:
 		#read message
-		1/0
 		if len(_INFILE)>0:
 			try:
 				f=open(_INFILE,encoding="UTF-8")
@@ -2327,6 +2354,7 @@ def daemonmode():
 	def _deferredlisthandler(signum, frame):
 		global _count_alarms	
 		check_deferred_list()
+		store_deferred_list()
 		if _count_alarms>1:
 			_count_alarms-=1
 		else:
@@ -2399,7 +2427,8 @@ def daemonmode():
 			try:
 				encrypt_mails(data,receiver)
 			except:
-				log("hksmtpserver: Bug:Exception in '%(m1)s %(m2)s' occured!"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
+				log("hksmtpserver: Bug:Exception!")
+				log_traceback()
 			return
 	##############
 	#hksmtpchannel
@@ -2487,7 +2516,7 @@ def daemonmode():
 			if "PLAIN" in command.upper():
 				debug("hksmtpserver: PLAIN decoding")
 				try:
-					d=binascii.a2b_base64(encoded).decode("UTF-8").split('\x00')
+					d=binascii.a2b_base64(encoded).decode("UTF-8",_unicodeerror).split('\x00')
 				except:
 					debug("hksmtpserver: error decode base64 '%s'"%sys.exc_info()[1])
 					d=[]
@@ -2537,7 +2566,7 @@ def daemonmode():
 		i=0
 		r=txt
 		while i<=1000:
-			r=hashlib.sha512(r.encode("UTF-8")).hexdigest()
+			r=hashlib.sha512(r.encode("UTF-8",_unicodeerror)).hexdigest()
 			i+=1
 		return r
 	
