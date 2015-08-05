@@ -30,7 +30,7 @@ from io import StringIO as _StringIO
 from os.path import expanduser
 import locale,traceback
 VERSION="2.0theta"
-DATE="04.08.2015"
+DATE="05.08.2015"
 #################################
 #Definition of general functions#
 #################################
@@ -647,7 +647,7 @@ def _send_textmsg(message, from_addr,to_addr,store_deferred=True):
 	if _OUTPUT==o_mail:
 		if len(to_addr) == 0:
 			log("Couldn't send email, recipient list is empty!","e")
-			return
+			return False
 		debug("Sending email to: <%s>" % to_addr)
 		try:
 			smtp = smtplib.SMTP(_HOST, _PORT)
@@ -665,9 +665,10 @@ def _send_textmsg(message, from_addr,to_addr,store_deferred=True):
 					smtp.login(_SMTP_USER,_SMTP_PASSWORD)
 				except smtplib.SMTPAuthenticationError:
 					log("Could not send email, could not authenticate","e")
+					debug("_send_textmsg: store_deferred %s" % store_deferred)
 					if store_deferred:
 						_store_temporaryfile(message,add_deferred=True,fromaddr=from_addr,toaddr=to_addr)
-					return
+					return False
 			debug("smtp.sendmail")
 			smtp.sendmail( from_addr, to_addr, message )
 			set_debug(dbg)
@@ -1777,14 +1778,15 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 	htmlheader=""
 	htmlbody=""
 	htmlfooter=""
+	charset=payload.get_param("charset",header="Content-Type")
+	debug("_encrypt_payload: charset %s"%charset)
+	if charset==None:
+		charset="UTF-8"
 	gpg = _GPG( _GPGKEYHOME, gpguser,counter)
-	decode=True
-	if payload["Content-Transfer-Encoding"]=="8bit" and payload.get_content_maintype().lower()=="text":
-		decode=False
-	raw_payload = payload.get_payload(decode=decode)
+	raw_payload = payload.get_payload(decode=True)
 	is_text=payload.get_content_maintype()=="text"
-	if is_text and decode:
-		raw_payload=raw_payload.decode("UTF-8",_unicodeerror)
+	if is_text:
+		raw_payload=raw_payload.decode(charset,_unicodeerror)
 		debug("decode UTF raw payload")
 	contenttype=payload.get_content_type()	
 	debug("nach payload.get_content_typ")	
@@ -1794,11 +1796,11 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 	filename = payload.get_filename()
 	if contenttype=="text/html":
 		res,htmlheader,htmlbody,htmlfooter=_split_html(raw_payload)
-		payload.set_charset("UTF-8")
-		fp.write(htmlbody.encode("UTF-8",_unicodeerror))
+		payload.set_charset(charset)
+		fp.write(htmlbody.encode(charset,_unicodeerror))
 	else:
 		if is_text:
-			raw_payload=raw_payload.encode("UTF-8",_unicodeerror)
+			raw_payload=raw_payload.encode(charset,_unicodeerror)
 		fp.write(raw_payload)
 	fp.close()
 	isAttachment = payload.get_param( 'attachment', None, 'Content-Disposition' ) is not None
