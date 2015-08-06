@@ -641,8 +641,6 @@ def _send_msg( message,from_addr,to_addr ):
 def _send_textmsg(message, from_addr,to_addr,store_deferred=True):
 	global _OUTPUT,_mailcount
 	global _AUTHENTICATE,_SMTP_USER,_SMTP_PASSWORD
-	dbg=_DEBUG
-	set_debug(True)
 	debug("_send_textmsg output %i"%_OUTPUT)
 	if _OUTPUT==o_mail:
 		if len(to_addr) == 0:
@@ -671,7 +669,6 @@ def _send_textmsg(message, from_addr,to_addr,store_deferred=True):
 					return False
 			debug("smtp.sendmail")
 			smtp.sendmail( from_addr, to_addr, message )
-			set_debug(dbg)
 			return True
 		except:
 			
@@ -2321,12 +2318,13 @@ def scriptmode():
 		#read message
 		if len(_INFILE)>0:
 			try:
-				m=email.message_from_binary_file(_INFILE)
+				f=open(_INFILE,"rb")
+				m=email.message_from_binary_file(f)
 				raw=m.as_string()
 				f.close()
 			except:
 				log("Could not open Inputfile '%s'"%_INFILE,"e")
-				log("'%(m1)s %(m2)s'"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
+				log_traceback()
 				exit(2)
 		else:
 			raw = sys.stdin.read()
