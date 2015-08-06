@@ -29,8 +29,8 @@ from email.generator import Generator
 from io import StringIO as _StringIO
 from os.path import expanduser
 import locale,traceback
-VERSION="2.0theta"
-DATE="05.08.2015"
+VERSION="2.0kappa"
+DATE="06.08.2015"
 #################################
 #Definition of general functions#
 #################################
@@ -2321,8 +2321,8 @@ def scriptmode():
 		#read message
 		if len(_INFILE)>0:
 			try:
-				f=open(_INFILE,encoding="UTF-8")
-				raw=f.read()
+				m=email.message_from_binary_file(_INFILE)
+				raw=m.as_string()
 				f.close()
 			except:
 				log("Could not open Inputfile '%s'"%_INFILE,"e")
@@ -2427,7 +2427,7 @@ def daemonmode():
 		def process_message(self, peer, mailfrom, receiver, data):
 			debug("hksmtpserver: gpgmailencryptserver from '%s' to '%s'"%(mailfrom,receiver))
 			try:
-				encrypt_mails(data,receiver)
+				encrypt_mails(email.message_from_string(data).as_string(),receiver)
 			except:
 				log("hksmtpserver: Bug:Exception!")
 				log_traceback()
