@@ -402,7 +402,7 @@ def debug(msg):
 ################
 def _debug_keepmail(mailtext):
 	searchtext=mailtext.lower()
-	return True
+	#return True
 	for txt in _DEBUGSEARCHTEXT:
 		if txt.lower() in searchtext:
 			for exclude in _DEBUGEXCLUDETEXT:
@@ -768,7 +768,6 @@ def check_deferred_list():
 			if not _is_old_deferred_mail(mail):
 				new_list.append(mail)	
 	_deferred_emails=new_list
-	_count_deferredmails=len(_deferred_emails)
 	debug("End check_deferred_list")		
 ####################
 #_do_finally_at_exit
@@ -795,8 +794,8 @@ def _do_finally_at_exit():
 #_log_statistics
 ################
 def _log_statistics():
-	log("Statistics: totally sent mails: %i, encrypt mails: %i, already encrypted mails: %i, deferred mails: %i" %\
-	(_count_totalmails,_count_encryptedmails,_count_alreadyencryptedmails,_count_deferredmails))
+	log("Statistics: totally sent mails: %i, encrypt mails: %i, already encrypted mails: %i, deferred mails: %i, still deferred: %i" %\
+	(_count_totalmails,_count_encryptedmails,_count_alreadyencryptedmails,_count_deferredmails,len(_deferred_emails)))
 ##############
 #_new_tempfile
 ##############
@@ -1406,8 +1405,7 @@ class _SMIME:
 #############
 #is_encrypted
 #############
-def is_pgpinlineencrypted(msg):
-	"returns whether or not the email is already PGPINLINE encrypted"
+def _pgpinlineencrypted(msg):
 	if msg ==None:
 		return False
 	if type(msg)==bytes:
@@ -1418,6 +1416,21 @@ def is_pgpinlineencrypted(msg):
 		return True
 	else:
 		return False
+def is_pgpinlineencrypted(msg):
+	"returns whether or not the email is already PGPINLINE encrypted"
+	if _pgpinlineencrypted(msg):
+		return True
+	if type(msg)==bytes:
+		return False
+	if type(msg)==str:
+		msg=email.message_from_string(msg)
+	for m in msg.walk():
+		charset=m.get_param("charset",header="Content-Type")
+		cte=m["Content-Transfer-Encoding"]
+		if isinstance( m.get_payload(), str):
+			if _pgpinlineencrypted(_decodetxt(m.get_payload(),cte,charset)):
+				return True
+	return False
 def is_pgpmimeencrypted(msg):
 	"returns whether or not the email is already PGPMIME encrypted"
 	if type(msg)==bytes:
@@ -1787,8 +1800,12 @@ def _decode_base64(encoded):
 ###########
 #_decodetxt
 ###########
-#necessary due to a bug in python 3 email module
 def _decodetxt(text,encoding,charset):
+#necessary due to a bug in python 3 email module
+	if not charset:
+		charset="UTF-8"
+	if not encoding:
+		encoding="8bit"
 	bytetext=text.encode(charset)
 	result=bytetext
 	cte=encoding.upper()
@@ -2005,7 +2022,7 @@ def _encrypt_pgpmime(message,gpguser,from_addr,to_addr):
 		newmsg=email.message_from_string( header)
 	except:
 		log("creating new message failed","w")
-		log("'%(m1)s %(m2)s'"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
+		log_traceback()
 	contenttype="text/plain"
 	contenttransferencoding=None
 	contentboundary=None
@@ -2030,7 +2047,7 @@ def _encrypt_pgpmime(message,gpguser,from_addr,to_addr):
 		contenttransferencoding=newmsg['Content-Transfer-Encoding']
 	except:
 		log("contenttype and/or transerfencoding could not be found")
-		log("'%(m1)s %(m2)s'"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
+		log_traceback()
 	newmsg.set_type("multipart/encrypted")
 	newmsg.set_param("protocol","application/pgp-encrypted")
 	newmsg.preamble='This is an OpenPGP/MIME encrypted message (RFC 4880 and 3156)'
@@ -2187,7 +2204,7 @@ def _encrypt_smime_mail(mailtext,smimeuser,from_addr,to_addr):
 		newmsg=email.message_from_string( header)
 	except:
 		log("creating new message failed","w")
-		log("'%(m1)s %(m2)s'"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
+		log_traceback()
 		return 
 	m_id=""
 	if "Message-Id" in raw_message:
@@ -2206,7 +2223,7 @@ def _encrypt_smime_mail(mailtext,smimeuser,from_addr,to_addr):
 		contenttransferencoding=newmsg['Content-Transfer-Encoding']
 	except:
 		log("contenttype and/or transerfencoding could not be found")
-		log("'%(m1)s %(m2)s'"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
+		log_traceback()
 	newmsg.set_type( 'application/pkcs7-mime')
 	if newmsg["Content-Disposition"]:
 		del newmsg["Content-Disposition"]
@@ -2674,15 +2691,14 @@ def daemonmode():
 						sslkeyfile=_SMTPD_SSL_KEYFILE,
 						sslcertfile=_SMTPD_SSL_CERTFILE)
 	except:
-		log("Couldn't start mail server '%(m1)s %(m2)s'"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
+		log("Couldn't start mail server")
+		log_traceback()
 		exit(1)
 	try:
 		asyncore.loop()
 	except SystemExit as m:
 		exit(0)
 	except:
-		exc_type, exc_value, exc_tb = sys.exc_info()
-		#error=traceback.format_exception(exc_type, exc_value, exc_tb)
 		log("Bug:Exception occured!","e")
 		log_traceback()
 ###############
