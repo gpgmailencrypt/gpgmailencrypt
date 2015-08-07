@@ -1777,26 +1777,6 @@ def _encodefilename(name):
 	n1=(emailutils.encode_rfc2231(name,"UTF-8"))
 	n2="?UTF-8?B?%s"%base64.encodebytes(name.encode("UTF-8",_unicodeerror)).decode("UTF-8",_unicodeerror)[0:-1]
 	return n1,n2
-###############
-#_decode_base64
-###############
-def _decode_base64(encoded):
-# taken and modified from email._encoded_words.py
-	pad_err = len(encoded) % 4
-	if pad_err:
-		padded_encoded = encoded + b'==='[:4-pad_err]
-	else:
-		padded_encoded = encoded
-	try:
-		return base64.b64decode(padded_encoded, validate=True)
-	except binascii.Error:
-		for i in 0, 1, 2, 3:
-			try:
-				return base64.b64decode(encoded+b'='*i, validate=False)
-			except binascii.Error:
-				pass
-		else:
-			raise AssertionError("unexpected binascii.Error")
 ###########
 #_decodetxt
 ###########
@@ -1810,7 +1790,22 @@ def _decodetxt(text,encoding,charset):
 	result=bytetext
 	cte=encoding.upper()
 	if cte=="BASE64":
-		result=_decode_base64(bytetext)
+		pad_err = len(bytetext) % 4
+		if pad_err:
+			padded_encoded = bytetext + b'==='[:4-pad_err]
+		else:
+			padded_encoded = bytetext
+		try:
+			result= base64.b64decode(padded_encoded, validate=True)
+		except binascii.Error:
+			for i in 0, 1, 2, 3:
+				try:
+					result= base64.b64decode(bytetext+b'='*i, validate=False)
+					break
+				except binascii.Error:
+					pass
+			else:
+				raise AssertionError("unexpected binascii.Error")
 	elif cte=="QUOTED-PRINTABLE":
 		result=quopri.decodestring(bytetext)
 	elif cte in ('X-UUENCODE', 'UUENCODE', 'UUE', 'X-UUE'):
