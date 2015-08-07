@@ -23,14 +23,15 @@ import email,email.message,email.mime,email.mime.base,email.mime.multipart,email
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import email.utils as emailutils
-import html.parser,base64
+import html.parser,base64,quopri,uu,binascii
 import re,sys,tempfile,os,subprocess,atexit,time,datetime,getopt,random,syslog,inspect,gzip
 from email.generator import Generator
 from io import StringIO as _StringIO
+from io import BytesIO as _BytesIO
 from os.path import expanduser
 import locale,traceback
-VERSION="2.0kappa"
-DATE="06.08.2015"
+VERSION="2.0lambda"
+DATE="07.08.2015"
 #################################
 #Definition of general functions#
 #################################
@@ -401,7 +402,7 @@ def debug(msg):
 ################
 def _debug_keepmail(mailtext):
 	searchtext=mailtext.lower()
-	#return True
+	return True
 	for txt in _DEBUGSEARCHTEXT:
 		if txt.lower() in searchtext:
 			for exclude in _DEBUGEXCLUDETEXT:
@@ -677,7 +678,6 @@ def _send_textmsg(message, from_addr,to_addr,store_deferred=True):
 			debug("store_deferred %s"%store_deferred)
 			if store_deferred:
 				_store_temporaryfile(message,add_deferred=True,fromaddr=from_addr,toaddr=to_addr)
-			set_debug(dbg)
 			return False
 	elif _OUTPUT==o_file and _OUTFILE and len(_OUTFILE)>0:
 		try:
@@ -687,16 +687,13 @@ def _send_textmsg(message, from_addr,to_addr,store_deferred=True):
 			f=open(fname,mode='w',encoding="UTF-8")
 			f.write(message)
 			f.close()
-			set_debug(dbg)
 			return True
 		except:
 			log("Could not open Outputfile '%s'"%_OUTFILE,"e")
 			log("'%(m1)s %(m2)s'"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
-			set_debug(dbg)
 			return False
 	else:
 		print (message)
-		set_debug(dbg)
 		return True
 ###################
 #load_deferred_list
@@ -761,6 +758,7 @@ def check_deferred_list():
 				if not _is_old_deferred_mail(mail):
 					new_list.append(mail)
 			else:
+				log("Deferred mail successfully sent from %s to %s"%(mail[1],mail[2]))
 				try:
 					os.remove(mail[0])
 				except:
@@ -1766,6 +1764,47 @@ def _encodefilename(name):
 	n1=(emailutils.encode_rfc2231(name,"UTF-8"))
 	n2="?UTF-8?B?%s"%base64.encodebytes(name.encode("UTF-8",_unicodeerror)).decode("UTF-8",_unicodeerror)[0:-1]
 	return n1,n2
+###############
+#_decode_base64
+###############
+def _decode_base64(encoded):
+# taken and modified from email._encoded_words.py
+	pad_err = len(encoded) % 4
+	if pad_err:
+		padded_encoded = encoded + b'==='[:4-pad_err]
+	else:
+		padded_encoded = encoded
+	try:
+		return base64.b64decode(padded_encoded, validate=True)
+	except binascii.Error:
+		for i in 0, 1, 2, 3:
+			try:
+				return base64.b64decode(encoded+b'='*i, validate=False)
+			except binascii.Error:
+				pass
+		else:
+			raise AssertionError("unexpected binascii.Error")
+###########
+#_decodetxt
+###########
+#necessary due to a bug in python 3 email module
+def _decodetxt(text,encoding,charset):
+	bytetext=text.encode(charset)
+	result=bytetext
+	cte=encoding.upper()
+	if cte=="BASE64":
+		result=_decode_base64(bytetext)
+	elif cte=="QUOTED-PRINTABLE":
+		result=quopri.decodestring(bytetext)
+	elif cte in ('X-UUENCODE', 'UUENCODE', 'UUE', 'X-UUE'):
+		in_file = _BytesIO(bytetext)
+		out_file = _BytesIO()
+		try:
+			uu.decode(in_file, out_file, quiet=True)
+			result=out_file.getvalue()
+		except uu.Error:
+			pass
+	return result.decode(charset,_unicodeerror)
 #################
 #_encrypt_payload
 #################
@@ -1776,28 +1815,37 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 	htmlbody=""
 	htmlfooter=""
 	charset=payload.get_param("charset",header="Content-Type")
+	is_text=payload.get_content_maintype()=="text"
+	cte=payload["Content-Transfer-Encoding"]
+	if not cte:
+		cte="7bit"
 	debug("_encrypt_payload: charset %s"%charset)
 	if charset==None:
 		charset="UTF-8"
 	gpg = _GPG( _GPGKEYHOME, gpguser,counter)
-	raw_payload = payload.get_payload(decode=True)
-	is_text=payload.get_content_maintype()=="text"
+	raw_payload = payload.get_payload(decode=not is_text)
 	if is_text:
-		raw_payload=raw_payload.decode(charset,_unicodeerror)
+		raw_payload=_decodetxt(raw_payload,cte,charset)
 		debug("decode UTF raw payload")
+		_store_temporaryfile(raw_payload)
 	contenttype=payload.get_content_type()	
 	debug("nach payload.get_content_typ")	
 	debug("Content-Type:'%s'"%contenttype)
 	fp=_new_tempfile()
 	debug("_encrypt_payload _new_tempfile %s"%fp.name)
 	filename = payload.get_filename()
+	tencoding="7bit"
 	if contenttype=="text/html":
 		res,htmlheader,htmlbody,htmlfooter=_split_html(raw_payload)
-		payload.set_charset(charset)
 		fp.write(htmlbody.encode(charset,_unicodeerror))
 	else:
 		if is_text:
+			try:
+				raw_payload.encode("ascii")
+			except:
+				tencoding="8bit"
 			raw_payload=raw_payload.encode(charset,_unicodeerror)
+
 		fp.write(raw_payload)
 	fp.close()
 	isAttachment = payload.get_param( 'attachment', None, 'Content-Disposition' ) is not None
@@ -1866,6 +1914,9 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 		if result==0:
 			if contenttype=="text/html":
 				pl=htmlheader+"\n<br>\n"+re.sub('\n',"<br>\n",pl)+"<br>\n"+htmlfooter
+			if "Content-Transfer-Encoding" in payload:
+				del payload["Content-Transfer-Encoding"]
+			payload["Content-Transfer-Encoding"]=tencoding
 			payload.set_payload(pl)
 		else:
 			log("Error during encryption: payload will be unencrypted!","m")	
@@ -1920,7 +1971,6 @@ def _encrypt_pgpinline(mail,gpguser,from_addr,to_addr):
 			debug("for in schleife for _encrypt payload %s" %type(payload))
 			res=_encrypt_payload( payload,gpguser,counter )
 			if res and payload.get_content_type()=="text/calendar" and payload.get_param( 'attachment', None, 'Content-Disposition' ) is  None:
-
 				CAL=MIMEText(res.get_payload(decode=True),_subtype="calendar",_charset="UTF-8")
 				CAL.add_header('Content-Disposition', 'attachment', filename=cal_fname)
 				CAL.set_param( 'name', cal_fname)
@@ -2425,7 +2475,7 @@ def daemonmode():
 		def process_message(self, peer, mailfrom, receiver, data):
 			debug("hksmtpserver: gpgmailencryptserver from '%s' to '%s'"%(mailfrom,receiver))
 			try:
-				encrypt_mails(email.message_from_string(data).as_string(),receiver)
+				encrypt_mails(data,receiver)
 			except:
 				log("hksmtpserver: Bug:Exception!")
 				log_traceback()
@@ -2555,7 +2605,6 @@ def daemonmode():
 					self.push("530 STARTTLS before authentication required.")
 					self._SMTPChannel__line=[]
 					return
-			
 			smtpd.SMTPChannel.found_terminator(self)
 
 		def smtp_STARTTLS(self,arg):
