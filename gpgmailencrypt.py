@@ -30,7 +30,7 @@ from io import StringIO as _StringIO
 from io import BytesIO as _BytesIO
 from os.path import expanduser
 import locale,traceback
-VERSION="2.0my"
+VERSION="2.0ny"
 DATE="08.08.2015"
 #################################
 #Definition of general functions#
@@ -413,12 +413,12 @@ def _debug_keepmail(mailtext):
 #####################
 #_store_temporaryfile
 #####################
-def _store_temporaryfile(message,add_deferred=False,fromaddr="",toaddr=""):
+def _store_temporaryfile(message,add_deferred=False,spooldir=False,fromaddr="",toaddr=""):
 	global _deferred_emails,_count_deferredmails
 	debug("_store_temporaryfile add_deferred=%s"%add_deferred)
 	try:
 		tmpdir=None
-		if add_deferred:
+		if add_deferred or spooldir:
 			tmpdir=_deferdir
 		f=tempfile.NamedTemporaryFile(mode='wb',delete=False,prefix='mail-',dir=tmpdir)
 		f.write(message.encode("UTF-8",_unicodeerror))
@@ -429,11 +429,11 @@ def _store_temporaryfile(message,add_deferred=False,fromaddr="",toaddr=""):
 			log("store_temporaryfile.append deferred email '%s'"%f.name)
 		else:
 			log("Message in temporary file '%s'"%f.name)
-
+		return f.name
 	except:
 		log("Couldn't save email in temporary file, write error")
 		log_traceback()
-
+	return None
 ################
 #_prepare_syslog
 ################
@@ -614,33 +614,43 @@ def _read_configfile():
 #############
 #_send_rawmsg
 #############
-def _send_rawmsg(mailtext,msg,from_addr, to_addr):
+def _send_rawmsg(m_id,mailtext,msg,from_addr, to_addr):
 	debug("_send_rawmsg")
 	try:
 		message = email.message_from_string( mailtext )
 		if _ADDHEADER and not _encryptheader in message and msg:
 			message.add_header(_encryptheader,msg)
-		_send_msg(message,from_addr,to_addr)
+		_send_msg(m_id,message,from_addr,to_addr)
 	except:
 		log("_send_rawmsg: exception _send_textmsg")
-		_send_textmsg(mailtext,from_addr,to_addr)
+		_send_textmsg(m_id,mailtext,from_addr,to_addr)
 ##########
 #_send_msg
 ##########
-def _send_msg( message,from_addr,to_addr ):
+def _send_msg( m_id,message,from_addr,to_addr ):
 	global _OUTPUT,_mailcount
 	debug("_send_msg output %i"%_OUTPUT)
 	if type(message)==str:
-		_send_textmsg(message,from_addr,to_addr)
+		_send_textmsg(m_id,message,from_addr,to_addr)
 	else:
 		if _ADDHEADER and not _encryptheader in message:
 			message.add_header(_encryptheader,_encryptgpgcomment)
-		_send_textmsg(message.as_string(),from_addr,to_addr)
+		_send_textmsg(m_id,message.as_string(),from_addr,to_addr)
+
+def _remove_mail_from_queue(m_id):
+	global _email_queue
+	try:
+		if m_id>-1:
+			del _email_queue[m_id]
+	except:
+		log("mail could not be removed from queue")
+		log_traceback()
+
 ##############
 #_send_textmsg
 ##############
-def _send_textmsg(message, from_addr,to_addr,store_deferred=True):
-	global _OUTPUT,_mailcount
+def _send_textmsg(m_id,message, from_addr,to_addr,store_deferred=True):
+	global _OUTPUT,_mailcount,_email_queue
 	global _AUTHENTICATE,_SMTP_USER,_SMTP_PASSWORD
 	debug("_send_textmsg output %i"%_OUTPUT)
 	if _OUTPUT==o_mail:
@@ -670,14 +680,15 @@ def _send_textmsg(message, from_addr,to_addr,store_deferred=True):
 					return False
 			debug("smtp.sendmail")
 			smtp.sendmail( from_addr, to_addr, message )
+			_remove_mail_from_queue(m_id)
 			return True
 		except:
-			
 			log("Couldn't send mail!","e")
 			log_traceback()
 			debug("store_deferred %s"%store_deferred)
 			if store_deferred:
 				_store_temporaryfile(message,add_deferred=True,fromaddr=from_addr,toaddr=to_addr)
+				_remove_mail_from_queue(m_id)
 			return False
 	elif _OUTPUT==o_file and _OUTFILE and len(_OUTFILE)>0:
 		try:
@@ -700,6 +711,7 @@ def _send_textmsg(message, from_addr,to_addr,store_deferred=True):
 ###################
 def load_deferred_list():
 	"loads the list with deferred emails, that have to be sent later"
+	global _count_deferredmails
 	debug("load_deferred_list")
 	global _deferred_emails
 	_deferred_emails=[]
@@ -710,6 +722,7 @@ def load_deferred_list():
 			mail[3]=float(mail[3])
 			_deferred_emails.append(mail)
 		f.close()
+		_count_deferredmails=len(_deferred_emails)
 	except:
 		log("Couldn't load defer list '%s'"%_deferlist)
 ####################
@@ -724,9 +737,15 @@ def store_deferred_list():
 			mail[3]=str(mail[3])
 			f.write("|".join(mail))
 			f.write("\n")
+		for qid in _email_queue:
+			mail=_email_queue[qid]
+			mail[3]=str(mail[3])
+			f.write("|".join(mail))
+			f.write("\n")
 		f.close()
 	except:
 		log("Couldn't store defer list '%s'"%_deferlist)
+		log_traceback()
 ######################
 #_is_old_deferred_mail
 ######################
@@ -747,14 +766,14 @@ def _is_old_deferred_mail(mail):
 def check_deferred_list():
 	"tries to re-send deferred emails"
 	debug("check_deferred_list")
-	global _deferred_emails,_count_deferredmails
+	global _deferred_emails,_count_deferredmails, _queue_id,email_queue
 	new_list=[]
 	for mail in _deferred_emails:
 		try:
 			f=open(mail[0])
 			msg=f.read()
 			f.close()
-			if not _send_textmsg(msg.encode("UTF-8",_unicodeerror),mail[1],mail[2],store_deferred=False):
+			if not _send_textmsg(-1,msg.encode("UTF-8",_unicodeerror),mail[1],mail[2],store_deferred=False):
 				if not _is_old_deferred_mail(mail):
 					new_list.append(mail)
 			else:
@@ -786,8 +805,7 @@ def _do_finally_at_exit():
 			debug("do_finally delete tempfile '%s'"%f)
 		except:
 			pass
-	if _RUNMODE==m_daemon:
-		store_deferred_list()
+	store_deferred_list()
 	if _LOGGING and _logfile!=None:
 		_logfile.close()
 ################
@@ -1527,7 +1545,7 @@ class _htmldecode(html.parser.HTMLParser):
 		if e:
 			c=e
 		else:
-			c="_%s_"%w
+			c="&%s"%name
 
 		self.data+=c
 
@@ -1939,7 +1957,7 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 ###################
 #_encrypt_pgpinline
 ###################
-def _encrypt_pgpinline(mail,gpguser,from_addr,to_addr):
+def _encrypt_pgpinline(m_id,mail,gpguser,from_addr,to_addr):
 	debug("encrypt_pgpinline")
 	message=email.message_from_string(mail)
 	counter=0
@@ -2000,7 +2018,7 @@ def _encrypt_pgpinline(mail,gpguser,from_addr,to_addr):
 #################
 #_encrypt_pgpmime
 #################
-def _encrypt_pgpmime(message,gpguser,from_addr,to_addr):
+def _encrypt_pgpmime(m_id,message,gpguser,from_addr,to_addr):
 	global _tempfiles
 	debug("encrypt_pgpmime")
 	raw_message=email.message_from_string(message)
@@ -2009,7 +2027,7 @@ def _encrypt_pgpmime(message,gpguser,from_addr,to_addr):
 		splitmsg=re.split("\r\n\r\n",message,1)
 	if len(splitmsg)!=2:
 		debug("Mail could not be split in header and body part (mailsize=%i)"%len(message))
-		_send_rawmsg(message,"Error parsing email",from_addr,to_addr)
+		_send_rawmsg(m_id,message,"Error parsing email",from_addr,to_addr)
 		return None
 	header,body=splitmsg 
 	header+="\n\n"
@@ -2101,7 +2119,7 @@ def _encrypt_pgpmime(message,gpguser,from_addr,to_addr):
 	gpg.set_filename( fp.name )
 	attachment=_GPGEncryptedAttachment()
 	if is_encrypted(message):
-		_send_rawmsg(message,'Mail was already encrypted',from_addr,to_addr)
+		_send_rawmsg(m_id,message,'Mail was already encrypted',from_addr,to_addr)
 		_del_tempfile(fp.name)
 		return None
 	result,pl=gpg.encrypt_file(binary=False) 
@@ -2144,36 +2162,36 @@ def get_preferredencryptionmethod(user):
 ##################
 #_encrypt_gpg_mail 
 ##################
-def _encrypt_gpg_mail(mailtext,use_pgpmime, gpguser,from_addr,to_addr):
+def _encrypt_gpg_mail(m_id,mailtext,use_pgpmime, gpguser,from_addr,to_addr):
 	global _count_encryptedmails,_count_alreadyencryptedmails
 	raw_message=email.message_from_string(mailtext)
-	m_id=""
+	msg_id=""
 	if "Message-Id" in raw_message:
-		m_id="Id:%s "%raw_message["Message-Id"]
+		msg_id="Id:%s "%raw_message["Message-Id"]
 	if "Subject"  in raw_message and len(_SPAMSUBJECT.strip())>0 and _SPAMSUBJECT in raw_message["Subject"]:
 		debug("message is SPAM, don't encrypt")
-		_send_rawmsg(mailtext,"Spammail",from_addr,to_addr)
+		_send_rawmsg(m_id,mailtext,"Spammail",from_addr,to_addr)
 		return
 	if is_encrypted( raw_message ):
 		debug("encrypt_gpg_mail, is already encrypted")
-		_send_rawmsg(mailtext,'Mail was already encrypted',from_addr,to_addr)
+		_send_rawmsg(m_id,mailtext,'Mail was already encrypted',from_addr,to_addr)
 		_count_alreadyencryptedmails+=1
 		return
-	log("Encrypting email %s to: %s" % (m_id, to_addr) )
+	log("Encrypting email %s to: %s" % (msg_id, to_addr) )
 	if use_pgpmime:
-		mail = _encrypt_pgpmime( mailtext,gpguser,from_addr,to_addr )
+		mail = _encrypt_pgpmime( m_id,mailtext,gpguser,from_addr,to_addr )
 	else:
 		#PGP Inline
-		mail = _encrypt_pgpinline( mailtext,gpguser,from_addr,to_addr )
+		mail = _encrypt_pgpinline( m_id,mailtext,gpguser,from_addr,to_addr )
 	if mail==None:
 		return
 	debug("vor sendmsg")
 	_count_encryptedmails+=1
-	_send_msg( mail, from_addr, to_addr )
+	_send_msg( m_id,mail, from_addr, to_addr )
 #####################
 # _encrypt_smime_mail 
 #####################
-def _encrypt_smime_mail(mailtext,smimeuser,from_addr,to_addr):
+def _encrypt_smime_mail(m_id,mailtext,smimeuser,from_addr,to_addr):
 	debug("encrypt_smime_mail")
 	raw_message=email.message_from_string(mailtext)
 	global _tempfiles, _count_encryptedmails,_count_alreadyencryptedmails
@@ -2182,7 +2200,7 @@ def _encrypt_smime_mail(mailtext,smimeuser,from_addr,to_addr):
 	contentboundary=None
 	if is_encrypted(raw_message):
 		debug("encrypt_smime_mail:mail is already encrypted")
-		_send_rawmsg(mailtext,"Mail was already encrypted",from_addr,to_addr)
+		_send_rawmsg(m_id,mailtext,"Mail was already encrypted",from_addr,to_addr)
 		_count_alreadyencryptedmails+=1
 		return
 		
@@ -2191,7 +2209,7 @@ def _encrypt_smime_mail(mailtext,smimeuser,from_addr,to_addr):
 		splitmsg=re.split("\r\n\r\n",mailtext,1)
 	if len(splitmsg)!=2:
 		debug("Mail could not be split in header and body part (mailsize=%i)"%len(mailtext))
-		_send_rawmsg(mailtext,"Not encrypted",from_addr,to_addr)
+		_send_rawmsg(m_id,mailtext,"Not encrypted",from_addr,to_addr)
 		return
 	header,body=splitmsg 
 	header+="\n\n"
@@ -2285,11 +2303,11 @@ def _encrypt_smime_mail(mailtext,smimeuser,from_addr,to_addr):
 				del newmsg[_encryptheader]
 			newmsg[_encryptheader] = _encryptgpgcomment
 		newmsg.set_payload( pl )
-		_send_msg( newmsg,from_addr,to_addr )
+		_send_msg( m_id,newmsg,from_addr,to_addr )
 	else:
 		debug("encrypt_smime_mail: error encrypting mail, send unencrypted")
 		m=None
-		_send_rawmsg(mailtext,m,from_addr,to_addr)
+		_send_rawmsg(m_id,mailtext,m,from_addr,to_addr)
 	_del_tempfile(fp.name)
 ###############
 # encrypt_mails 
@@ -2303,7 +2321,7 @@ def encrypt_mails(mailtext,receiver):
 	example:
 	encrypt_mails(myemailtext,['agentj@mib','agentk@mib'])
 	"""
-	global _mailcount,_PREFERRED_ENCRYPTION,_count_totalmails
+	global _mailcount,_PREFERRED_ENCRYPTION,_count_totalmails, _queue_id
 	debug("encrypt_mails")
 	try:
 		if _debug_keepmail(mailtext): #DEBUG
@@ -2325,6 +2343,7 @@ def encrypt_mails(mailtext,receiver):
 			g_r,to_gpg=check_gpgrecipient(to_addr)
 			s_r,to_smime=check_smimerecipient(to_addr)
 			method=get_preferredencryptionmethod(to_addr)
+			fname=_store_temporaryfile(mailtext,spooldir=True)
 			debug("GPG encrypt possible %i"%g_r)
 			debug("SMIME encrypt possible %i"%s_r)
 			_count_totalmails+=1
@@ -2346,24 +2365,26 @@ def encrypt_mails(mailtext,receiver):
 				log_traceback()
 				return
 			from_addr = raw_message['From']
+			_email_queue[_queue_id]=[fname,from_addr,to_addr,time.time()]
 			if not s_r and not g_r:
 				m="Email not encrypted, public key for '%s' not found"%to_addr
 				log(m,"w")
-				_send_rawmsg(mailtext,m,from_addr,to_addr)
+				_send_rawmsg(_queue_id,mailtext,m,from_addr,to_addr)
 				continue
 			if _prefer_gpg:
 				debug("PREFER GPG")
 				if g_r:
-					_encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
+					_encrypt_gpg_mail(_queue_id,mailtext,_pgpmime,to_gpg,from_addr,to_addr)
 				else:
-					_encrypt_smime_mail(mailtext,to_smime,from_addr,to_addr)
+					_encrypt_smime_mail(_queue_id,mailtext,to_smime,from_addr,to_addr)
 			else:
 				debug("PREFER S/MIME")
 				if s_r:
-					_encrypt_smime_mail(mailtext,to_smime,from_addr,to_addr)
+					_encrypt_smime_mail(_queue_id,mailtext,to_smime,from_addr,to_addr)
 				else:
-					_encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
+					_encrypt_gpg_mail(_queue_id,mailtext,_pgpmime,to_gpg,from_addr,to_addr)
 			_mailcount+=1
+			_queue_id+=1
 	except:
 		log_traceback()
 		debug("END encrypt_mails")
@@ -2376,6 +2397,7 @@ def encrypt_mails(mailtext,receiver):
 def scriptmode():
 	"run gpgmailencrypt a script"
 	debug("scriptmode")
+	check_deferred_list()
 	try:
 		#read message
 		if len(_INFILE)>0:
@@ -2673,7 +2695,6 @@ def daemonmode():
 	signal.alarm(5)
 	signal.signal(signal.SIGTERM, _sigtermhandler)
 	signal.signal(signal.SIGHUP,  _sighuphandler)
-	load_deferred_list()
 	smtpd.__version__="gpgmailencrypt smtp server %s"%VERSION
 	log("gpgmailencrypt %s starts as daemon on %s:%s"%(VERSION,_SERVERHOST,_SERVERPORT) )
 	if _SMTPD_USE_AUTH:
@@ -2716,6 +2737,10 @@ def _sighuphandler(signum, frame):
 #############################
 init()
 _deferred_emails=[]
+_email_queue={}
+_queue_id=0
+load_deferred_list()
+
 if __name__ == "__main__":
 	receiver=_parse_commandline()
 	_set_logmode()
