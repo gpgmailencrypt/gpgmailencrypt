@@ -339,7 +339,7 @@ def _set_logmode():
 	except:
 		_logfile=None
 		_LOGGING=l_stderr
-		log("'%(m1)s %(m2)s'"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
+		log_traceback()
 ####
 #log
 ####
@@ -452,7 +452,8 @@ def _read_smtpcredentials(pwfile):
 	try:
 		f=open(pwfile)
 	except:
-		debug("hksmtpserver: Config file could not be read '%s'"%sys.exc_info()[1])
+		log("hksmtpserver: Config file could not be read","e")
+		log_traceback()
 		exit(5)
 	txt=f.read()
 	f.close()
@@ -623,6 +624,7 @@ def _send_rawmsg(m_id,mailtext,msg,from_addr, to_addr):
 		_send_msg(m_id,message,from_addr,to_addr)
 	except:
 		log("_send_rawmsg: exception _send_textmsg")
+		log_traceback()
 		_send_textmsg(m_id,mailtext,from_addr,to_addr)
 ##########
 #_send_msg
@@ -630,7 +632,7 @@ def _send_rawmsg(m_id,mailtext,msg,from_addr, to_addr):
 def _send_msg( m_id,message,from_addr,to_addr ):
 	global _OUTPUT,_mailcount
 	debug("_send_msg output %i"%_OUTPUT)
-	if type(message)==str:
+	if isinstance(message,str):
 		_send_textmsg(m_id,message,from_addr,to_addr)
 	else:
 		if _ADDHEADER and not _encryptheader in message:
@@ -701,7 +703,7 @@ def _send_textmsg(m_id,message, from_addr,to_addr,store_deferred=True):
 			return True
 		except:
 			log("Could not open Outputfile '%s'"%_OUTFILE,"e")
-			log("'%(m1)s %(m2)s'"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")
+			log_traceback()
 			return False
 	else:
 		print (message)
@@ -805,7 +807,8 @@ def _do_finally_at_exit():
 			debug("do_finally delete tempfile '%s'"%f)
 		except:
 			pass
-	store_deferred_list()
+	if _RUNMODE==m_daemon:
+		store_deferred_list()
 	if _LOGGING and _logfile!=None:
 		_logfile.close()
 ################
@@ -1419,7 +1422,8 @@ class _SMIME:
 				            		break
 	        				fdst.write(buf)
 		except:
-			log("Class smime._copyfile: Couldn't copy file, error '%(m1)s %(m2)s' occured!"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]},"e")	
+			log("Class smime._copyfile: Couldn't copy file!","e")
+			log_traceback()
 #############
 #is_encrypted
 #############
@@ -2047,7 +2051,8 @@ def _encrypt_pgpmime(m_id,message,gpguser,from_addr,to_addr):
 	try:
 		newmsg.set_boundary(boundary)
 	except:
-		log("Error setting boundary: %(m1)s %(m2)s"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]})
+		log("Error setting boundary")
+		log_traceback()
 	res= re.search("boundary=.*\n",message,re.IGNORECASE)
 	if res:
 		_b=message[res.start():res.end()]
@@ -2397,7 +2402,6 @@ def encrypt_mails(mailtext,receiver):
 def scriptmode():
 	"run gpgmailencrypt a script"
 	debug("scriptmode")
-	check_deferred_list()
 	try:
 		#read message
 		if len(_INFILE)>0:
@@ -2418,8 +2422,6 @@ def scriptmode():
 		debug("Exitcode:'%s'"%m)
 		exit(int(m.code))
 	except:
-		#exc_type, exc_value, exc_tb = sys.exc_info()
-		#error=traceback.format_exception(exc_type, exc_value, exc_tb)
 		log("Bug:Exception occured!","e")
 		log_traceback()
 		exit(4)	
@@ -2495,7 +2497,8 @@ def daemonmode():
 							except ssl.SSLWantWriteError:
 								select.select([], [conn], [])
 					except:
-						debug("hksmtpserver: Exception: Could not start SSL connection\n%s"%{"m1":sys.exc_info()[0],"m2":sys.exc_info()[1]})
+						log("hksmtpserver: Exception: Could not start SSL connection")
+						log_traceback()
 						return
 				debug('hksmtpserver: Incoming connection from %s' % repr(addr))
 				channel = hksmtpchannel(self, 
@@ -2658,7 +2661,8 @@ def daemonmode():
 		try:
 			f=open(pwfile)
 		except:
-			debug("hksmtpserver: Config file could not be read '%s'"%sys.exc_info()[1])
+			log("hksmtpserver: Config file could not be read","e")
+			log_traceback()
 			exit(5)
 		txt=f.read()
 		f.close()
@@ -2695,6 +2699,7 @@ def daemonmode():
 	signal.alarm(5)
 	signal.signal(signal.SIGTERM, _sigtermhandler)
 	signal.signal(signal.SIGHUP,  _sighuphandler)
+	load_deferred_list()
 	smtpd.__version__="gpgmailencrypt smtp server %s"%VERSION
 	log("gpgmailencrypt %s starts as daemon on %s:%s"%(VERSION,_SERVERHOST,_SERVERPORT) )
 	if _SMTPD_USE_AUTH:
@@ -2739,8 +2744,6 @@ init()
 _deferred_emails=[]
 _email_queue={}
 _queue_id=0
-load_deferred_list()
-
 if __name__ == "__main__":
 	receiver=_parse_commandline()
 	_set_logmode()
