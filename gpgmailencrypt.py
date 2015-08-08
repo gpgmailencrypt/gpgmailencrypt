@@ -30,8 +30,8 @@ from io import StringIO as _StringIO
 from io import BytesIO as _BytesIO
 from os.path import expanduser
 import locale,traceback
-VERSION="2.0lambda"
-DATE="07.08.2015"
+VERSION="2.0my"
+DATE="08.08.2015"
 #################################
 #Definition of general functions#
 #################################
@@ -1786,7 +1786,7 @@ def _decodetxt(text,encoding,charset):
 		charset="UTF-8"
 	if not encoding:
 		encoding="8bit"
-	bytetext=text.encode(charset)
+	bytetext=text.encode(charset,_unicodeerror)
 	result=bytetext
 	cte=encoding.upper()
 	if cte=="BASE64":
@@ -2696,9 +2696,9 @@ def daemonmode():
 	except:
 		log("Bug:Exception occured!","e")
 		log_traceback()
-###############
+################
 #_sigtermhandler
-###############
+################
 def _sigtermhandler(signum, frame):
 	exit(0)
 ###############
@@ -2711,9 +2711,9 @@ def _sighuphandler(signum, frame):
 	_daemonstarttime=_now
 	log("Signal SIGHUP: reload configuration")
 	init()
-##############################
+#############################
 # gpgmailencrypt main program
-##############################
+#############################
 init()
 _deferred_emails=[]
 if __name__ == "__main__":
