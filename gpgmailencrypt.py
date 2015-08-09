@@ -42,6 +42,12 @@ DATE="09.08.2015"
 def _dbg(func):
 	@wraps(func)
 	def wrapper(*args, **kwargs):
+		try:
+			_DEBUG
+		except:
+			_DEBUG=False
+		if not _DEBUG:
+			return func(*args,**kwargs)
 		lineno=0
 		endlineno=0
 		try:
@@ -208,6 +214,8 @@ def _parse_commandline():
 				_PREFERRED_ENCRYPTION="SMIME"
 			elif a=="pgpmime":
 				_PREFERRED_ENCRYPTION="PGPMIME"
+			elif a=="none":
+				_PREFERRED_ENCRYPTION="NONE"
 			else:
 				_PREFERRED_ENCRYPTION="PGPINLINE"
 		debug("Set _PREFERRED_ENCRYPTION to '%s'"%_PREFERRED_ENCRYPTION)
@@ -740,6 +748,7 @@ def _send_textmsg(m_id,message, from_addr,to_addr,store_deferred=True):
 			f=open(fname,mode='w',encoding="UTF-8")
 			f.write(message)
 			f.close()
+			_mailcount+=1
 			return True
 		except:
 			log("Could not open Outputfile '%s'"%_OUTFILE,"e")
@@ -2041,10 +2050,14 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 	return payload
 
 ###################
-#_encrypt_pgpinline
+#encrypt_pgpinline
 ###################
 @_dbg
-def _encrypt_pgpinline(m_id,mail,gpguser,from_addr,to_addr):
+def encrypt_pgpinline(mail,gpguser,from_addr,to_addr):
+	"""
+	returns the string 'message' as an PGPINLINE encrypted mail as an email.Message object
+	returns None if encryption was not possible
+	"""
 	debug("encrypt_pgpinline")
 	message=email.message_from_string(mail)
 	counter=0
@@ -2059,9 +2072,9 @@ def _encrypt_pgpinline(m_id,mail,gpguser,from_addr,to_addr):
 		msg=message
 	else:
 		msg=message.walk()
-		debug("_encrypt_pgpinline vor get_content_type")
+		debug("encrypt_pgpinline vor get_content_type")
 		contenttype=message.get_content_type()	
-		debug("_encrypt_pgpinline nach get_content_type")
+		debug("encrypt_pgpinline nach get_content_type")
 		debug("CONTENTTYPE %s"%contenttype)
 		if type( message.get_payload() ) == str:
 			debug("encrypt_pgpinlie: type( message.get_payload() ) == str")
@@ -2103,10 +2116,14 @@ def _encrypt_pgpinline(m_id,mail,gpguser,from_addr,to_addr):
 	debug("encrypt_pgpinline END")
 	return message
 #################
-#_encrypt_pgpmime
+#encrypt_pgpmime
 #################
 @_dbg
-def _encrypt_pgpmime(m_id,message,gpguser,from_addr,to_addr):
+def encrypt_pgpmime(message,gpguser,from_addr,to_addr):
+	"""
+	returns the string 'message' as an PGP/MIME encrypted mail as an email.Message object
+	returns None if encryption was not possible
+	"""
 	global _tempfiles
 	debug("encrypt_pgpmime")
 	raw_message=email.message_from_string(message)
@@ -2115,7 +2132,7 @@ def _encrypt_pgpmime(m_id,message,gpguser,from_addr,to_addr):
 		splitmsg=re.split("\r\n\r\n",message,1)
 	if len(splitmsg)!=2:
 		debug("Mail could not be split in header and body part (mailsize=%i)"%len(message))
-		_send_rawmsg(m_id,message,"Error parsing email",from_addr,to_addr)
+		log("Error parsing email","w")
 		return None
 	header,body=splitmsg 
 	header+="\n\n"
@@ -2208,7 +2225,6 @@ def _encrypt_pgpmime(m_id,message,gpguser,from_addr,to_addr):
 	gpg.set_filename( fp.name )
 	attachment=_GPGEncryptedAttachment()
 	if is_encrypted(message):
-		_send_rawmsg(m_id,message,'Mail was already encrypted',from_addr,to_addr)
 		_del_tempfile(fp.name)
 		return None
 	result,pl=gpg.encrypt_file(binary=False) 
@@ -2250,10 +2266,14 @@ def get_preferredencryptionmethod(user):
 		debug("get_preferredencryptionmethod: Method '%s' for user '%s' unknown" % (_m,_u))
 		return method
 ##################
-#_encrypt_gpg_mail 
+#encrypt_gpg_mail 
 ##################
 @_dbg
-def _encrypt_gpg_mail(m_id,mailtext,use_pgpmime, gpguser,from_addr,to_addr):
+def encrypt_gpg_mail(mailtext,use_pgpmime, gpguser,from_addr,to_addr):
+	"""
+	returns the string 'message' as an PGP encrypted mail (either PGP/INLINE or PGP/MIME depending on the configuration) as an email.Message object
+	returns None if encryption was not possible
+	"""
 	global _count_encryptedmails,_count_alreadyencryptedmails
 	raw_message=email.message_from_string(mailtext)
 	msg_id=""
@@ -2261,29 +2281,30 @@ def _encrypt_gpg_mail(m_id,mailtext,use_pgpmime, gpguser,from_addr,to_addr):
 		msg_id="Id:%s "%raw_message["Message-Id"]
 	if "Subject"  in raw_message and len(_SPAMSUBJECT.strip())>0 and _SPAMSUBJECT in raw_message["Subject"]:
 		debug("message is SPAM, don't encrypt")
-		_send_rawmsg(m_id,mailtext,"Spammail",from_addr,to_addr)
-		return
+		return None
 	if is_encrypted( raw_message ):
 		debug("encrypt_gpg_mail, is already encrypted")
-		_send_rawmsg(m_id,mailtext,'Mail was already encrypted',from_addr,to_addr)
 		_count_alreadyencryptedmails+=1
-		return
-	log("Encrypting email %s to: %s" % (msg_id, to_addr) )
+		return None
+	log("Encrypting email to: %s" % to_addr )
 	if use_pgpmime:
-		mail = _encrypt_pgpmime( m_id,mailtext,gpguser,from_addr,to_addr )
+		mail = encrypt_pgpmime( mailtext,gpguser,from_addr,to_addr )
 	else:
 		#PGP Inline
-		mail = _encrypt_pgpinline( m_id,mailtext,gpguser,from_addr,to_addr )
+		mail = encrypt_pgpinline( mailtext,gpguser,from_addr,to_addr )
 	if mail==None:
-		return
-	debug("vor sendmsg")
+		return None
 	_count_encryptedmails+=1
-	_send_msg( m_id,mail, from_addr, to_addr )
+	return mail
 #####################
-# _encrypt_smime_mail 
+# encrypt_smime_mail 
 #####################
 @_dbg
-def _encrypt_smime_mail(m_id,mailtext,smimeuser,from_addr,to_addr):
+def encrypt_smime_mail(mailtext,smimeuser,from_addr,to_addr):
+	"""
+	returns the string 'message' as an S/MIME encrypted mail as an email.Message object
+	returns None if encryption was not possible
+	"""
 	debug("encrypt_smime_mail")
 	raw_message=email.message_from_string(mailtext)
 	global _tempfiles, _count_encryptedmails,_count_alreadyencryptedmails
@@ -2292,17 +2313,16 @@ def _encrypt_smime_mail(m_id,mailtext,smimeuser,from_addr,to_addr):
 	contentboundary=None
 	if is_encrypted(raw_message):
 		debug("encrypt_smime_mail:mail is already encrypted")
-		_send_rawmsg(m_id,mailtext,"Mail was already encrypted",from_addr,to_addr)
+		debug("Mail was already encrypted")
 		_count_alreadyencryptedmails+=1
-		return
+		return None
 		
 	splitmsg=re.split("\n\n",mailtext,1)
 	if len(splitmsg)!=2:
 		splitmsg=re.split("\r\n\r\n",mailtext,1)
 	if len(splitmsg)!=2:
 		debug("Mail could not be split in header and body part (mailsize=%i)"%len(mailtext))
-		_send_rawmsg(m_id,mailtext,"Not encrypted",from_addr,to_addr)
-		return
+		return None
 	header,body=splitmsg 
 	header+="\n\n"
 	try:
@@ -2395,12 +2415,12 @@ def _encrypt_smime_mail(m_id,mailtext,smimeuser,from_addr,to_addr):
 				del newmsg[_encryptheader]
 			newmsg[_encryptheader] = _encryptgpgcomment
 		newmsg.set_payload( pl )
-		_send_msg( m_id,newmsg,from_addr,to_addr )
 	else:
 		debug("encrypt_smime_mail: error encrypting mail, send unencrypted")
 		m=None
-		_send_rawmsg(m_id,mailtext,m,from_addr,to_addr)
+		newmsg=None
 	_del_tempfile(fp.name)
+	return newmsg
 ###############
 # encrypt_mails 
 ###############
@@ -2471,16 +2491,22 @@ def encrypt_mails(mailtext,receiver):
 			if _prefer_gpg:
 				debug("PREFER GPG")
 				if g_r:
-					_encrypt_gpg_mail(_queue_id,mailtext,_pgpmime,to_gpg,from_addr,to_addr)
+					mresult=encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
 				else:
-					_encrypt_smime_mail(_queue_id,mailtext,to_smime,from_addr,to_addr)
+					mresult=encrypt_smime_mail(mailtext,to_smime,from_addr,to_addr)
 			else:
 				debug("PREFER S/MIME")
 				if s_r:
-					_encrypt_smime_mail(_queue_id,mailtext,to_smime,from_addr,to_addr)
+					mresult=encrypt_smime_mail(mailtext,to_smime,from_addr,to_addr)
 				else:
-					_encrypt_gpg_mail(_queue_id,mailtext,_pgpmime,to_gpg,from_addr,to_addr)
-			_mailcount+=1
+					mresult=encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
+			if mresult:
+				debug("send encrypted mail")
+				_send_msg( _queue_id,mresult,from_addr,to_addr )
+			else:
+				m="Email could not be encrypted"
+				debug(m)
+				_send_rawmsg(_queue_id,mailtext,m,from_addr,to_addr)
 			if _RUNMODE==m_daemon:
 				_queue_id+=1
 	except:
