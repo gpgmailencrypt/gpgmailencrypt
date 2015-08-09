@@ -39,9 +39,12 @@ DATE="09.08.2015"
 #####
 #_dbg
 #####
+_level=0
 def _dbg(func):
 	@wraps(func)
 	def wrapper(*args, **kwargs):
+		global _DEBUG
+		global _level
 		try:
 			_DEBUG
 		except:
@@ -56,9 +59,13 @@ def _dbg(func):
 			endlineno=lineno+len(source[0])
 		except:
 			pass
-		debug("%s start"%func.__name__,lineno)
+		_level+=1
+		debug("START %s"%func.__name__,lineno)
 		result=func(*args,**kwargs)
-		debug("%s end"%func.__name__,endlineno)
+		debug("END %s"%func.__name__,endlineno)
+		_level-=1
+		if _level<0:
+			_level=0
 		return result
 	return wrapper
 #####
@@ -369,13 +376,24 @@ def _set_logmode():
 		_logfile=None
 		_LOGGING=l_stderr
 		log_traceback()
+#############
+#_splitstring
+#############
+def _splitstring(txt,length=80):
+	def chunkstring(string, length):
+		return (string[0+i:length+i] for i in range(0, len(string), length))
+	return list(chunkstring(txt,length))
 ####
 #log
 ####
 def log(msg,infotype="m",ln=-1):
 	"prints logging information"
-	global _logfile
+	global _logfile, _level
 	if _LOGGING!=l_none:
+		if infotype=='d':
+			space=" "*_level
+		else:
+			space=" "
 		if ln==-1:
 			ln=inspect.currentframe().f_back.f_lineno
 		_lftmsg=20
@@ -387,29 +405,36 @@ def log(msg,infotype="m",ln=-1):
 		elif infotype=='d':
 			prefix="Debug"
 		t=time.localtime(time.time())
-		_lntxt="Line %i: "%ln
+		_lntxt="Line %i:%s"%(ln,space)
 		tm=("%02d.%02d.%04d %02d:%02d:%02d:" % (t[2],t[1],t[0],t[3],t[4],t[5])).ljust(_lftmsg)
-		if (ln>0):
-			msg=_lntxt+str(msg)
-		if _LOGGING==l_syslog:
-			#write to syslog
-			level=syslog.LOG_INFO
-			if infotype=='w':
-				level=syslog.LOG_WARNING
-			elif infotype=='e':
-				level=syslog.LOG_ERR
-				msg="ERROR "+msg
-			elif infotype=='d':
-				level=syslog.LOG_DEBUG
-				msg="DEBUG "+msg
-			syslog.syslog(level,msg)
-		elif  _LOGGING==l_file and _logfile!=None:
-			#write to _logfile
-			_logfile.write("%s %s: %s\n"%(tm,prefix,msg ))
-			_logfile.flush()
-		else:
-			# print to stderr if nothing else works
-			sys.stdout.write("%s %s: %s\n"%(tm,prefix,msg ))
+		txt=_splitstring(msg)
+		c=0
+		for t in txt:
+			if (ln>0):
+				t=_lntxt+t
+			l=len(txt)
+			if l>1 and c<l-1:
+				t=t+"\\"
+			c+=1
+			if _LOGGING==l_syslog:
+				#write to syslog
+				level=syslog.LOG_INFO
+				if infotype=='w':
+					level=syslog.LOG_WARNING
+				elif infotype=='e':
+					level=syslog.LOG_ERR
+					t="ERROR "+t
+				elif infotype=='d':
+					level=syslog.LOG_DEBUG
+					t="DEBUG "+t
+				syslog.syslog(level,t)
+			elif  _LOGGING==l_file and _logfile!=None:
+				#write to _logfile
+				_logfile.write("%s %s: %s\n"%(tm,prefix,t ))
+				_logfile.flush()
+			else:
+				# print to stderr if nothing else works
+				sys.stdout.write("%s %s: %s\n"%(tm,prefix,t ))
 ##############
 #log_traceback
 ##############
@@ -484,7 +509,6 @@ def _read_smtpcredentials(pwfile):
 	global _SMTP_USER,_SMTP_PASSWORD
 	if not _AUTHENTICATE:
 		return
-	debug("_read_smtpcredentials")
 	try:
 		f=open(pwfile)
 	except:
@@ -654,7 +678,6 @@ def _read_configfile():
 #############
 @_dbg
 def _send_rawmsg(m_id,mailtext,msg,from_addr, to_addr):
-	debug("_send_rawmsg")
 	try:
 		message = email.message_from_string( mailtext )
 		if _ADDHEADER and not _encryptheader in message and msg:
@@ -764,7 +787,6 @@ def _send_textmsg(m_id,message, from_addr,to_addr,store_deferred=True):
 def load_deferred_list():
 	"loads the list with deferred emails, that have to be sent later"
 	global _count_deferredmails
-	debug("load_deferred_list")
 	global _deferred_emails
 	_deferred_emails=[]
 	try:
@@ -820,7 +842,6 @@ def _is_old_deferred_mail(mail):
 @_dbg
 def check_deferred_list():
 	"tries to re-send deferred emails"
-	debug("check_deferred_list")
 	global _deferred_emails,_count_deferredmails, _queue_id,email_queue
 	new_list=[]
 	for mail in _deferred_emails:
@@ -849,7 +870,6 @@ def check_deferred_list():
 @_dbg
 def _do_finally_at_exit():
 	global _logfile,_tempfiles,_count_totalmails,_count_encryptedmails,_count_deferredmails
-	debug("do_finally")
 	if _RUNMODE==m_daemon:
 		log("gpgmailencrypt daemon shutdown")
 		_now=datetime.datetime.now()
@@ -1020,7 +1040,7 @@ def get_locale():
 def get_statistics():
 	"returns how many mails were handeled"
 	global _count_totalmails,_count_encryptedmails,_count_deferredmails,_count_alreadyencryptedmails
-	return {"total":_count_totalmails,"encrypt":_count_encryptedmails,"deferred":_count_deferredmails,"already encrypted":_count_alreadyencryptedmails}
+	return {"total":_count_totalmails,"encrypt":_count_encryptedmails,"deferred":_count_deferredmails,"still deferred":len(_deferred_emails),"already encrypted":_count_alreadyencryptedmails}
 #############
 #is_debugging
 #############
@@ -1336,6 +1356,7 @@ def check_smimerecipient(saddr):
 #CLASS _SMIME
 #############
 class _SMIME:
+	@_dbg
 	def __init__(self, keyhome=None, recipient = None):
 		global _SMIMEKEYHOME
 		debug("_SMIME.__init__ %s"%_SMIMEKEYHOME)
@@ -1349,27 +1370,31 @@ class _SMIME:
 			self._recipient=recipient
 		debug("_SMIME.__init__ end")
 
+	@_dbg
 	def set_filename(self, fname):
 		if type(fname)==str:
 			self._filename=fname.strip()
 		else:
 			self._filename=''
 	
+	@_dbg
 	def set_keyhome(self,keyhome):
 		if type(keyhome)==str:
 			self._keyhome=expanduser(keyhome.strip())
 		else:
 			self._keyhome=''
 		
+	@_dbg
 	def set_recipient(self, recipient):
 		if type(recipient) == str:
 			self._recipient=recipient
 
+	@_dbg
 	def recipient(self):
 		return self._recipient	
 
+	@_dbg
 	def has_key(self,key):
-		debug("smime.has_key")
 		global _smimeuser
 		if type(key)!=str:
 			debug("smime has_key, key not of type str")
@@ -1381,6 +1406,7 @@ class _SMIME:
 			return False
 		return True
 
+	@_dbg
 	def encrypt_file(self,filename=None,binary=False):
 		global _tempfiles
 		if filename:
@@ -1402,6 +1428,7 @@ class _SMIME:
 		m=email.message_from_string(encdata)
 		return _result,m.get_payload()
 
+	@_dbg
 	def _command_fromfile(self,sourcefile,binary):
 		_recipient=_smimeuser[self._recipient]
 		encrypt="des3" # RFC 3583
@@ -1414,12 +1441,14 @@ class _SMIME:
 		cmd=[_SMIMECMD, "smime", "-%s" %encrypt,"-encrypt", "-in",self._filename,"-out", sourcefile,  _recipient[0] ]
 		return cmd
 
+	@_dbg
 	def opensslcmd(self,cmd):
 		result=""
 		p = subprocess.Popen( cmd.split(" "), stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
 		result=p.stdout.read()
 		return result, p.returncode
 
+	@_dbg
 	def get_emailaddresses(self,certfile):
 		cmd=[_SMIMECMD,"x509","-in",certfile,"-text","-noout"]
 		cert,returncode=self.opensslcmd(" ".join(cmd))
@@ -1441,6 +1470,7 @@ class _SMIME:
 				pass
 		return email
 	
+	@_dbg
 	def get_fingerprint(self,cert):
 		cmd=[_SMIMECMD,"x509","-fingerprint","-in",cert,"-noout"]
 		fingerprint,returncode=self.opensslcmd(" ".join(cmd))
@@ -1452,6 +1482,7 @@ class _SMIME:
 				pass
 		return fingerprint
 	
+	@_dbg
 	def extract_publickey_from_mail(self,mail,targetdir):
 		debug("extract_publickey_from_mail to '%s'"%targetdir)
 		f=tempfile.NamedTemporaryFile(mode='wb',delete=False,prefix='mail-')
@@ -1470,6 +1501,7 @@ class _SMIME:
 		os.remove(fname)
 		return targetname
 	
+	@_dbg
 	def create_keylist(self,directory):
 		result={}
 		directory=expanduser(directory)
@@ -1488,11 +1520,13 @@ class _SMIME:
 			  			result[e] = [f,_SMIMECIPHER]
 		return result
 
+	@_dbg
 	def verify_certificate(self,cert):
 		cmd=[_SMIMECMD,"verify",cert,"&>/dev/null"]
 		_result = subprocess.call( " ".join(cmd) ,shell=True) 
 		return _result==0
 
+	@_dbg
 	def _copyfile(self,src, dst):
 		length=16*1024
 		try:
@@ -1936,7 +1970,6 @@ def _decodetxt(text,encoding,charset):
 #################
 @_dbg
 def _encrypt_payload( payload,gpguser,counter=0 ):
-	debug("_encrypt_payload")
 	global _tempfiles
 	htmlheader=""
 	htmlbody=""
@@ -2055,10 +2088,9 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 @_dbg
 def encrypt_pgpinline(mail,gpguser,from_addr,to_addr):
 	"""
-	returns the string 'message' as an PGPINLINE encrypted mail as an email.Message object
+	returns the string 'message' as an PGP/INLINE encrypted mail as an email.Message object
 	returns None if encryption was not possible
 	"""
-	debug("encrypt_pgpinline")
 	message=email.message_from_string(mail)
 	counter=0
 	attach_list=list()
@@ -2113,7 +2145,6 @@ def encrypt_pgpinline(mail,gpguser,from_addr,to_addr):
 		debug("for schleife Ende")			
 	for a in attach_list:
 		message.attach(a)
-	debug("encrypt_pgpinline END")
 	return message
 #################
 #encrypt_pgpmime
@@ -2125,7 +2156,6 @@ def encrypt_pgpmime(message,gpguser,from_addr,to_addr):
 	returns None if encryption was not possible
 	"""
 	global _tempfiles
-	debug("encrypt_pgpmime")
 	raw_message=email.message_from_string(message)
 	splitmsg=re.split("\n\n",message,1)
 	if len(splitmsg)!=2:
@@ -2236,7 +2266,6 @@ def encrypt_pgpmime(message,gpguser,from_addr,to_addr):
 	newmsg.set_boundary(boundary)
 	attachment.set_boundary(contentboundary)
 	attachment.set_masterboundary(boundary)
-	debug("encrypt_pgpmime END")
 	_del_tempfile(fp.name)
 	return newmsg
 ##############################
@@ -2305,7 +2334,6 @@ def encrypt_smime_mail(mailtext,smimeuser,from_addr,to_addr):
 	returns the string 'message' as an S/MIME encrypted mail as an email.Message object
 	returns None if encryption was not possible
 	"""
-	debug("encrypt_smime_mail")
 	raw_message=email.message_from_string(mailtext)
 	global _tempfiles, _count_encryptedmails,_count_alreadyencryptedmails
 	contenttype="text/plain"
@@ -2316,7 +2344,6 @@ def encrypt_smime_mail(mailtext,smimeuser,from_addr,to_addr):
 		debug("Mail was already encrypted")
 		_count_alreadyencryptedmails+=1
 		return None
-		
 	splitmsg=re.split("\n\n",mailtext,1)
 	if len(splitmsg)!=2:
 		splitmsg=re.split("\r\n\r\n",mailtext,1)
@@ -2435,7 +2462,6 @@ def encrypt_mails(mailtext,receiver):
 	encrypt_mails(myemailtext,['agentj@mib','agentk@mib'])
 	"""
 	global _mailcount,_PREFERRED_ENCRYPTION,_count_totalmails, _queue_id
-	debug("encrypt_mails")
 	try:
 		if _debug_keepmail(mailtext): #DEBUG
 			_store_temporaryfile(mailtext)
@@ -2453,11 +2479,11 @@ def encrypt_mails(mailtext,receiver):
 			_del_tempfile(f.name)
 		for to_addr in receiver:
 			debug("encrypt_mail for user '%s'"%to_addr)
+			if _RUNMODE==m_daemon:
+				fname=_store_temporaryfile(mailtext,spooldir=True)
 			g_r,to_gpg=check_gpgrecipient(to_addr)
 			s_r,to_smime=check_smimerecipient(to_addr)
 			method=get_preferredencryptionmethod(to_addr)
-			if _RUNMODE==m_daemon:
-				fname=_store_temporaryfile(mailtext,spooldir=True)
 			debug("GPG encrypt possible %i"%g_r)
 			debug("SMIME encrypt possible %i"%s_r)
 			_count_totalmails+=1
@@ -2488,6 +2514,11 @@ def encrypt_mails(mailtext,receiver):
 				log(m,"w")
 				_send_rawmsg(_queue_id,mailtext,m,from_addr,to_addr)
 				continue
+			if is_encrypted(mailtext):
+				m="Email already encrypted"
+				debug(m)
+				_send_rawmsg(_queue_id,mailtext,m,from_addr,to_addr)
+				continue
 			if _prefer_gpg:
 				debug("PREFER GPG")
 				if g_r:
@@ -2511,7 +2542,6 @@ def encrypt_mails(mailtext,receiver):
 				_queue_id+=1
 	except:
 		log_traceback()
-		debug("END encrypt_mails")
 #######################################
 #END definition of encryption functions
 #######################################
@@ -2521,7 +2551,6 @@ def encrypt_mails(mailtext,receiver):
 @_dbg
 def scriptmode():
 	"run gpgmailencrypt a script"
-	debug("scriptmode")
 	try:
 		#read message
 		if len(_INFILE)>0:
@@ -2547,7 +2576,6 @@ def scriptmode():
 		exit(4)	
 	else:
 		debug("Program exits without errors")
-		exit(0)	
 ###########
 #daemonmode
 ###########
@@ -2727,7 +2755,6 @@ def daemonmode():
 				except:
 					debug("hksmtpserver: error decode base64 '%s'"%sys.exc_info()[1])
 					d=[]
-				#debug("hksmtpserver: RESULT %s"%d)
 				if len(d)<2:
 					self.push("454 Temporary authentication failure.")
 					return
@@ -2735,7 +2762,6 @@ def daemonmode():
 					del d[0]
 				user=d[0]
 				password=d[1]
-				#debug("hksmtpserver: user:%s password:%s"%(user,password))
 				if not self.authenticate_function:
 					debug("hksmtpserver: self.authenticate_function=None")
 				if self.authenticate_function and self.authenticate_function(user,password):
@@ -2745,6 +2771,18 @@ def daemonmode():
 					self.push("454 Temporary authentication failure.")
 			else:
 				self.push("454 Temporary authentication failure.")
+		def smtp_STATISTICS(self,arg):
+			if arg:
+				self.push("501 Syntax error: no arguments allowed")
+				return
+			statistics=get_statistics()
+			c=0
+			for s in statistics:
+				dash="-"
+				if c==len(statistics)-1:
+					dash=" "
+				self.push("250%s%s %i"%(dash,s,statistics[s]) )
+				c+=1
 		def found_terminator(self):
 			line = "".join(self._SMTPChannel__line)
 			i = line.find(' ')
