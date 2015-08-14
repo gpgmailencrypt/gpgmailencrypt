@@ -24,15 +24,15 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import email.utils as emailutils
 import html.parser,base64,quopri,uu,binascii
-import re,sys,tempfile,os,subprocess,atexit,time,datetime,getopt,random,syslog,inspect,gzip
+import re,sys,tempfile,os,stat,subprocess,atexit,time,datetime,getopt,random,syslog,inspect,gzip
 from email.generator import Generator
 from io import StringIO as _StringIO
 from io import BytesIO as _BytesIO
 from os.path import expanduser
-import locale,traceback
+import locale,traceback,hashlib
 from functools import wraps
-VERSION="2.0xi"
-DATE="09.08.2015"
+VERSION="2.0pi"
+DATE="14.08.2015"
 #################################
 #Definition of general functions#
 #################################
@@ -71,6 +71,7 @@ def _dbg(func):
 #####
 #init
 #####
+@_dbg
 def init():
 	"initiales the module and reads the config file"
 	global o_mail,o_stdout,o_file,l_none,l_syslog,l_file,l_stderr,m_daemon,m_script
@@ -82,7 +83,7 @@ def init():
 	global _INFILE,_OUTFILE,_PREFERRED_ENCRYPTION,_GPGKEYHOME,_ALLOWGPGCOMMENT,_GPGCMD
 	global _SMIMEKEYHOME,_SMIMECMD,_SMIMECIPHER,_SMIMEKEYEXTRACTDIR,_SMIMEAUTOMATICEXTRACTKEYS
 	global _SPAMSUBJECT,_OUTPUT, _DEBUGSEARCHTEXT,_DEBUGEXCLUDETEXT,_LOCALE,_LOCALEDB
-	global _RUNMODE,_SERVERHOST,_SERVERPORT,_STATISTICS_PER_DAY
+	global _RUNMODE,_SERVERHOST,_SERVERPORT,_STATISTICS_PER_DAY, _ADMINS
 	global _SMTPD_USE_SMTPS,_SMTPD_USE_AUTH,_SMTPD_PASSWORDFILE,_SMTPD_SSL_KEYFILE,_SMTPD_SSL_CERTFILE,_smtpd_passwords
 	global _AUTHENTICATE,_SMTP_CREDENTIAL,_SMTP_USER,_SMTP_PASSWORD,_deferlist
 	global _count_totalmails, _count_encryptedmails,_count_deferredmails,_count_alreadyencryptedmails,_count_alarms
@@ -171,10 +172,11 @@ def init():
 	_SMTPD_PASSWORDFILE="/etc/gpgmailencrypt.pw"
 	_SMTPD_SSL_KEYFILE="/etc/gpgsmtpd.key"
 	_SMTPD_SSL_CERTFILE="/etc/gpgsmtpd.cert"
+	_ADMINS=[]
+	_read_configfile()
 	if _DEBUG:
 		for a in _addressmap:
 			debug("_addressmap: '%s'='%s'"%(a,_addressmap[a]))
-	_read_configfile()
 ###################
 #_parse_commandline
 ###################
@@ -407,7 +409,7 @@ def log(msg,infotype="m",ln=-1):
 		t=time.localtime(time.time())
 		_lntxt="Line %i:%s"%(ln,space)
 		tm=("%02d.%02d.%04d %02d:%02d:%02d:" % (t[2],t[1],t[0],t[3],t[4],t[5])).ljust(_lftmsg)
-		txt=_splitstring(msg)
+		txt=_splitstring(msg,120)
 		c=0
 		for t in txt:
 			if (ln>0):
@@ -536,7 +538,7 @@ def _read_configfile():
 	global _ADDHEADER,_HOST,_PORT,_ALLOWGPGCOMMENT,_CONFIGFILE,_SPAMSUBJECT,_OUTPUT,_STATISTICS_PER_DAY
 	global _smimeuser,_SMIMEKEYHOME,_SMIMECMD,_SMIMECIPHER,_SMIMEKEYEXTRACTDIR,_SMIMEAUTOMATICEXTRACTKEYS
 	global _DEBUGEXCLUDETEXT,_DEBUGSEARCHTEXT
-	global _LOCALE,_SERVERHOST,_SERVERPORT
+	global _LOCALE,_SERVERHOST,_SERVERPORT,_ADMINS
 	global _AUTHENTICATE,_SMTP_CREDENTIAL
 	global _SMTPD_USE_SMTPS,_SMTPD_USE_AUTH,_SMTPD_PASSWORDFILE,_SMTPD_SSL_KEYFILE,_SMTPD_SSL_CERTFILE,_deferlist
 	
@@ -641,6 +643,10 @@ def _read_configfile():
 			_STATISTICS_PER_DAY=_cfg.getint('daemon','statistics')
 			if _STATISTICS_PER_DAY >24:
 				_STATISTICS_PER_DAY=24
+		if _cfg.has_option('daemon','admins'):
+			admins=_cfg.get('daemon','admins').split(",")
+			for a in admins:
+				_ADMINS.append(a.strip())
 	if _cfg.has_section('smime'):
 		if _cfg.has_option('smime','opensslcommand'):
 			_SMIMECMD=_cfg.get('smime','opensslcommand')
@@ -673,6 +679,24 @@ def _read_configfile():
 			debug("SMimeuser: '%s %s'"%(u,_smimeuser[u]))
 	if _AUTHENTICATE:
 		_read_smtpcredentials(_SMTP_CREDENTIAL)
+########################
+#_remove_mail_from_queue
+########################
+@_dbg
+def _remove_mail_from_queue(m_id):
+	global _email_queue
+	try:
+		if m_id>-1:
+			mail=_email_queue[m_id]
+			try:
+				debug("_remove_mail_from_queue file '%s'"%mail[0])
+				os.remove(mail[0])
+			except:
+				pass
+			del _email_queue[m_id]
+	except:
+		log("mail %i could not be removed from queue"%m_id)
+		log_traceback()
 #############
 #_send_rawmsg
 #############
@@ -700,24 +724,6 @@ def _send_msg( m_id,message,from_addr,to_addr ):
 		if _ADDHEADER and not _encryptheader in message:
 			message.add_header(_encryptheader,_encryptgpgcomment)
 		_send_textmsg(m_id,message.as_string(),from_addr,to_addr)
-########################
-#_remove_mail_from_queue
-########################
-@_dbg
-def _remove_mail_from_queue(m_id):
-	global _email_queue
-	try:
-		if m_id>-1:
-			mail=_email_queue[m_id]
-			try:
-				debug("_remove_mail_from_queue file '%s'"%mail[0])
-				os.remove(mail[0])
-			except:
-				pass
-			del _email_queue[m_id]
-	except:
-		log("mail %i could not be removed from queue"%m_id)
-		log_traceback()
 ##############
 #_send_textmsg
 ##############
@@ -752,7 +758,8 @@ def _send_textmsg(m_id,message, from_addr,to_addr,store_deferred=True):
 						_store_temporaryfile(message,add_deferred=True,fromaddr=from_addr,toaddr=to_addr)
 					return False
 			debug("smtp.sendmail")
-			smtp.sendmail( from_addr, to_addr, message )
+			message=re.sub(r'(?:\r\n|\n|\r(?!\n))', "\r\n", message)
+			smtp.sendmail( from_addr, to_addr, message.encode("UTF-8") )
 			_remove_mail_from_queue(m_id)
 			return True
 		except:
@@ -849,7 +856,7 @@ def check_deferred_list():
 			f=open(mail[0])
 			msg=f.read()
 			f.close()
-			if not _send_textmsg(-1,msg.encode("UTF-8",_unicodeerror),mail[1],mail[2],store_deferred=False):
+			if not _send_textmsg(-1,msg,mail[1],mail[2],store_deferred=False):
 				if not _is_old_deferred_mail(mail):
 					new_list.append(mail)
 			else:
@@ -864,6 +871,28 @@ def check_deferred_list():
 				new_list.append(mail)	
 	_deferred_emails=new_list
 	debug("End check_deferred_list")		
+def check_mailqueue():
+	global email_queue
+	for qid in _email_queue:
+		mail=_email_queue[qid]
+		try:
+			f=open(mail[0],"rb")
+			m=f.read()
+			f.close()
+			mailtext=m.decode("UTF-8",_unicodeerror)
+			encrypt_single_mail(-1,mailtext,mail[1],mail[2])	
+			del _email_queue[qid]
+		except:
+			log("mail couldn't be removed from email queue")
+			log_traceback()
+	
+	
+#########
+#is_admin
+#########
+@_dbg
+def is_admin(user):
+	return user in _ADMINS
 ####################
 #_do_finally_at_exit
 ####################
@@ -1978,14 +2007,16 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 	is_text=payload.get_content_maintype()=="text"
 	cte=payload["Content-Transfer-Encoding"]
 	if not cte:
-		cte="7bit"
+		cte="8bit"
 	debug("_encrypt_payload: charset %s"%charset)
-	if charset==None:
+	if charset==None or charset.upper()=="ASCII" or len(charset)==0:
 		charset="UTF-8"
 	gpg = _GPG( _GPGKEYHOME, gpguser,counter)
 	raw_payload = payload.get_payload(decode=not is_text)
 	if is_text:
-		raw_payload=_decodetxt(raw_payload,cte,charset)
+		raw_payload=_decodetxt(raw_payload,cte,charset)	
+		payload.del_param("charset")	
+		payload.set_param("charset",charset)
 	contenttype=payload.get_content_type()	
 	debug("nach payload.get_content_typ")	
 	debug("Content-Type:'%s'"%contenttype)
@@ -2081,7 +2112,6 @@ def _encrypt_payload( payload,gpguser,counter=0 ):
 	_del_tempfile(fp.name)
 	debug("_encrypt_payload END")
 	return payload
-
 ###################
 #encrypt_pgpinline
 ###################
@@ -2110,6 +2140,9 @@ def encrypt_pgpinline(mail,gpguser,from_addr,to_addr):
 		debug("CONTENTTYPE %s"%contenttype)
 		if type( message.get_payload() ) == str:
 			debug("encrypt_pgpinlie: type( message.get_payload() ) == str")
+			charset=message.get_param("charset",header="Content-Type")
+			if charset==None or charset.upper()=="ASCII":
+				message.set_param("charset",charset)		
 			pl=_encrypt_payload( message ,gpguser)
 			if contenttype=="text/calendar":
 				CAL=MIMEText(pl.get_payload(decode=True),_subtype="calendar",_charset="UTF-8")
@@ -2118,7 +2151,7 @@ def encrypt_pgpinline(mail,gpguser,from_addr,to_addr):
 				pl.set_payload(None)
 				pl.set_type("multipart/mixed")
 				pl.attach(CAL)
-			debug("encrypt_pgpinlie: type( message.get_payload() ) == str END")
+			debug("encrypt_pgpinline: type( message.get_payload() ) == str END")
 			return pl
 	for payload in msg:
 		content=payload.get_content_maintype()
@@ -2448,6 +2481,56 @@ def encrypt_smime_mail(mailtext,smimeuser,from_addr,to_addr):
 		newmsg=None
 	_del_tempfile(fp.name)
 	return newmsg
+
+@_dbg
+def encrypt_single_mail(queue_id,mailtext,from_addr,to_addr):
+	global _mailcount,_PREFERRED_ENCRYPTION,_count_totalmails, _queue_id
+	g_r,to_gpg=check_gpgrecipient(to_addr)
+	s_r,to_smime=check_smimerecipient(to_addr)
+	method=get_preferredencryptionmethod(to_addr)
+	debug("GPG encrypt possible %i"%g_r)
+	debug("SMIME encrypt possible %i"%s_r)
+	_count_totalmails+=1
+	if method=="PGPMIME":
+		_prefer_gpg=True
+		_pgpmime=True
+	elif method=="PGPINLINE":
+		_prefer_gpg=True
+		_pgpmime=False
+	if method=="SMIME":
+		_prefer_gpg=False
+	if method=="NONE":
+		g_r=False
+		s_r=False
+	if not s_r and not g_r:
+		m="Email not encrypted, public key for '%s' not found"%to_addr
+		log(m,"w")
+		_send_rawmsg(_queue_id,mailtext,m,from_addr,to_addr)
+		return
+	if is_encrypted(mailtext):
+		m="Email already encrypted"
+		debug(m)
+		_send_rawmsg(_queue_id,mailtext,m,from_addr,to_addr)
+		return
+	if _prefer_gpg:
+		debug("PREFER GPG")
+		if g_r:
+			mresult=encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
+		else:
+			mresult=encrypt_smime_mail(mailtext,to_smime,from_addr,to_addr)
+	else:
+		debug("PREFER S/MIME")
+		if s_r:
+			mresult=encrypt_smime_mail(mailtext,to_smime,from_addr,to_addr)
+		else:
+			mresult=encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
+	if mresult:
+		debug("send encrypted mail")
+		_send_msg(queue_id,mresult,from_addr,to_addr )
+	else:
+		m="Email could not be encrypted"
+		debug(m)
+		_send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
 ###############
 # encrypt_mails 
 ###############
@@ -2481,23 +2564,6 @@ def encrypt_mails(mailtext,receiver):
 			debug("encrypt_mail for user '%s'"%to_addr)
 			if _RUNMODE==m_daemon:
 				fname=_store_temporaryfile(mailtext,spooldir=True)
-			g_r,to_gpg=check_gpgrecipient(to_addr)
-			s_r,to_smime=check_smimerecipient(to_addr)
-			method=get_preferredencryptionmethod(to_addr)
-			debug("GPG encrypt possible %i"%g_r)
-			debug("SMIME encrypt possible %i"%s_r)
-			_count_totalmails+=1
-			if method=="PGPMIME":
-				_prefer_gpg=True
-				_pgpmime=True
-			elif method=="PGPINLINE":
-				_prefer_gpg=True
-				_pgpmime=False
-			if method=="SMIME":
-				_prefer_gpg=False
-			if method=="NONE":
-				g_r=False
-				s_r=False
 			try:
 				raw_message = email.message_from_string( mailtext )
 			except:
@@ -2509,35 +2575,7 @@ def encrypt_mails(mailtext,receiver):
 				_email_queue[_queue_id]=[fname,from_addr,to_addr,time.time()]
 			else:
 				_queue_id=-1
-			if not s_r and not g_r:
-				m="Email not encrypted, public key for '%s' not found"%to_addr
-				log(m,"w")
-				_send_rawmsg(_queue_id,mailtext,m,from_addr,to_addr)
-				continue
-			if is_encrypted(mailtext):
-				m="Email already encrypted"
-				debug(m)
-				_send_rawmsg(_queue_id,mailtext,m,from_addr,to_addr)
-				continue
-			if _prefer_gpg:
-				debug("PREFER GPG")
-				if g_r:
-					mresult=encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
-				else:
-					mresult=encrypt_smime_mail(mailtext,to_smime,from_addr,to_addr)
-			else:
-				debug("PREFER S/MIME")
-				if s_r:
-					mresult=encrypt_smime_mail(mailtext,to_smime,from_addr,to_addr)
-				else:
-					mresult=encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
-			if mresult:
-				debug("send encrypted mail")
-				_send_msg( _queue_id,mresult,from_addr,to_addr )
-			else:
-				m="Email could not be encrypted"
-				debug(m)
-				_send_rawmsg(_queue_id,mailtext,m,from_addr,to_addr)
+			encrypt_single_mail(_queue_id,mailtext,from_addr,to_addr)
 			if _RUNMODE==m_daemon:
 				_queue_id+=1
 	except:
@@ -2545,6 +2583,61 @@ def encrypt_mails(mailtext,receiver):
 #######################################
 #END definition of encryption functions
 #######################################
+@_dbg
+def start_adminconsole(host,port):
+	"starts the admin console"
+	import getpass
+	class gmeadmin():
+		def __init__(self):
+			self.smtp= smtplib.SMTP()
+			self.host="localhost"
+			self.port=0
+
+		def _sendcmd(self, cmd,arg=""):
+		        self.smtp.putcmd(cmd,arg)
+		        (code, msg) = self.getreply()
+		        print(msg.decode("UTF-8"))
+		        return (code, msg)
+
+		def getreply(self):
+			return self.smtp.getreply()	
+	
+		def start(self,host="localhost",port=0):
+			self.host=host
+			self.port=port
+			try:
+				self.smtp.connect(host,port)
+			except:
+				print("Connection not possible")
+				exit(1)
+			user=input("User: ")
+			password=getpass.getpass("Password: ")
+			auth=binascii.b2a_base64(("\x00%s\x00%s"%(user,password)).encode("UTF-8"))[:-1]
+			code,msg=self._sendcmd("AUTH PLAIN",auth.decode("UTF-8"))
+			if code!=235:
+				print("Authentication failed")
+				exit(1)
+		
+			while True:
+				i=input("> ").upper()
+				cmd=""
+				if i in ["STATISTICS","FLUSH","RELOAD","HELP","QUIT"]:
+					if i=="HELP":
+						self.print_help()
+					else:
+						self._sendcmd(i)
+				else:
+					print("Error: command '%s' unknown"%i)
+				if i=="QUIT":
+					break
+
+		def print_help(self):
+			print("Allowed commands:")
+			print("statistics,flush,reload,help,quit")
+
+	g=gmeadmin()
+	g.start(host,port)
+
 ###########
 #scriptmode
 ###########
@@ -2579,9 +2672,10 @@ def scriptmode():
 ###########
 #daemonmode
 ###########
+@_dbg
 def daemonmode():
 	"starts the smtpd daemon"
-	import smtpd,asyncore, signal,ssl,hashlib,asynchat,binascii,socket,select
+	import smtpd,asyncore, signal,ssl,asynchat,binascii,socket,select
 	#####################
 	#_deferredlisthandler
 	#####################
@@ -2603,6 +2697,7 @@ def daemonmode():
 	#gpgmailencryptserver
 	#####################
 	class gpgmailencryptserver(smtpd.SMTPServer):
+		@_dbg
 		def __init__(self, 
 				localaddr,sslcertfile=None,
 				sslkeyfile=None,
@@ -2622,6 +2717,7 @@ def daemonmode():
 			self.use_smtps=use_smtps
 			self.use_authentication=use_auth
 			self.authenticate_function=authenticate_function
+		@_dbg
 		def handle_accept(self):
 			pair = self.accept()
 			if pair is not None:
@@ -2657,6 +2753,7 @@ def daemonmode():
 							sslcertfile=self.sslcertfile,
 							sslkeyfile=self.sslkeyfile,
 							sslversion=self.sslversion)
+		@_dbg
 		def process_message(self, peer, mailfrom, receiver, data):
 			debug("hksmtpserver: gpgmailencryptserver from '%s' to '%s'"%(mailfrom,receiver))
 			try:
@@ -2690,6 +2787,7 @@ def daemonmode():
 			self.tls_active=False
 			self.authenticate_function=authenticate_function
 			self.is_authenticated=False
+			self.is_admin=False
 			self.use_authentication=use_auth
 			self.user=""
 			self.password=""
@@ -2698,7 +2796,7 @@ def daemonmode():
 			self.fqdn=socket.getfqdn()
 			if self.sslcertfile and self.sslkeyfile and self.sslversion:
 				self.starttls_available=True
-
+		@_dbg
 		def smtp_HELO(self,arg):
 			debug("hksmtpserver: HELO")
 			if not arg:
@@ -2709,7 +2807,7 @@ def daemonmode():
 			else:
 				self.seen_greeting = True
 				self.push('250 %s' % self.fqdn)
-	
+		@_dbg
 		def smtp_EHLO(self, arg):
 			debug("hksmtpserver: EHLO")
 			if not arg:
@@ -2728,15 +2826,19 @@ def daemonmode():
 			if self.use_authentication and (not self.force_tls or (self.force_tls and self.tls_active)):
 				self.push('250-AUTH PLAIN')
 			self.push('250 %s' % self.fqdn)
+		@_dbg
 		def smtp_RSET(self, arg):
 			debug("hksmtpserver: RSET")
 			self.reset_values()
 			smtpd.SMTPChannel.smtp_RSET(self,arg)
+		@_dbg
 		def reset_values(self):	
 			self.is_authenticated=False
+			self.is_admin=False
 			self.user=""
 			self.password=""
 			self.seen_greeting=False
+		@_dbg
 		def smtp_AUTH(self,arg):
 			debug ("hksmtpserver: AUTH")
 			if not arg:
@@ -2767,10 +2869,14 @@ def daemonmode():
 				if self.authenticate_function and self.authenticate_function(user,password):
 					self.push("235 Authentication successful.")
 					self.is_authenticated=True
+					self.is_admin=is_admin(user)
+					self.user=user
+					debug("user '%s' is admin %s"%(user,self.is_admin))
 				else:
 					self.push("454 Temporary authentication failure.")
 			else:
 				self.push("454 Temporary authentication failure.")
+		@_dbg
 		def smtp_STATISTICS(self,arg):
 			if arg:
 				self.push("501 Syntax error: no arguments allowed")
@@ -2783,6 +2889,54 @@ def daemonmode():
 					dash=" "
 				self.push("250%s%s %i"%(dash,s,statistics[s]) )
 				c+=1
+		@_dbg
+		def smtp_FLUSH(self,arg):
+			log("FLUSH")
+			check_deferred_list()
+			check_mailqueue()
+			self.push("250 OK")
+		@_dbg
+		def smtp_RELOAD(self,arg):
+			if arg:
+				self.push("501 Syntax error: no arguments allowed")
+				return
+			init()
+			_parse_commandline()
+			self.push("250 OK")
+		@_dbg
+		def smtp_SETUSER(self,arg):
+			if not arg:
+				self.push("501 Syntax error: SETUSER user password")
+				return
+			res=arg.split(" ")
+			if len(res)!=2:
+				self.push("501 Syntax error: SETUSER user password")
+				return
+			r=adm_set_user(res[0],res[1])
+			if r:
+				write_smtpdpasswordfile(_SMTPD_PASSWORDFILE)
+				self.push("250 OK")
+			else:
+				self.push("454 User could not be set")
+		@_dbg
+		def smtp_DELUSER(self,arg):
+			if not arg:
+				self.push("501 Syntax error: DELUSER user")
+				return
+			res=arg.split(" ")
+			if len(res)!=1:
+				self.push("501 Syntax error: DELUSER user")
+				return
+			if self.user==res[0]:
+				self.push("454 You can't delete yourself")
+				return
+			r=adm_del_user(res[0])
+			if r:
+				write_smtpdpasswordfile(_SMTPD_PASSWORDFILE)
+				self.push("250 OK")
+			else:
+				self.push("454 User could not be deleted")
+		@_dbg
 		def found_terminator(self):
 			line = "".join(self._SMTPChannel__line)
 			i = line.find(' ')
@@ -2790,51 +2944,35 @@ def daemonmode():
 				command = line.upper()
 			else:
 				command = line[:i].upper()
+			SIMPLECOMMANDS=["EHLO","HELO","RSET","NOOP","QUIT","STARTTLS"]
+			ADMINCOMMANDS=["STATISTICS","RELOAD","FLUSH","SETUSER","DELUSER"]
 			if self.use_authentication and not self.is_authenticated:
-				if not command in ["EHLO","HELO","RSET","NOOP","AUTH","QUIT","STARTTLS"]:
+				if not command in SIMPLECOMMANDS+ADMINCOMMANDS+["AUTH"]+ADMINCOMMANDS:
 					self.push("530 Authentication required.")
 					self._SMTPChannel__line=[]
 					return
+			if not self.is_admin:
+				if command in ADMINCOMMANDS:
+					self.push("530 Admin authentication required.")
+					self._SMTPChannel__line=[]
+					return
 			if self.use_tls and self.force_tls and not self.tls_active:
-				if not command in ["EHLO","HELO","RSET","NOOP","QUIT","STARTTLS"]:
+				if not command in SIMPLECOMMANDS+ADMINCOMMANDS:
 					self.push("530 STARTTLS before authentication required.")
 					self._SMTPChannel__line=[]
 					return
 			smtpd.SMTPChannel.found_terminator(self)
-
+		@_dbg
 		def smtp_STARTTLS(self,arg):
 				self.push('502 Error: command "STARTTLS" not implemented' )
 				self._SMTPChannel__line=[]
 				return
-	def get_hash(txt):
-		i=0
-		r=txt
-		while i<=1000:
-			r=hashlib.sha512(r.encode("UTF-8",_unicodeerror)).hexdigest()
-			i+=1
-		return r
-	
-	def _read_smtpdpasswordfile( pwfile):
-		global _smtpd_passwords
-		try:
-			f=open(pwfile)
-		except:
-			log("hksmtpserver: Config file could not be read","e")
-			log_traceback()
-			exit(5)
-		txt=f.read()
-		f.close()
-		for l in txt.splitlines():
-			try:
-				name,passwd=l.split("=",1)
-				_smtpd_passwords[name.strip()]=get_hash(passwd.strip())
-			except:
-				pass
+	@_dbg
 	def file_auth(user,password):
 		debug("hksmtpserver: file_auth")
 		try:
 			pw=_smtpd_passwords[user]
-			if pw==get_hash(password):
+			if pw==_get_hash(password):
 				debug("hksmtpserver: User '%s' authenticated"%user)
 				return True
 			else:
@@ -2880,6 +3018,90 @@ def daemonmode():
 	except:
 		log("Bug:Exception occured!","e")
 		log_traceback()
+#############
+#adm_set_user
+#############
+@_dbg
+def adm_set_user(user,password):
+	"adds a user, if the user already exists it changes the password"
+	global _smtpd_passwords
+	try:
+		_smtpd_passwords[user]=_get_hash(password)
+		return True
+	except:
+		log("User could not be added","e")
+		log_traceback()
+		return False
+	return True
+#############
+#adm_del_user
+#############
+@_dbg
+def adm_del_user(user):
+	"deletes a user"
+	global _smtpd_passwords
+	try:
+		del _smtpd_passwords[user]
+		return True
+	except:
+		log("User could not be deleted","e")
+		log_traceback()
+		return False
+	return True
+########################
+#_read_smtpdpasswordfile
+########################
+@_dbg
+def _read_smtpdpasswordfile( pwfile):
+	global _smtpd_passwords
+	try:
+		f=open(os.path.expanduser(pwfile))
+	except:
+		log("hksmtpserver: Config file could not be read","e")
+		log_traceback()
+		exit(5)
+	txt=f.read()
+	f.close()
+	_smtpd_passwords=dict()
+	for l in txt.splitlines():
+		try:
+			name,passwd=l.split("=",1)
+			_smtpd_passwords[name.strip()]=passwd.strip()
+		except:
+			pass
+########################
+#write_smtpdpasswordfile
+########################
+@_dbg
+def write_smtpdpasswordfile( pwfile):
+	"writes the users to the password file"
+	global _smtpd_passwords
+	try:
+		f=os.open(os.path.expanduser(pwfile),os.O_WRONLY|os.O_CREAT,int("0600", 8))
+	except:
+		log("hksmtpserver: Config file could not be written","e")
+		log_traceback()
+		return False
+	for user in _smtpd_passwords:
+		try:
+			password=_smtpd_passwords[user]
+			os.write(f,("%s=%s\n"%(user,password)).encode("UTF-8"))
+		except:
+			log_traceback()
+			pass
+	os.close(f)
+#########
+#_get_hash
+#########
+@_dbg
+def _get_hash(txt):
+	i=0
+	r=txt
+	while i<=1000:
+		r=hashlib.sha512(r.encode("UTF-8",_unicodeerror)).hexdigest()
+		i+=1
+	return r
+
 ################
 #_sigtermhandler
 ################
