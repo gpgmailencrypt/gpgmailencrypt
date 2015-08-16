@@ -17,8 +17,9 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
+VERSION="2.0sigma"
+DATE="16.08.2015"
 from configparser import ConfigParser
-#from email import encoders as _Encoders
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -31,11 +32,16 @@ from io import BytesIO as _BytesIO
 from os.path import expanduser
 import locale,traceback,hashlib
 from functools import wraps
-VERSION="2.0pi"
-DATE="14.08.2015"
-#################################
-#Definition of general functions#
-#################################
+import smtpd,asyncore, signal,ssl,asynchat,socket,select
+
+try:
+	import readline
+	has_readline=True
+except:
+	has_readline=False
+################################
+#Definition of general functions
+################################
 #####
 #_dbg
 #####
@@ -409,7 +415,7 @@ def log(msg,infotype="m",ln=-1):
 		t=time.localtime(time.time())
 		_lntxt="Line %i:%s"%(ln,space)
 		tm=("%02d.%02d.%04d %02d:%02d:%02d:" % (t[2],t[1],t[0],t[3],t[4],t[5])).ljust(_lftmsg)
-		txt=_splitstring(msg,120)
+		txt=_splitstring(msg,240)
 		c=0
 		for t in txt:
 			if (ln>0):
@@ -2613,6 +2619,7 @@ def start_adminconsole(host,port):
 			user=input("User: ")
 			password=getpass.getpass("Password: ")
 			auth=binascii.b2a_base64(("\x00%s\x00%s"%(user,password)).encode("UTF-8"))[:-1]
+			code,msg=self._sendcmd("ADMIN",auth.decode("UTF-8"))
 			code,msg=self._sendcmd("AUTH PLAIN",auth.decode("UTF-8"))
 			if code!=235:
 				print("Authentication failed")
@@ -2633,8 +2640,7 @@ def start_adminconsole(host,port):
 
 		def print_help(self):
 			print("Allowed commands:")
-			print("statistics,flush,reload,help,quit")
-
+			print("statistics,flush,reload,help,quit,setuser,deluser")
 	g=gmeadmin()
 	g.start(host,port)
 
@@ -2675,7 +2681,6 @@ def scriptmode():
 @_dbg
 def daemonmode():
 	"starts the smtpd daemon"
-	import smtpd,asyncore, signal,ssl,asynchat,binascii,socket,select
 	#####################
 	#_deferredlisthandler
 	#####################
@@ -2693,295 +2698,6 @@ def daemonmode():
 			if _count_alarms>0:
 				_log_statistics() #log statistics every 24 hours
 		signal.alarm(3600) # once every hour
-	#####################
-	#gpgmailencryptserver
-	#####################
-	class gpgmailencryptserver(smtpd.SMTPServer):
-		@_dbg
-		def __init__(self, 
-				localaddr,sslcertfile=None,
-				sslkeyfile=None,
-				sslversion=ssl.PROTOCOL_SSLv23,
-				use_smtps=False,
-				use_auth=False,
-				authenticate_function=None,
-				data_size_limit=smtpd.DATA_SIZE_DEFAULT):
-			try:
-				smtpd.SMTPServer.__init__(self, localaddr, None,data_size_limit=data_size_limit)
-			except socket.error as e:
-				log("hksmtpserver: error",e)
-				exit(5)
-			self.sslcertfile=sslcertfile
-			self.sslkeyfile=sslkeyfile
-			self.sslversion=sslversion
-			self.use_smtps=use_smtps
-			self.use_authentication=use_auth
-			self.authenticate_function=authenticate_function
-		@_dbg
-		def handle_accept(self):
-			pair = self.accept()
-			if pair is not None:
-				conn, addr = pair
-				self.socket.setblocking(0)
-				if self.use_smtps:
-					try:
-						conn=ssl.wrap_socket(conn,
-							server_side=True,
-							certfile=self.sslcertfile,
-							keyfile=self.sslkeyfile,
-							ssl_version=self.sslversion,
-							do_handshake_on_connect=False
-							)
-						while True:
-							try:
-								conn.do_handshake()
-								break
-							except ssl.SSLWantReadError:
-								select.select([conn], [], [])
-							except ssl.SSLWantWriteError:
-								select.select([], [conn], [])
-					except:
-						log("hksmtpserver: Exception: Could not start SSL connection")
-						log_traceback()
-						return
-				debug('hksmtpserver: Incoming connection from %s' % repr(addr))
-				channel = hksmtpchannel(self, 
-							conn, 
-							addr,
-							use_auth=self.use_authentication, 
-							authenticate_function=self.authenticate_function,	
-							sslcertfile=self.sslcertfile,
-							sslkeyfile=self.sslkeyfile,
-							sslversion=self.sslversion)
-		@_dbg
-		def process_message(self, peer, mailfrom, receiver, data):
-			debug("hksmtpserver: gpgmailencryptserver from '%s' to '%s'"%(mailfrom,receiver))
-			try:
-				encrypt_mails(data,receiver)
-			except:
-				log("hksmtpserver: Bug:Exception!")
-				log_traceback()
-			return
-	##############
-	#hksmtpchannel
-	##############
-	class hksmtpchannel(smtpd.SMTPChannel):
-		def __init__(self, smtp_server, 
-					newsocket, 	
-					fromaddr,					
-					use_auth,
-					authenticate_function=None,
-					use_tls=False,
-					force_tls=False,
-					sslcertfile=None,
-					sslkeyfile=None,
-					sslversion=None):
-			smtpd.SMTPChannel.__init__(self, smtp_server, newsocket, fromaddr)
-			asynchat.async_chat.__init__(self, newsocket)
-			self.sslcertfile=sslcertfile
-			self.sslkeyfile=sslkeyfile
-			self.sslversion=sslversion
-			self.use_tls=use_tls
-			self.starttls_available=False
-			self.force_tls=force_tls
-			self.tls_active=False
-			self.authenticate_function=authenticate_function
-			self.is_authenticated=False
-			self.is_admin=False
-			self.use_authentication=use_auth
-			self.user=""
-			self.password=""
-			self.seen_greeting=False
-			self.data_size_limit=0
-			self.fqdn=socket.getfqdn()
-			if self.sslcertfile and self.sslkeyfile and self.sslversion:
-				self.starttls_available=True
-		@_dbg
-		def smtp_HELO(self,arg):
-			debug("hksmtpserver: HELO")
-			if not arg:
-		       		self.push('501 Syntax: HELO hostname')
-		       		return
-			if self.seen_greeting:
-				self.push('503 Duplicate HELO/EHLO')
-			else:
-				self.seen_greeting = True
-				self.push('250 %s' % self.fqdn)
-		@_dbg
-		def smtp_EHLO(self, arg):
-			debug("hksmtpserver: EHLO")
-			if not arg:
-				self.push('501 Syntax: EHLO hostname')
-				return
-			if self.seen_greeting:
-				self.push('503 Duplicate HELO/EHLO')
-				return
-			else:
-				self.seen_greeting = arg
-				self.extended_smtp = True
-			if self.use_tls and not self.tls_active:
-				self.push('250-STARTTLS')
-			if self.data_size_limit:
-				self.push('250-SIZE %s' % self.data_size_limit)
-			if self.use_authentication and (not self.force_tls or (self.force_tls and self.tls_active)):
-				self.push('250-AUTH PLAIN')
-			self.push('250 %s' % self.fqdn)
-		@_dbg
-		def smtp_RSET(self, arg):
-			debug("hksmtpserver: RSET")
-			self.reset_values()
-			smtpd.SMTPChannel.smtp_RSET(self,arg)
-		@_dbg
-		def reset_values(self):	
-			self.is_authenticated=False
-			self.is_admin=False
-			self.user=""
-			self.password=""
-			self.seen_greeting=False
-		@_dbg
-		def smtp_AUTH(self,arg):
-			debug ("hksmtpserver: AUTH")
-			if not arg:
-				self.push("501 Syntax error: AUTH PLAIN")
-				return
-			debug("hksmtpserver: Original ARG: %s"%arg)
-			res=arg.split(" ")
-			if len(res)<2:
-				self.push("454 Temporary authentication failure.")
-				return
-			command,encoded=res	
-			if "PLAIN" in command.upper():
-				debug("hksmtpserver: PLAIN decoding")
-				try:
-					d=binascii.a2b_base64(encoded).decode("UTF-8",_unicodeerror).split('\x00')
-				except:
-					debug("hksmtpserver: error decode base64 '%s'"%sys.exc_info()[1])
-					d=[]
-				if len(d)<2:
-					self.push("454 Temporary authentication failure.")
-					return
-				while len(d)>2:
-					del d[0]
-				user=d[0]
-				password=d[1]
-				if not self.authenticate_function:
-					debug("hksmtpserver: self.authenticate_function=None")
-				if self.authenticate_function and self.authenticate_function(user,password):
-					self.push("235 Authentication successful.")
-					self.is_authenticated=True
-					self.is_admin=is_admin(user)
-					self.user=user
-					debug("user '%s' is admin %s"%(user,self.is_admin))
-				else:
-					self.push("454 Temporary authentication failure.")
-			else:
-				self.push("454 Temporary authentication failure.")
-		@_dbg
-		def smtp_STATISTICS(self,arg):
-			if arg:
-				self.push("501 Syntax error: no arguments allowed")
-				return
-			statistics=get_statistics()
-			c=0
-			for s in statistics:
-				dash="-"
-				if c==len(statistics)-1:
-					dash=" "
-				self.push("250%s%s %i"%(dash,s,statistics[s]) )
-				c+=1
-		@_dbg
-		def smtp_FLUSH(self,arg):
-			log("FLUSH")
-			check_deferred_list()
-			check_mailqueue()
-			self.push("250 OK")
-		@_dbg
-		def smtp_RELOAD(self,arg):
-			if arg:
-				self.push("501 Syntax error: no arguments allowed")
-				return
-			init()
-			_parse_commandline()
-			self.push("250 OK")
-		@_dbg
-		def smtp_SETUSER(self,arg):
-			if not arg:
-				self.push("501 Syntax error: SETUSER user password")
-				return
-			res=arg.split(" ")
-			if len(res)!=2:
-				self.push("501 Syntax error: SETUSER user password")
-				return
-			r=adm_set_user(res[0],res[1])
-			if r:
-				write_smtpdpasswordfile(_SMTPD_PASSWORDFILE)
-				self.push("250 OK")
-			else:
-				self.push("454 User could not be set")
-		@_dbg
-		def smtp_DELUSER(self,arg):
-			if not arg:
-				self.push("501 Syntax error: DELUSER user")
-				return
-			res=arg.split(" ")
-			if len(res)!=1:
-				self.push("501 Syntax error: DELUSER user")
-				return
-			if self.user==res[0]:
-				self.push("454 You can't delete yourself")
-				return
-			r=adm_del_user(res[0])
-			if r:
-				write_smtpdpasswordfile(_SMTPD_PASSWORDFILE)
-				self.push("250 OK")
-			else:
-				self.push("454 User could not be deleted")
-		@_dbg
-		def found_terminator(self):
-			line = "".join(self._SMTPChannel__line)
-			i = line.find(' ')
-			if i < 0:
-				command = line.upper()
-			else:
-				command = line[:i].upper()
-			SIMPLECOMMANDS=["EHLO","HELO","RSET","NOOP","QUIT","STARTTLS"]
-			ADMINCOMMANDS=["STATISTICS","RELOAD","FLUSH","SETUSER","DELUSER"]
-			if self.use_authentication and not self.is_authenticated:
-				if not command in SIMPLECOMMANDS+ADMINCOMMANDS+["AUTH"]+ADMINCOMMANDS:
-					self.push("530 Authentication required.")
-					self._SMTPChannel__line=[]
-					return
-			if not self.is_admin:
-				if command in ADMINCOMMANDS:
-					self.push("530 Admin authentication required.")
-					self._SMTPChannel__line=[]
-					return
-			if self.use_tls and self.force_tls and not self.tls_active:
-				if not command in SIMPLECOMMANDS+ADMINCOMMANDS:
-					self.push("530 STARTTLS before authentication required.")
-					self._SMTPChannel__line=[]
-					return
-			smtpd.SMTPChannel.found_terminator(self)
-		@_dbg
-		def smtp_STARTTLS(self,arg):
-				self.push('502 Error: command "STARTTLS" not implemented' )
-				self._SMTPChannel__line=[]
-				return
-	@_dbg
-	def file_auth(user,password):
-		debug("hksmtpserver: file_auth")
-		try:
-			pw=_smtpd_passwords[user]
-			if pw==_get_hash(password):
-				debug("hksmtpserver: User '%s' authenticated"%user)
-				return True
-			else:
-				debug("hksmtpserver: User '%s' incorrect password"%user)
-			
-		except:
-			debug("hksmtpserver: No such user '%s'"%user)
-			pass
-		return False
 	##################
 	global _daemonstarttime
 	_RUNMODE==m_daemon
@@ -3004,6 +2720,7 @@ def daemonmode():
 		server = gpgmailencryptserver(	(_SERVERHOST, _SERVERPORT),
 						use_auth=_SMTPD_USE_AUTH,
 						authenticate_function=file_auth,
+						write_smtpdpasswordfile=write_smtpdpasswordfile,
 						use_smtps=_SMTPD_USE_SMTPS,
 						sslkeyfile=_SMTPD_SSL_KEYFILE,
 						sslcertfile=_SMTPD_SSL_CERTFILE)
@@ -3018,6 +2735,321 @@ def daemonmode():
 	except:
 		log("Bug:Exception occured!","e")
 		log_traceback()
+
+
+
+
+#####################
+#gpgmailencryptserver
+#####################
+class gpgmailencryptserver(smtpd.SMTPServer):
+	@_dbg
+	def __init__(self, 
+			localaddr,sslcertfile=None,
+			sslkeyfile=None,
+			sslversion=ssl.PROTOCOL_SSLv23,
+			use_smtps=False,
+			use_auth=False,
+			authenticate_function=None,
+			write_smtpdpasswordfile=None,
+			data_size_limit=smtpd.DATA_SIZE_DEFAULT):
+		try:
+			smtpd.SMTPServer.__init__(self, localaddr, None,data_size_limit=data_size_limit)
+		except socket.error as e:
+			log("hksmtpserver: error",e)
+			exit(5)
+		self.sslcertfile=sslcertfile
+		self.sslkeyfile=sslkeyfile
+		self.sslversion=sslversion
+		self.use_smtps=use_smtps
+		self.use_authentication=use_auth
+		self.write_smtpdpasswordfile=write_smtpdpasswordfile
+		self.authenticate_function=authenticate_function
+	@_dbg
+	def handle_accept(self):
+		pair = self.accept()
+		if pair is not None:
+			conn, addr = pair
+			self.socket.setblocking(0)
+			if self.use_smtps:
+				try:
+					conn=ssl.wrap_socket(conn,
+						server_side=True,
+						certfile=self.sslcertfile,
+						keyfile=self.sslkeyfile,
+						ssl_version=self.sslversion,
+						do_handshake_on_connect=False
+						)
+					while True:
+						try:
+							conn.do_handshake()
+							break
+						except ssl.SSLWantReadError:
+							select.select([conn], [], [])
+						except ssl.SSLWantWriteError:
+							select.select([], [conn], [])
+				except:
+					log("hksmtpserver: Exception: Could not start SSL connection")
+					log_traceback()
+					return
+			debug('hksmtpserver: Incoming connection from %s' % repr(addr))
+			channel = hksmtpchannel(self, 
+						conn, 
+						addr,
+						use_auth=self.use_authentication, 
+						authenticate_function=self.authenticate_function,
+						write_smtpdpasswordfile=self.write_smtpdpasswordfile,	
+						sslcertfile=self.sslcertfile,
+						sslkeyfile=self.sslkeyfile,
+						sslversion=self.sslversion)
+	@_dbg
+	def process_message(self, peer, mailfrom, receiver, data):
+		debug("hksmtpserver: gpgmailencryptserver from '%s' to '%s'"%(mailfrom,receiver))
+		try:
+			encrypt_mails(data,receiver)
+		except:
+			log("hksmtpserver: Bug:Exception!")
+			log_traceback()
+		return
+##############
+#hksmtpchannel
+##############
+class hksmtpchannel(smtpd.SMTPChannel):
+	def __init__(self, smtp_server, 
+				newsocket, 	
+				fromaddr,					
+				use_auth,
+				authenticate_function=None,
+				write_smtpdpasswordfile=None,
+				use_tls=False,
+				force_tls=False,
+				sslcertfile=None,
+				sslkeyfile=None,
+				sslversion=None):
+		smtpd.SMTPChannel.__init__(self, smtp_server, newsocket, fromaddr)
+		asynchat.async_chat.__init__(self, newsocket)
+		self.sslcertfile=sslcertfile
+		self.sslkeyfile=sslkeyfile
+		self.sslversion=sslversion
+		self.use_tls=use_tls
+		self.starttls_available=False
+		self.force_tls=force_tls
+		self.tls_active=False
+		self.authenticate_function=authenticate_function
+		self.write_smtpdpasswordfile=write_smtpdpasswordfile
+		self.is_authenticated=False
+		self.is_admin=False
+		self.adminmode=False
+		self.use_authentication=use_auth
+		self.user=""
+		self.password=""
+		self.seen_greeting=False
+		self.data_size_limit=0
+		self.fqdn=socket.getfqdn()
+		if self.sslcertfile and self.sslkeyfile and self.sslversion:
+			self.starttls_available=True
+	@_dbg
+	def smtp_HELO(self,arg):
+		debug("hksmtpserver: HELO")
+		if not arg:
+	       		self.push('501 Syntax: HELO hostname')
+	       		return
+		if self.seen_greeting:
+			self.push('503 Duplicate HELO/EHLO')
+		else:
+			self.seen_greeting = True
+			self.push('250 %s' % self.fqdn)
+	@_dbg
+	def smtp_EHLO(self, arg):
+		debug("hksmtpserver: EHLO")
+		if not arg:
+			self.push('501 Syntax: EHLO hostname')
+			return
+		if self.seen_greeting:
+			self.push('503 Duplicate HELO/EHLO')
+			return
+		else:
+			self.seen_greeting = arg
+			self.extended_smtp = True
+		if self.use_tls and not self.tls_active:
+			self.push('250-STARTTLS')
+		if self.data_size_limit:
+			self.push('250-SIZE %s' % self.data_size_limit)
+		if self.use_authentication and (not self.force_tls or (self.force_tls and self.tls_active)):
+			self.push('250-AUTH PLAIN')
+		self.push('250 %s' % self.fqdn)
+	@_dbg
+	def smtp_RSET(self, arg):
+		debug("hksmtpserver: RSET")
+		self.reset_values()
+		smtpd.SMTPChannel.smtp_RSET(self,arg)
+	@_dbg
+	def reset_values(self):	
+		self.is_authenticated=False
+		self.is_admin=False
+		self.user=""
+		self.password=""
+		self.seen_greeting=False
+	@_dbg
+	def smtp_AUTH(self,arg):
+		debug ("hksmtpserver: AUTH")
+		if not arg:
+			self.push("501 Syntax error: AUTH PLAIN")
+			return
+		#debug("hksmtpserver: Original ARG: %s"%arg)
+		res=arg.split(" ")
+		if len(res)<2:
+			self.push("454 Temporary authentication failure.")
+			return
+		command,encoded=res	
+		if "PLAIN" in command.upper():
+			debug("hksmtpserver: PLAIN decoding")
+			try:
+				d=binascii.a2b_base64(encoded).decode("UTF-8",_unicodeerror).split('\x00')
+			except:
+				debug("hksmtpserver: error decode base64 '%s'"%sys.exc_info()[1])
+				d=[]
+			if len(d)<2:
+				self.push("454 Temporary authentication failure.")
+				return
+			while len(d)>2:
+				del d[0]
+			user=d[0]
+			password=d[1]
+			if not self.authenticate_function:
+				debug("hksmtpserver: self.authenticate_function=None")
+			if self.authenticate_function and self.authenticate_function(user,password):
+				self.push("235 Authentication successful.")
+				self.is_authenticated=True
+				self.is_admin=is_admin(user)
+				self.user=user
+				debug("user '%s' is admin %s"%(user,self.is_admin))
+			else:
+				self.push("454 Temporary authentication failure.")
+		else:
+			self.push("454 Temporary authentication failure.")
+	@_dbg
+	def smtp_STATISTICS(self,arg):
+		if arg:
+			self.push("501 Syntax error: no arguments allowed")
+			return
+		statistics=get_statistics()
+		c=0
+		for s in statistics:
+			dash="-"
+			if c==len(statistics)-1:
+				dash=" "
+			self.push("250%s%s %i"%(dash,s,statistics[s]) )
+			c+=1
+	@_dbg
+	def smtp_FLUSH(self,arg):
+		log("FLUSH")
+		check_deferred_list()
+		check_mailqueue()
+		self.push("250 OK")
+	@_dbg
+	def smtp_RELOAD(self,arg):
+		if arg:
+			self.push("501 Syntax error: no arguments allowed")
+			return
+		init()
+		_parse_commandline()
+		self.push("250 OK")
+	@_dbg
+	def smtp_SETUSER(self,arg):
+		if not arg:
+			self.push("501 Syntax error: SETUSER user password")
+			return
+		res=arg.split(" ")
+		if len(res)!=2:
+			self.push("501 Syntax error: SETUSER user password")
+			return
+		r=adm_set_user(res[0],res[1])
+		if r:
+			if self.write_smtpdpasswordfile:
+				self.write_smtpdpasswordfile(_SMTPD_PASSWORDFILE)
+			self.push("250 OK")
+		else:
+			self.push("454 User could not be set")
+	@_dbg
+	def smtp_DELUSER(self,arg):
+		if not arg:
+			self.push("501 Syntax error: DELUSER user")
+			return
+		res=arg.split(" ")
+		if len(res)!=1:
+			self.push("501 Syntax error: DELUSER user")
+			return
+		if self.user==res[0]:
+			self.push("454 You can't delete yourself")
+			return
+		r=adm_del_user(res[0])
+		if r:
+			if self.write_smtpdpasswordfile:
+				self.write_smtpdpasswordfile(_SMTPD_PASSWORDFILE)
+			self.push("250 OK")
+		else:
+			self.push("454 User could not be deleted")
+	def smtp_ADMIN(self,arg):
+		self.adminmode=True
+		_read_smtpdpasswordfile(_SMTPD_PASSWORDFILE)
+		self.push("250 OK")
+		return
+	@_dbg
+	def found_terminator(self):
+		line = "".join(self._SMTPChannel__line)
+		i = line.find(' ')
+		if i < 0:
+			command = line.upper()
+		else:
+			command = line[:i].upper()
+		SIMPLECOMMANDS=["EHLO","HELO","RSET","NOOP","QUIT","STARTTLS"]
+		if not self.use_authentication and not self.adminmode :
+			SIMPLECOMMANDS+=["ADMIN"]
+		ADMINCOMMANDS=["STATISTICS","RELOAD","FLUSH","SETUSER","DELUSER"]
+		if (self.use_authentication or self.adminmode) and not self.is_authenticated:
+			if not command in SIMPLECOMMANDS+["AUTH"]:
+				self.push("530 Authentication required.")
+				self._SMTPChannel__line=[]
+				return
+		
+		if not self.is_admin:
+			if command in ADMINCOMMANDS:
+				self.push("530 Admin authentication required.")
+				self._SMTPChannel__line=[]
+				return
+		if self.use_tls and self.force_tls and not self.tls_active:
+			if not command in SIMPLECOMMANDS+ADMINCOMMANDS:
+				self.push("530 STARTTLS before authentication required.")
+				self._SMTPChannel__line=[]
+				return
+		smtpd.SMTPChannel.found_terminator(self)
+	@_dbg
+	def smtp_STARTTLS(self,arg):
+			self.push('502 Error: command "STARTTLS" not implemented' )
+			self._SMTPChannel__line=[]
+			return
+@_dbg
+def file_auth(user,password):
+	debug("hksmtpserver: file_auth")
+	try:
+		pw=_smtpd_passwords[user]
+		if pw==_get_hash(password):
+			debug("hksmtpserver: User '%s' authenticated"%user)
+			return True
+		else:
+			debug("hksmtpserver: User '%s' incorrect password"%user)
+		
+	except:
+		debug("hksmtpserver: No such user '%s'"%user)
+		pass
+	return False
+
+
+
+
+
+
 #############
 #adm_set_user
 #############
@@ -3077,7 +3109,12 @@ def write_smtpdpasswordfile( pwfile):
 	"writes the users to the password file"
 	global _smtpd_passwords
 	try:
-		f=os.open(os.path.expanduser(pwfile),os.O_WRONLY|os.O_CREAT,int("0600", 8))
+		pwfile=os.path.expanduser(pwfile)
+		fileexists=os.path.exists(pwfile)
+		f=open(pwfile,"w")
+		if not fileexists:
+			os.chmod(pwfile,0o600)
+			debug("new pwfile chmod")
 	except:
 		log("hksmtpserver: Config file could not be written","e")
 		log_traceback()
@@ -3085,11 +3122,11 @@ def write_smtpdpasswordfile( pwfile):
 	for user in _smtpd_passwords:
 		try:
 			password=_smtpd_passwords[user]
-			os.write(f,("%s=%s\n"%(user,password)).encode("UTF-8"))
+			f.write(("%s=%s\n"%(user,password)))
 		except:
 			log_traceback()
 			pass
-	os.close(f)
+	f.close()
 #########
 #_get_hash
 #########
