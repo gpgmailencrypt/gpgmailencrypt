@@ -2768,8 +2768,8 @@ def start_adminconsole(host,port):
 				exit(1)
 			print("Welcome. Enter 'HELP' for a list of commands")
 			while True:
-					i=""
-				#try:
+				i=""
+				try:
 					i=input("> ").upper()
 					res=i.split(" ")
 					i=res[0].upper()
@@ -2786,10 +2786,10 @@ def start_adminconsole(host,port):
 							self._sendcmd(i,args)
 					else:
 						print("Error: command '%s' unknown"%i)
-				#except:
-				#	print("Error sending admin command, perhaps server is down")
-					if i=="QUIT":
-						break
+				except:
+					print("Error sending admin command, perhaps server is down")
+				if i=="QUIT":
+					break
 		def print_help(self):
 			print("\nAllowed commands:")
 			print("=================")
