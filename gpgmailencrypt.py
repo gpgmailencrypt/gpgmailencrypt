@@ -1361,7 +1361,7 @@ class gme:
 		try:
 			tmpdir=None
 			if add_deferred or spooldir:
-				tmpdir=_deferdir
+				tmpdir=self._deferdir
 			f=tempfile.NamedTemporaryFile(mode='wb',delete=False,prefix='mail-',dir=tmpdir)
 			f.write(message.encode("UTF-8",_unicodeerror))
 			f.close()
@@ -1370,7 +1370,7 @@ class gme:
 				self._count_deferredmails+=1
 				self.log("store_temporaryfile.append deferred email '%s'"%f.name)
 			else:
-				self.log("Message in temporary file '%s'"%f.name)
+				self.debug("Message in temporary file '%s'"%f.name)
 			return f.name
 		except:
 			self.log("Couldn't save email in temporary file, write error")
@@ -1381,7 +1381,7 @@ class gme:
 	################
 	@_dbg
 	def _prepare_syslog(self):
-			self._LOGGING=l_syslog
+			self._LOGGING=self.l_syslog
 			syslog.openlog("gpgmailencrypt",syslog.LOG_PID,syslog.LOG_MAIL)
 	######################
 	#_read_smtpcredentials
@@ -2636,6 +2636,7 @@ class gme:
 							use_auth=self._SMTPD_USE_AUTH,
 							authenticate_function=file_auth,
 							write_smtpdpasswordfile=self.write_smtpdpasswordfile,
+							read_smtpdpasswordfile=self._read_smtpdpasswordfile,
 							use_smtps=self._SMTPD_USE_SMTPS,
 							sslkeyfile=self._SMTPD_SSL_KEYFILE,
 							sslcertfile=self._SMTPD_SSL_CERTFILE)
@@ -2827,6 +2828,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 			use_auth=False,
 			authenticate_function=None,
 			write_smtpdpasswordfile=None,
+			read_smtpdpasswordfile=None,
 			data_size_limit=smtpd.DATA_SIZE_DEFAULT):
 		self.parent=parent
 		try:
@@ -2840,6 +2842,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 		self.use_smtps=use_smtps
 		self.use_authentication=use_auth
 		self.write_smtpdpasswordfile=write_smtpdpasswordfile
+		self.read_smtpdpasswordfile=read_smtpdpasswordfile
 		self.authenticate_function=authenticate_function
 	def handle_accept(self):
 		print("handle_accept")
@@ -2876,6 +2879,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 						use_auth=self.use_authentication, 
 						authenticate_function=self.authenticate_function,
 						write_smtpdpasswordfile=self.write_smtpdpasswordfile,	
+						read_smtpdpasswordfile=self.read_smtpdpasswordfile,
 						sslcertfile=self.sslcertfile,
 						sslkeyfile=self.sslkeyfile,
 						sslversion=self.sslversion)
@@ -2901,6 +2905,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				parent,
 				authenticate_function=None,
 				write_smtpdpasswordfile=None,
+				read_smtpdpasswordfile=None,
 				use_tls=False,
 				force_tls=False,
 				sslcertfile=None,
@@ -2917,7 +2922,8 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		self.force_tls=force_tls
 		self.tls_active=False
 		self.authenticate_function=authenticate_function
-		self.write_smtpdpasswordfile=write_smtpdpasswordfile
+		self.write_smtpdpasswordfile=write_smtpdpasswordfile  
+		self.read_smtpdpasswordfile=read_smtpdpasswordfile
 		self.is_authenticated=False
 		self.is_admin=False
 		self.adminmode=False
@@ -3072,7 +3078,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			self.push("454 User could not be deleted")
 	def smtp_ADMIN(self,arg):
 		self.adminmode=True
-		self.parent._read_smtpdpasswordfile(_SMTPD_PASSWORDFILE)
+		self.read_smtpdpasswordfile(self.parent._SMTPD_PASSWORDFILE)
 		self.push("250 OK")
 		return
 	def found_terminator(self):
