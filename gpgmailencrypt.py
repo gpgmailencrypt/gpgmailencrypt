@@ -2462,7 +2462,9 @@ class gme:
 			newmsg=None
 		self._del_tempfile(fp.name)
 		return newmsg
-	
+	####################
+	#encrypt_single_mail
+	####################	
 	@_dbg
 	def encrypt_single_mail(self,queue_id,mailtext,from_addr,to_addr):
 		g_r,to_gpg=self.check_gpgrecipient(to_addr)
@@ -2651,9 +2653,6 @@ class gme:
 		except:
 			self.log("Bug:Exception occured!","e")
 			self.log_traceback()
-		
-
-
 	#############
 	#adm_set_user
 	#############
@@ -2715,6 +2714,7 @@ class gme:
 			if not fileexists:
 				os.chmod(pwfile,0o600)
 				self.debug("new pwfile chmod")
+				f=open(pwfile,"w")
 		except:
 			self.log("hksmtpserver: Config file could not be written","e")
 			self.log_traceback()
@@ -2725,14 +2725,7 @@ class gme:
 				f.write(("%s=%s\n"%(user,password)))
 			except:
 				self.log_traceback()
-			f.close()
-		
-
-
-
-
-
-
+		f.close()
 ###################
 #start_adminconsole
 ###################
@@ -2797,7 +2790,6 @@ def start_adminconsole(host,port):
 				#	print("Error sending admin command, perhaps server is down")
 					if i=="QUIT":
 						break
-
 		def print_help(self):
 			print("\nAllowed commands:")
 			print("=================")
@@ -3078,7 +3070,8 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			self.push("454 User could not be deleted")
 	def smtp_ADMIN(self,arg):
 		self.adminmode=True
-		self.read_smtpdpasswordfile(self.parent._SMTPD_PASSWORDFILE)
+		if self.read_smtpdpasswordfile:
+			self.read_smtpdpasswordfile(self.parent._SMTPD_PASSWORDFILE)
 		self.push("250 OK")
 		return
 	def found_terminator(self):
@@ -3122,7 +3115,6 @@ def file_auth(parent,user,password):
 			return True
 		else:
 			parent.debug("hksmtpserver: User '%s' incorrect password"%user)
-		
 	except:
 		parent.debug("hksmtpserver: No such user '%s'"%user)
 	return False
