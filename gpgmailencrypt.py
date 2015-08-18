@@ -262,7 +262,7 @@ class _GPG:
 							email=""
 						email=email.lower()
 						if len(email)>0 and self.parent._GPGkeys.count(email) == 0:
-							self.parent.debug("add email address '%s'"%email)
+							#self.parent.debug("add email address '%s'"%email)
 							self.parent._GPGkeys.append(email)
 						#else:
 							#self.parent.debug("Email '%s' already added"%email)
@@ -862,7 +862,15 @@ def _decodetxt(text,encoding,charset):
 	return result.decode(charset,_unicodeerror)
 
 class gme:
-	"create an instance of gme via 'with gme() as g'"
+	"""
+	Main class to encrypt emails
+	create an instance of gme via 'with gme() as g'
+	example:
+	with gme() as g:
+	  g.encrypt_mails(mailtext,["receiver@mail.com","receiver2@mail.com"])
+	
+	this will be all to encrypt and send the mails
+	"""
 	o_mail=1
 	o_stdout=2
 	o_file=3
@@ -994,8 +1002,8 @@ class gme:
 		self._ADMINS=[]
 		self._read_configfile()
 		if self._DEBUG:
-			for a in _addressmap:
-				debug("_addressmap: '%s'='%s'"%(a,_addressmap[a]))
+			for a in self._addressmap:
+				self.debug("_addressmap: '%s'='%s'"%(a,self._addressmap[a]))
 	#################
 	#_read_configfile
 	#################	
@@ -1831,32 +1839,6 @@ class gme:
 	def get_default_preferredencryption(self):
 		"returns the default preferred encryption method"
 		return self._PREFERRED_ENCRYPTION
-
-	##############################
-	#get_preferredencryptionmethod
-	##############################	
-	@_dbg
-	def get_preferredencryptionmethod(self,user):
-		"returns the preferenced encryption method for user 'user'"
-		self.debug("get_preferredencryptionmethod :'%s'"%user)
-		method=self._PREFERRED_ENCRYPTION
-		_m=""
-		_u=user
-		try:
-			_u=self._addressmap[user]
-		except:
-			pass
-		try:
-			_m=self._encryptionmap[_u].upper()
-		except:
-			self.debug("get_preferredencryptionmethod User '%s' not found"%user)
-			return method
-		if _m in ("PGPMIME","PGPINLINE","SMIME","NONE"):
-			self.debug("get_preferredencryptionmethod User %s (=> %s) :'%s'"%(user,_u,_m))
-			return _m
-		else:
-			self.debug("get_preferredencryptionmethod: Method '%s' for user '%s' unknown" % (_m,_u))
-			return method
 	###################
 	#check_gpgrecipient
 	###################
@@ -1875,15 +1857,12 @@ class gme:
 		except:
 			self.debug("_addressmap to_addr not found")
 			gpg_to_addr=gaddr
-		else:
-			found =True
-		if gpg.has_key(gaddr):
+		if gpg.has_key(gpg_to_addr):
 			if (len(self._DOMAINS)>0 and domain in self._DOMAINS.split(',')) or len(self._DOMAINS)==0:
 				found=True
 				self.debug("check_gpgrecipient: after in_key")
 			else:
 				self.debug("gpg key exists, but '%s' is not in _DOMAINS [%s]"%(domain,self._DOMAINS))
-		self.debug("check_gpgrecipient: end")
 		return found,gpg_to_addr
 	#####################
 	#check_smimerecipient
@@ -1891,7 +1870,7 @@ class gme:
 	@_dbg
 	def check_smimerecipient(self,saddr):
 		"returns True and the effective key-emailaddress if emails to address 'saddr' can be SMIME encrcrypted"
-		self.debug("check_smimerecipient: start")
+		self.debug("check_smimerecipient: start '%s'"%saddr)
 		addr=saddr.split('@')
 		domain=''
 		if len(addr)==2:
@@ -2313,13 +2292,14 @@ class gme:
 		_m=""
 		_u=user
 		try:
-			_u=_self.addressmap[user]
+			_u=self._addressmap[user]
 		except:
 			pass
 		try:
+			self.debug("get_preferred encryptionmap %s"%_u)
 			_m=self._encryptionmap[_u].upper()
 		except:
-			self.debug("get_preferredencryptionmethod User '%s' not found"%user)
+			self.debug("get_preferredencryptionmethod User '%s/%s' not found"%(user,_u))
 			return method
 		if _m in ("PGPMIME","PGPINLINE","SMIME","NONE"):
 			self.debug("get_preferredencryptionmethod User %s (=> %s) :'%s'"%(user,_u,_m))
@@ -2484,11 +2464,12 @@ class gme:
 	####################	
 	@_dbg
 	def encrypt_single_mail(self,queue_id,mailtext,from_addr,to_addr):
+		_pgpmime=False
 		g_r,to_gpg=self.check_gpgrecipient(to_addr)
 		s_r,to_smime=self.check_smimerecipient(to_addr)
 		method=self.get_preferredencryptionmethod(to_addr)
-		self.debug("GPG encrypt possible %i"%g_r)
-		self.debug("SMIME encrypt possible %i"%s_r)
+		self.debug("GPG encrypt possible %i / %s"%(g_r,to_gpg))
+		self.debug("SMIME encrypt possible %i / %s"%(s_r,to_smime))
 		self._count_totalmails+=1
 		if method=="PGPMIME":
 			_prefer_gpg=True
