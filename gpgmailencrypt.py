@@ -17,8 +17,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.0tau"
-DATE="17.08.2015"
+VERSION="2.0ypsilon"
+DATE="18.08.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -176,7 +176,7 @@ def _splitstring(txt,length=80):
 ###########
 #CLASS _GPG
 ###########
-_GPGkeys=list()
+
 class _GPG:
 	@_dbg
 	def __init__(self, parent,keyhome=None, recipient = None, counter=0):
@@ -210,37 +210,36 @@ class _GPG:
 	def set_recipient(self, recipient):
 		if type(recipient) == str:
 			self._recipient=recipient
-			global _GPGkeys
-			_GPGkeys = list()
+			self.parent._GPGkeys = list()
 	@_dbg
 	def recipient(self):
 		return self._recipient	
 
 	@_dbg
 	def public_keys(self):
-		if len(_GPGkeys)==0:
+		if len(self.parent._GPGkeys)==0:
 			self._get_public_keys()
-		return _GPGkeys
+		return self.parent._GPGkeys
 
 	@_dbg
 	def has_key(self,key):
-		self.parent.debug("gpg.has_key")
-		if len(_GPGkeys)==0:
+		self.parent.debug("gpg.has_key '%s'"%key)
+		if len(self.parent._GPGkeys)==0:
 			self._get_public_keys()
 		if type(key)!=str:
 			self.parent.debug("has_key, key not of type str")
 			return False
-		if key in _GPGkeys:	
+		if key in self.parent._GPGkeys:	
 			return True
 		else:
 			self.parent.debug("has_key, key not in _GPGkeys")
-			#debug("_GPGkeys '%s'"%str(_GPGkeys))
+			self.parent.debug("_GPGkeys '%s'"%str(self.parent._GPGkeys))
 			return False
 			
 	@_dbg
 	def _get_public_keys( self ):
 		self.parent.debug("_GPG._get_public_keys")
-		_GPGkeys = list()
+		self.parent._GPGkeys = list()
 		cmd = '%s --homedir %s --list-keys --with-colons' % (self.parent._GPGCMD, self._keyhome.replace("%user",self._recipient))
 		self.parent.debug("_GPG.public_keys command: '%s'"%cmd)
 		try:
@@ -259,14 +258,14 @@ class _GPG:
 						try:
 							email=email[found.start():found.end()]
 						except:
-							self.parent.log("splitting email didn't work","e")
+							self.parent.log("splitting email address didn't work","e")
 							email=""
 						email=email.lower()
-						if len(email)>0 and _GPGkeys.count(email) == 0:
-							#debug("add email address '%s'"%email)
-							_GPGkeys.append(email)
+						if len(email)>0 and self.parent._GPGkeys.count(email) == 0:
+							self.parent.debug("add email address '%s'"%email)
+							self.parent._GPGkeys.append(email)
 						#else:
-							#debug("Email '%s' already added"%email)
+							#self.parent.debug("Email '%s' already added"%email)
 		except:
 			self.parent.log("Error opening keyring (Perhaps wrong directory '%s'?)"%self._keyhome,"e")
 			self.parent.log_traceback()
@@ -431,7 +430,7 @@ class _SMIME:
 		result=p.stdout.read()
 		return result, p.returncode
 	@_dbg
-	def get_emailaddresses(self,certfile):
+	def get_certemailaddresses(self,certfile):
 		cmd=[self.parent._SMIMECMD,"x509","-in",certfile,"-text","-noout"]
 		cert,returncode=self.opensslcmd(" ".join(cmd))
 		cert=cert.decode("utf-8",_unicodeerror)
@@ -452,7 +451,7 @@ class _SMIME:
 				pass
 		return email
 	@_dbg
-	def get_fingerprint(self,cert):
+	def get_certfingerprint(self,cert):
 		cmd=[self.parent._SMIMECMD,"x509","-fingerprint","-in",cert,"-noout"]
 		fingerprint,returncode=self.opensslcmd(" ".join(cmd))
 		found= re.search("(?<=SHA1 Fingerprint=)(.*)",fingerprint.decode("UTF-8",_unicodeerror))
@@ -475,7 +474,7 @@ class _SMIME:
 		if size==0:
 			os.remove(fname)
 			return None
-		fp=self.get_fingerprint(fname)
+		fp=self.get_certfingerprint(fname)
 		targetname="%s/%s.pem"%(targetdir,fp)
 		self._copyfile(fname,targetname)
 		os.remove(fname)
@@ -494,7 +493,7 @@ class _SMIME:
 		for _i in _udir:
 			  if re.match(_match,_i):
 			  	f="%s/%s"%(directory,_i)
-			  	emailaddress=self.get_emailaddresses(f)
+			  	emailaddress=self.get_certemailaddresses(f)
 			  	if len(emailaddress)>0:
 			  		for e in emailaddress:
 			  			result[e] = [f,self.parent._SMIMECIPHER]
@@ -863,7 +862,34 @@ def _decodetxt(text,encoding,charset):
 	return result.decode(charset,_unicodeerror)
 
 class gme:
+	"create an instance of gme via 'with gme() as g'"
+	o_mail=1
+	o_stdout=2
+	o_file=3
+	l_none=1
+	l_syslog=2
+	l_file=3
+	l_stderr=4
+	m_daemon=1
+	m_script=2
+	_LOCALEDB={
+	#"CN":("审读","文件"),
+	"DE":("Termin","Datei"),
+	"EN":("appointment","file"),
+	"ES":("cita","fichero"),
+	"FR":("rendez-vous","fichier"),
+	"IT":("appuntamento","file"),
+	"NL":("Termijn","Bestand"),
+	"PL":("termin","plik"),
+	"PT":("hora","ficheiro"),
+	"RU":("срок","файл"),
+	"SE":("möte","fil"),
+	}
+	#########
+	#__init__
+	#########
 	def __init__(self):
+		"class creator"
 		self._deferred_emails=[]
 		self._email_queue={}
 		self._queue_id=0
@@ -872,8 +898,15 @@ class gme:
 		self._LOGGING=False
 		self._level=0
 		self._DEBUG=False
+		self._systemerrors=0
+		self._systemwarnings=0
+		self._GPGkeys=list()
 		self.init()
+	#########
+	#__exit__
+	#########
 	def __exit__(self, exc_type, exc_value, traceback):
+		"cleans up tempfiles"
 		if self._RUNMODE==self.m_daemon:
 			self.log("gpgmailencrypt daemon shutdown")
 			_now=datetime.datetime.now()
@@ -890,6 +923,7 @@ class gme:
 		if self._LOGGING and self._logfile!=None:
 			self._logfile.close()
 	def __enter__(self):
+		"necessary for the 'with'-creation"
 		return self
 	#####
 	#init
@@ -904,15 +938,6 @@ class gme:
 		self._smimeuser = dict()
 		self._tempfiles = list()
 		self._mailcount=0
-		self.o_mail=1
-		self.o_stdout=2
-		self.o_file=3
-		self.l_none=1
-		self.l_syslog=2
-		self.l_file=3
-		self.l_stderr=4
-		self.m_daemon=1
-		self.m_script=2
 		self._encryptgpgcomment="Encrypted by gpgmailencrypt version %s"%VERSION
 		self._encryptheader="X-GPGMailencrypt"
 		self._smtpd_passwords=dict()
@@ -928,8 +953,8 @@ class gme:
 		self._count_deferredmails=0
 		self._count_alreadyencryptedmails=0
 		self._count_alarms=0
-		self._STATISTICS_PER_DAY=1
 		#GLOBAL CONFIG VARIABLES
+		self._STATISTICS_PER_DAY=1
 		self._DEBUG=False
 		self._LOGGING=self.l_none
 		self._LOGFILE=""
@@ -960,19 +985,6 @@ class gme:
 		self._DEBUGSEARCHTEXT=[]
 		self._DEBUGEXCLUDETEXT=[]
 		self._LOCALE="EN"
-		self._LOCALEDB={
-		#"CN":("审读","文件"),
-		"DE":("Termin","Datei"),
-		"EN":("appointment","file"),
-		"ES":("cita","fichero"),
-		"FR":("rendez-vous","fichier"),
-		"IT":("appuntamento","file"),
-		"NL":("Termijn","Bestand"),
-		"PL":("termin","plik"),
-		"PT":("hora","ficheiro"),
-		"RU":("срок","файл"),
-		"SE":("möte","fil"),
-		}
 		self._RUNMODE=self.m_script
 		self._SMTPD_USE_SMTPS=False
 		self._SMTPD_USE_AUTH=False
@@ -995,7 +1007,6 @@ class gme:
 		except:
 			log("Could not read config file '%s'"%self._CONFIGFILE,"e")
 			return
-
 		if _cfg.has_section('default'):
 			if _cfg.has_option('default','add_header'):
 				self._ADDHEADER=_cfg.getboolean('default','add_header')
@@ -1139,7 +1150,6 @@ class gme:
 			self._LOGGING=self.l_stderr
 			self.log("unknown commandline parameter '%s'"%e,"e")
 			exit(2)
-	
 		for _opt, _arg in _opts:
 			if _opt == '--version':
 				print("gpgmailencrypt version %s from %s"%(VERSION,DATE))
@@ -1152,7 +1162,6 @@ class gme:
 						self._prepare_syslog()
 					else:
 						self._LOGGING=self.l_stderr
-	
 		for _opt, _arg in _opts:
 			if (_opt  =='-c' or  _opt == '--config') and _arg!=None:
 		   		_arg=_arg.strip()
@@ -1161,7 +1170,6 @@ class gme:
 		   			self.log("read new config file '%s'"%self._CONFIGFILE)
 		   			self._read_configfile()
 		   			break
-	
 		for _opt, _arg in _opts:
 			if _opt  =='-a' or  _opt == '--addheader':
 		   		self._ADDHEADER=True
@@ -1227,7 +1235,6 @@ class gme:
 				self.log("gpgmailencrypt needs at least one recipient at the commandline, %i given"%len(_remainder),"e")
 				exit(1)
 		return receiver
-
 	######################
 	#_read_smtpcredentials
 	######################	
@@ -1253,7 +1260,6 @@ class gme:
 			except:
 				pass
 		debug("_read_smtpcredentials END read lines: %i"%c)
-			
 	####
 	#log
 	####
@@ -1269,8 +1275,10 @@ class gme:
 			_lftmsg=20
 			prefix="Info"
 			if infotype=='w':
+				self._systemwarnings+=1
 				prefix="Warning"
 			elif infotype=='e':
+				self._systemerrors=+1
 				prefix="Error"
 			elif infotype=='d':
 				prefix="Debug"
@@ -1303,7 +1311,7 @@ class gme:
 					self._logfile.write("%s %s: %s\n"%(tm,prefix,t ))
 					self._logfile.flush()
 				else:
-					# print to stderr if nothing else works
+					# print to stdout if nothing else works
 					sys.stdout.write("%s %s: %s\n"%(tm,prefix,t ))
 	##############
 	#log_traceback
@@ -1493,7 +1501,7 @@ class gme:
 				self.debug("store_deferred %s"%store_deferred)
 				if store_deferred:
 					self._store_temporaryfile(message,add_deferred=True,fromaddr=from_addr,toaddr=to_addr)
-					_remove_mail_from_queue(m_id)
+					self._remove_mail_from_queue(m_id)
 				return False
 		elif self._OUTPUT==self.o_file and self._OUTFILE and len(self._OUTFILE)>0:
 			try:
@@ -1593,7 +1601,10 @@ class gme:
 					new_list.append(mail)	
 		self._deferred_emails=new_list
 		self.debug("End check_deferred_list")		
-
+	################
+	#check_mailqueue
+	################
+	@_dbg
 	def check_mailqueue(self):
 		for qid in self._email_queue:
 			mail=self._email_queue[qid]
@@ -1762,7 +1773,14 @@ class gme:
 	@_dbg
 	def get_statistics(self):
 		"returns how many mails were handeled"
-		return {"total":self._count_totalmails,"encrypt":self._count_encryptedmails,"deferred":self._count_deferredmails,"still deferred":len(self._deferred_emails),"already encrypted":self._count_alreadyencryptedmails}
+		return {"total":self._count_totalmails,
+			"encrypt":self._count_encryptedmails,
+			"deferred":self._count_deferredmails,
+			"still deferred":len(self._deferred_emails),
+			"already encrypted":self._count_alreadyencryptedmails,
+			"systemerrors":self._systemerrors,
+			"systemwarnings":self._systemwarnings,
+			}
 	#############
 	#is_debugging
 	#############
@@ -1895,9 +1913,9 @@ class gme:
 				self.debug("smime key exists, but '%s' is not in _DOMAINS [%s]"%(domain,self._DOMAINS))
 				found=False
 		return found, smime_to_addr
-	#############
-	#is_encrypted
-	#############
+	#############################
+	#is_encrypted function family
+	#############################
 	@_dbg
 	def _pgpinlineencrypted(self,msg):
 		if msg ==None:
@@ -2179,7 +2197,6 @@ class gme:
 			splitmsg=re.split("\r\n\r\n",message,1)
 		if len(splitmsg)!=2:
 			self.debug("Mail could not be split in header and body part (mailsize=%i)"%len(message))
-			self.log("Error parsing email","w")
 			return None
 		header,body=splitmsg 
 		header+="\n\n"
@@ -3012,10 +3029,11 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			return
 		statistics=self.parent.get_statistics()
 		c=0
-		self.push("250-gpgmailencrypt version %s from %s"%(VERSION,DATE))
+		self.push("250-gpgmailencrypt version %s (%s)"%(VERSION,DATE))
 		_now=datetime.datetime.now()
-		self.push("250-gpgmailencrypt server runs %s"%(_now-self.parent._daemonstarttime))
-
+		self.push("250-Server runs %s"%(_now-self.parent._daemonstarttime))
+		self.push("250-Systemerrors %i"%(self.parent._systemerrors))
+		self.push("250-Systemwarnings %i"%(self.parent._systemwarnings))
 		for s in statistics:
 			dash="-"
 			if c==len(statistics)-1:
