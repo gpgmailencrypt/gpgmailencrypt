@@ -17,8 +17,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.0ypsilon"
-DATE="18.08.2015"
+VERSION="2.0phi"
+DATE="19.08.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -89,7 +89,7 @@ def show_usage():
 	print ("\nUsage:\n")
 	print ("gpgmailencrypt [options] receiver@email.address < Inputfile_from_stdin")
 	print ("\nOptions:\n")
-	print ("-a --addheader:  adds %s header to the mail"%_encryptheader)
+	print ("-a --addheader:  adds %s header to the mail"%gme._encryptheader)
 	print ("-c f --config f: use configfile 'f'. Default is /etc/gpgmailencrypt.conf")
 	print ("-d --daemon :    start gpgmailencrypt as smtpserver")
 	print ("-e pgpinline :   preferred encryption method, either 'pgpinline','pgpmime' or 'smime'")
@@ -111,7 +111,7 @@ def print_exampleconfig():
 	"prints an example config file to stdout"
 	print ("[default]")
 	print ("prefered_encryption = gpginline 		# valid values are 'gpginline','gpgmime' or 'smime'")
-	print ("add_header = no         			# adds a %s header to the mail"%_encryptheader)
+	print ("add_header = no         			# adds a %s header to the mail"%gme._encryptheader)
 	print ("domains =    		     			# comma separated list of domain names, \
 that should be encrypted, empty is all")
 	print ("spamsubject =***SPAM				# Spam recognition string, spam will not be encrypted")
@@ -355,7 +355,7 @@ class _SMIME:
 		if type(keyhome)==str:
 			self._keyhome = expanduser(keyhome)
 		else:
-			self._keyhome=expanduser(_SMIMEKEYHOME)
+			self._keyhome=expanduser(self._SMIMEKEYHOME)
 		self._recipient = ''
 		self._filename=''	
 		if type(recipient) == str:
@@ -501,7 +501,7 @@ class _SMIME:
 
 	@_dbg
 	def verify_certificate(self,cert):
-		cmd=[_SMIMECMD,"verify",cert,"&>/dev/null"]
+		cmd=[self._SMIMECMD,"verify",cert,"&>/dev/null"]
 		_result = subprocess.call( " ".join(cmd) ,shell=True) 
 		return _result==0
 
@@ -576,7 +576,7 @@ class _htmldecode(html.parser.HTMLParser):
 				
 	def handle_starttag(self, tag, attrs):
 		if self.dbg:
-			debug( "<%s>"%tag)
+			self.parent.debug( "<%s>"%tag)
 		self.handle_tag(tag,attrs)
 
 	def handle_entityref(self, name):
@@ -595,19 +595,19 @@ class _htmldecode(html.parser.HTMLParser):
 
 	def handle_endtag(self, tag):
 		if self.dbg:
-			debug("</%s>"%tag)
+			self.parent.debug("</%s>"%tag)
 		self.handle_tag(tag,starttag=False)
 
 	def handle_startendtag(self,tag,attrs):
 		if self.dbg:
-			debug("< %s/>"%tag)
+			self.parent.debug("< %s/>"%tag)
 		if tag=="br":
 			self.handle_tag(tag,attrs,starttag=False)
 
 	def handle_data(self, data):
 		if self.in_throwaway==0:
 			if self.dbg:
-				debug("   data: '%s'"%data)
+				self.parent.debug("   data: '%s'"%data)
 			if self.in_keep>0:
 				self.data+=data
 			elif len(data.strip())>0:
@@ -615,7 +615,7 @@ class _htmldecode(html.parser.HTMLParser):
 
 	def handle_charref(self, name):
 		if self.dbg:
-			debug("handle_charref '%s'"%name)
+			self.parent.debug("handle_charref '%s'"%name)
 		if name.startswith('x'):
 			c = chr(int(name[1:], 16))
 		else:
@@ -653,13 +653,13 @@ class _htmldecode(html.parser.HTMLParser):
 			if tag=="tr":
 				self.first_td_in_row=True
 				if self.dbg:
-					debug("tr first_td_in_row=True")
+					self.parent.debug("tr first_td_in_row=True")
 			if tag in ("td","th") :
 				if self.dbg:
-					debug("<td/th> first %s"%self.first_td_in_row)
+					self.parent.debug("<td/th> first %s"%self.first_td_in_row)
 				if  not self.first_td_in_row:
 					if self.dbg:
-						debug("     td/th \\t")
+						self.parent.debug("     td/th \\t")
 					self.data+="\t"
 				else:
 					self.first_td_in_row=False
@@ -893,6 +893,7 @@ class gme:
 	"RU":("срок","файл"),
 	"SE":("möte","fil"),
 	}
+	_encryptheader="X-GPGMailencrypt"
 	#########
 	#__init__
 	#########
@@ -923,7 +924,7 @@ class gme:
 		for f in self._tempfiles:
 			try:
 				os.remove(f)
-				debug("do_finally delete tempfile '%s'"%f)
+				self.debug("do_finally delete tempfile '%s'"%f)
 			except:
 				pass
 		if self._RUNMODE==self.m_daemon:
@@ -947,7 +948,6 @@ class gme:
 		self._tempfiles = list()
 		self._mailcount=0
 		self._encryptgpgcomment="Encrypted by gpgmailencrypt version %s"%VERSION
-		self._encryptheader="X-GPGMailencrypt"
 		self._smtpd_passwords=dict()
 		self._encoding = locale.getdefaultlocale()[1]
 		if self._encoding==None:
@@ -1211,7 +1211,7 @@ class gme:
 					elif _arg=='file':
 						self._LOGGING=self.l_file
 					else:
-						self._LOGGINGself.l_stderr
+						self._LOGGING=self.l_stderr
 	
 			if _opt  =='-o' or  _opt == '--output':
 				if type(_arg)==str:
@@ -1267,7 +1267,7 @@ class gme:
 				c+=1
 			except:
 				pass
-		debug("_read_smtpcredentials END read lines: %i"%c)
+		self.debug("_read_smtpcredentials END read lines: %i"%c)
 	####
 	#log
 	####
@@ -1489,9 +1489,9 @@ class gme:
 				except:
 					self.debug("smtp.starttls on server failed")
 				if self._AUTHENTICATE and smtp.has_extn("auth"):
-					self.debug("_send_textmsg: authenticate at smtp server with user %s"%_SMTP_USER)
+					self.debug("_send_textmsg: authenticate at smtp server with user %s"%self._SMTP_USER)
 					try:
-						smtp.login(_SMTP_USER,_SMTP_PASSWORD)
+						smtp.login(self._SMTP_USER,self._SMTP_PASSWORD)
 					except smtplib.SMTPAuthenticationError:
 						self.log("Could not send email, could not authenticate","e")
 						self.debug("_send_textmsg: store_deferred %s" % store_deferred)
@@ -2028,7 +2028,7 @@ class gme:
 					payload[self._encryptheader] = 'Mail was already encrypted'
 				self.debug("Mail was already encrypted")
 			self._del_tempfile(fp.name)
-			if len(_OUTFILE) >0:
+			if len(self._OUTFILE) >0:
 				return None	
 			return payload
 		contentmaintype=payload.get_content_maintype() 
@@ -2675,8 +2675,7 @@ class gme:
 			del self._smtpd_passwords[user]
 			return True
 		except:
-			self.log("User could not be deleted","e")
-			self.log_traceback()
+			self.log("User could not be deleted","w")
 			return False
 		return True
 	########################
@@ -3013,8 +3012,6 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		self.push("250-gpgmailencrypt version %s (%s)"%(VERSION,DATE))
 		_now=datetime.datetime.now()
 		self.push("250-Server runs %s"%(_now-self.parent._daemonstarttime))
-		self.push("250-Systemerrors %i"%(self.parent._systemerrors))
-		self.push("250-Systemwarnings %i"%(self.parent._systemwarnings))
 		for s in statistics:
 			dash="-"
 			if c==len(statistics)-1:
