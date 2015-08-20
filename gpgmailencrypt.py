@@ -110,7 +110,7 @@ def show_usage():
 def print_exampleconfig():
 	"prints an example config file to stdout"
 	print ("[default]")
-	print ("prefered_encryption = gpginline 		# valid values are 'gpginline','gpgmime' or 'smime'")
+	print ("prefered_encryption = pgpinline 		# valid values are 'pgpinline','pgpmime' or 'smime'")
 	print ("add_header = no         			# adds a %s header to the mail"%gme._encryptheader)
 	print ("domains =    		     			# comma separated list of domain names, \
 that should be encrypted, empty is all")
@@ -180,10 +180,6 @@ def _splitstring(txt,length=80):
 class _GPG:
 	@_dbg
 	def __init__(self, parent,keyhome=None, recipient = None, counter=0):
-		if type(keyhome)==str:
-			self._keyhome = expanduser(keyhome)
-		else:
-			self._keyhome=expanduser('~/.gnupg')
 		self._recipient = ''
 		self._filename=''	
 		self.count=counter
@@ -191,6 +187,12 @@ class _GPG:
 		self.parent.debug("_GPG.__init__")
 		if type(recipient) == str:
 			self.set_recipient(recipient)
+		if type(keyhome)==str:
+			self._keyhome = expanduser(keyhome)
+		elif self.parent and self.parent._GPGKEYHOME:
+			self._keyhome=expanduser(self.parent._GPGKEYHOME)
+		else:
+			self._keyhome=expanduser('~/.gnupg')
 		self.parent.debug("_GPG.__init__ end")
 
 	@_dbg
@@ -275,12 +277,12 @@ class _GPG:
 		if filename:
 			set_filename(filename)
 		if len(self._filename) == 0:
-			self.parent.log( 'Error: GPGEncryptor: filename not set',"m")
+			self.parent.log( 'Error: GPGEncrypt: filename not set',"e")
 			return ''
 		f=self.parent._new_tempfile()
 		self.parent.debug("_GPG.encrypt_file _new_tempfile %s"%f.name)
 		f.close()
-		_result = subprocess.call( ' '.join(self._command_fromfile(f.name,binary)),shell=True ) 
+		_result = subprocess.call( ' '.join(self._encryptcommand_fromfile(f.name,binary)),shell=True ) 
 		self.parent.debug("Encryption command: '%s'" %' '.join(self._command_fromfile(f.name,binary)))
 		if _result != 0:
 			self.parent.log("Error executing command (Error code %d)"%_result,"e")
@@ -296,7 +298,7 @@ class _GPG:
 		return _result,encdata
 
 	@_dbg
-	def _command_fromfile(self,sourcefile,binary):
+	def _encryptcommand_fromfile(self,sourcefile,binary):
 		cmd=[self.parent._GPGCMD, "--trust-model", "always", "-r",self._recipient,"--homedir", 
 		self._keyhome.replace("%user",self._recipient), "--batch", "--yes", "--pgp7", "--no-secmem-warning", "--output",sourcefile, "-e",self._filename ]
 		if self.parent._ALLOWGPGCOMMENT==True:
@@ -915,6 +917,19 @@ class gme:
 	#__exit__
 	#########
 	def __exit__(self, exc_type, exc_value, traceback):
+		"automatically cleans up tempfiles when created with the 'with' statement"
+		self.close()
+	##########
+	#__enter__
+	##########
+	def __enter__(self):
+		"necessary for the 'with'-creation"
+		return self
+	######
+	#close
+	######
+	@_dbg
+	def close(self):
 		"cleans up tempfiles"
 		if self._RUNMODE==self.m_daemon:
 			self.log("gpgmailencrypt daemon shutdown")
@@ -931,9 +946,6 @@ class gme:
 			self.store_deferred_list()
 		if self._LOGGING and self._logfile!=None:
 			self._logfile.close()
-	def __enter__(self):
-		"necessary for the 'with'-creation"
-		return self
 	#####
 	#init
 	#####
@@ -1009,7 +1021,8 @@ class gme:
 	#################	
 	@_dbg
 	def _read_configfile(self):
-		_cfg = ConfigParser()
+		_cfg = ConfigParser(inline_comment_prefixes=("#",))
+		self._GPGkeys=list()
 		try:
 			_cfg.read(self._CONFIGFILE)
 		except:
@@ -1307,6 +1320,7 @@ class gme:
 					level=syslog.LOG_INFO
 					if infotype=='w':
 						level=syslog.LOG_WARNING
+						t="WARNING "+t
 					elif infotype=='e':
 						level=syslog.LOG_ERR
 						t="ERROR "+t
@@ -1765,8 +1779,8 @@ class gme:
 			return
 		cf=f.strip()
 		if len(cf)>0:
-			self._CONFIGFILE=_arg
-			self.log("read new config file '%s'"%self._CONFIGFILE)
+			self._CONFIGFILE=cf
+			self.debug("read new config file '%s'"%self._CONFIGFILE)
 			self._read_configfile()
 	###########
 	#get_locale
@@ -2484,7 +2498,7 @@ class gme:
 			s_r=False
 		if not s_r and not g_r:
 			m="Email not encrypted, public key for '%s' not found"%to_addr
-			self.log(m,"w")
+			self.log(m)
 			self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
 			return
 		if self.is_encrypted(mailtext):
@@ -3132,8 +3146,8 @@ def _sigtermhandler(signum, frame):
 #############################
 # gpgmailencrypt main program
 #############################
-with gme() as g:
-	if __name__ == "__main__":
+if __name__ == "__main__":
+	with gme() as g:
 		receiver=g._parse_commandline()
 		g._set_logmode()
 		if g._RUNMODE==g.m_daemon:
