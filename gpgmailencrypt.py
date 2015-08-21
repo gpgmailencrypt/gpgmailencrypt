@@ -17,8 +17,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.0phi"
-DATE="19.08.2015"
+VERSION="2.0chi"
+DATE="21.08.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -1655,6 +1655,7 @@ class gme:
 	def _log_statistics(self):
 		self.log("Mail statistics: total: %i, encrypt: %i, were encrypted: %i, total deferred: %i, still deferred: %i" %\
 		(self._count_totalmails,self._count_encryptedmails,self._count_alreadyencryptedmails,self._count_deferredmails,len(self._deferred_emails)))
+		self.log("systemerrors: %i, systemwarnings: %i" %(self._systemerrors,self._systemwarnings))
 	##############
 	#_new_tempfile
 	##############
@@ -1943,7 +1944,10 @@ class gme:
 		"returns whether or not the email is already PGPMIME encrypted"
 		if type(msg)==bytes:
 			return False
-		if "\ncontent-type: application/pgp-encrypted" in msg.lower():
+		m=msg
+		if isinstance(msg,email.message.Message):
+			m=msg.as_string()
+		if "\ncontent-type: application/pgp-encrypted" in m.lower():
 			return True
 		else:
 			return False
@@ -1952,7 +1956,10 @@ class gme:
 		"returns whether or not the email is already SMIME encrypted"
 		if type(msg)==bytes:
 			return False
-		if  "\ncontent-type: application/pkcs7-mime"  in msg.lower() :
+		m=msg
+		if isinstance(msg,email.message.Message):
+			m=msg.as_string()
+		if  "\ncontent-type: application/pkcs7-mime"  in m.lower() :
 			return True
 		else:
 			return False
