@@ -283,7 +283,7 @@ class _GPG:
 		self.parent.debug("_GPG.encrypt_file _new_tempfile %s"%f.name)
 		f.close()
 		_result = subprocess.call( ' '.join(self._encryptcommand_fromfile(f.name,binary)),shell=True ) 
-		self.parent.debug("Encryption command: '%s'" %' '.join(self._command_fromfile(f.name,binary)))
+		self.parent.debug("Encryption command: '%s'" %' '.join(self._encryptcommand_fromfile(f.name,binary)))
 		if _result != 0:
 			self.parent.log("Error executing command (Error code %d)"%_result,"e")
 		if binary:
@@ -1021,7 +1021,7 @@ class gme:
 	#################	
 	@_dbg
 	def _read_configfile(self):
-		_cfg = ConfigParser(inline_comment_prefixes=("#",))
+		_cfg = ConfigParser(inline_comment_prefixes=("#",),comment_prefixes=("#",))
 		self._GPGkeys=list()
 		try:
 			_cfg.read(self._CONFIGFILE)
@@ -1144,6 +1144,7 @@ class gme:
 		s=_SMIME(self,self._SMIMEKEYHOME)
 		self._smimeuser.update(s.create_keylist(self._SMIMEKEYHOME))
 		if _cfg.has_section('smimeuser'):
+			self._smimeuser = dict()
 			for (name, value) in _cfg.items('smimeuser'):
 				user=value.split(",")
 				cipher=self._SMIMECIPHER
@@ -1942,10 +1943,7 @@ class gme:
 		"returns whether or not the email is already PGPMIME encrypted"
 		if type(msg)==bytes:
 			return False
-		if type(msg)==str:
-			msg=email.message_from_string(msg)
-		contenttype=msg.get_content_type()
-		if contenttype=="application/pgp-encrypted":
+		if "\ncontent-type: application/pgp-encrypted" in msg.lower():
 			return True
 		else:
 			return False
@@ -1954,10 +1952,7 @@ class gme:
 		"returns whether or not the email is already SMIME encrypted"
 		if type(msg)==bytes:
 			return False
-		if type(msg)==str:
-			msg=email.message_from_string(msg)
-		contenttype=msg.get_content_type()
-		if contenttype=="application/pkcs7-mime":
+		if  "\ncontent-type: application/pkcs7-mime"  in msg.lower() :
 			return True
 		else:
 			return False
