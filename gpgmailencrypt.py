@@ -1919,6 +1919,9 @@ class gme:
 			return False
 		if type(msg)==email.message.Message:
 			msg=msg.as_string()
+		find=re.search("^Content-Type: application/pgp-encrypted",msg,re.I|re.MULTILINE)
+		if find:
+			return False
 		if "\n-----BEGIN PGP MESSAGE-----" in msg and "\n-----END PGP MESSAGE-----" in msg:
 			return True
 		else:
@@ -1947,7 +1950,8 @@ class gme:
 		m=msg
 		if isinstance(msg,email.message.Message):
 			m=msg.as_string()
-		if "\ncontent-type: application/pgp-encrypted" in m.lower():
+		find=re.search("^Content-Type: application/pgp-encrypted",msg,re.I|re.MULTILINE)
+		if find:
 			return True
 		else:
 			return False
@@ -1959,7 +1963,8 @@ class gme:
 		m=msg
 		if isinstance(msg,email.message.Message):
 			m=msg.as_string()
-		if  "\ncontent-type: application/pkcs7-mime"  in m.lower() :
+		find=re.search("^Content-Type: application/pkcs7-mime",msg,re.I|re.MULTILINE)
+		if find:
 			return True
 		else:
 			return False
