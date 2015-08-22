@@ -18,7 +18,7 @@ Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
 VERSION="2.0chi"
-DATE="21.08.2015"
+DATE="22.08.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -36,9 +36,8 @@ import smtpd,asyncore, signal,ssl,asynchat,socket,select
 
 try:
 	import readline
-	has_readline=True
 except:
-	has_readline=False
+	pass
 ################################
 #Definition of general functions
 ################################
@@ -100,7 +99,6 @@ def show_usage():
 	print ("-n domainnames:  sets the used domain names (comma separated lists, no space), which should be encrypted, empty is all")
 	print ("-m mailfile :    write email file to 'mailfile', otherwise email will be sent via smtp")
 	print ("-o p --output p: valid values for p are 'mail' or 'stdout', alternatively you can set an outputfile with -m")
-	print ("-p --pgpmime:    create email in PGP/MIME style")
 	print ("-x --example:    print example config file")
 	print ("-v --verbose:    print debugging information into _logfile")
 	print ("")
@@ -194,14 +192,12 @@ class _GPG:
 		else:
 			self._keyhome=expanduser('~/.gnupg')
 		self.parent.debug("_GPG.__init__ end")
-
 	@_dbg
 	def set_filename(self, fname):
 		if type(fname)==str:
 			self._filename=fname.strip()
 		else:
 			self._filename=''
-	
 	@_dbg
 	def set_keyhome(self,keyhome):
 		if type(keyhome)==str:
@@ -216,34 +212,30 @@ class _GPG:
 	@_dbg
 	def recipient(self):
 		return self._recipient	
-
 	@_dbg
 	def public_keys(self):
 		if len(self.parent._GPGkeys)==0:
 			self._get_public_keys()
 		return self.parent._GPGkeys
-
 	@_dbg
 	def private_keys(self):
-		if len(self.parent._GPGsecretkeys)==0:
+		if len(self.parent._GPGprivatekeys)==0:
 			self._get_private_keys()
-		return self.parent._GPGsecretkeys
-
+		return self.parent._GPGprivatekeys
 	@_dbg
-	def has_key(self,key):
-		self.parent.debug("gpg.has_key '%s'"%key)
+	def has_public_key(self,key):
+		self.parent.debug("gpg.has_public_key '%s'"%key)
 		if len(self.parent._GPGkeys)==0:
 			self._get_public_keys()
 		if type(key)!=str:
-			self.parent.debug("has_key, key not of type str")
+			self.parent.debug("has_public_key, key not of type str")
 			return False
 		if key in self.parent._GPGkeys:	
 			return True
 		else:
-			self.parent.debug("has_key, key not in _GPGkeys")
+			self.parent.debug("has_publickey, key not in _GPGkeys")
 			self.parent.debug("_GPGkeys '%s'"%str(self.parent._GPGkeys))
 			return False
-			
 	@_dbg
 	def _get_public_keys( self ):
 		self.parent.debug("_GPG._get_public_keys")
@@ -277,12 +269,10 @@ class _GPG:
 		except:
 			self.parent.log("Error opening keyring (Perhaps wrong directory '%s'?)"%self._keyhome,"e")
 			self.parent.log_traceback()
-
-
 	@_dbg
 	def _get_private_keys( self ):
 		self.parent.debug("_GPG._get_private_keys")
-		self.parent._GPGsecretkeys = list()
+		self.parent._GPGprivatekeys = list()
 		cmd = '%s --homedir %s --list-secret-keys --with-colons' % (self.parent._GPGCMD, self._keyhome.replace("%user",self._recipient))
 		self.parent.debug("_GPG.private_keys command: '%s'"%cmd)
 		try:
@@ -304,9 +294,9 @@ class _GPG:
 							self.parent.log("splitting email address didn't work","e")
 							email=""
 						email=email.lower()
-						if len(email)>0 and self.parent._GPGsecretkeys.count(email) == 0:
+						if len(email)>0 and self.parent._GPGprivatekeys.count(email) == 0:
 							#self.parent.debug("add email address '%s'"%email)
-							self.parent._GPGsecretkeys.append(email)
+							self.parent._GPGprivatekeys.append(email)
 						#else:
 							#self.parent.debug("Email '%s' already added"%email)
 		except:
@@ -314,16 +304,17 @@ class _GPG:
 			self.parent.log_traceback()
 	@_dbg
 	def encrypt_file(self,filename=None,binary=False, recipient=None):
+		result=False
 		if filename:
 			self.set_filename(filename)
 		if len(self._filename) == 0:
 			self.parent.log( 'Error: GPGEncrypt: filename not set',"e")
-			return ''
+			return result,''
 		if recipient:
 			self.set_recipient(recipient)
 		if len(self._recipient)==0:
 			log("GPG encrypt file: No recipient set!","e")
-			return False,None
+			return result,None
 		f=self.parent._new_tempfile()
 		self.parent.debug("_GPG.encrypt_file _new_tempfile %s"%f.name)
 		f.close()
@@ -331,6 +322,8 @@ class _GPG:
 		self.parent.debug("Encryption command: '%s'" %' '.join(self._encryptcommand_fromfile(f.name,binary)))
 		if _result != 0:
 			self.parent.log("Error executing command (Error code %d)"%_result,"e")
+		else:
+			result=True
 		if binary:
 			res=open(f.name,mode="br")
 			self.parent.debug("GPG.encrypt_file binary open")
@@ -340,27 +333,27 @@ class _GPG:
 		encdata=res.read()
 		res.close()
 		self.parent._del_tempfile(f.name)
-		return _result,encdata
-
+		return result,encdata
 	@_dbg
 	def _encryptcommand_fromfile(self,sourcefile,binary):
 		cmd=[self.parent._GPGCMD, "--trust-model", "always", "-r",self._recipient,"--homedir", 
-		self._keyhome.replace("%user",self._recipient), "--batch", "--yes", "--pgp7", "--no-secmem-warning", "--output",sourcefile, "-e",self._filename ]
+		self._keyhome.replace("%user",self._recipient), "--batch", "--yes", "--pgp7", "-q","--no-secmem-warning", "--output",sourcefile, "-e",self._filename ]
 		if self.parent._ALLOWGPGCOMMENT==True:
 			cmd.insert(1,"'%s'"%self.parent._encryptgpgcomment)
 			cmd.insert(1,"--comment")
 		if not binary:
 			cmd.insert(1,"-a")
 		return cmd
-
+	@_dbg
 	def decrypt_file(self,filename=None,binary=False,recipient=None):
+		result=False
 		if recipient:
 			self.set_recipient(recipient)
 		if filename:
 			self.set_filename(filename)
 		if len(self._filename) == 0:
 			self.parent.log( 'Error: GPGDecrypt: filename not set',"e")
-			return ''
+			return result,''
 		f=self.parent._new_tempfile()
 		self.parent.debug("_GPG.decrypt_file _new_tempfile %s"%f.name)
 		f.close()
@@ -368,6 +361,8 @@ class _GPG:
 		self.parent.debug("Encryption command: '%s'" %' '.join(self._decryptcommand_fromfile(f.name,binary)))
 		if _result != 0:
 			self.parent.log("Error executing command (Error code %d)"%_result,"e")
+		else:
+			result=True
 		if binary:
 			res=open(f.name,mode="br")
 			self.parent.debug("GPG.decrypt_file binary open")
@@ -377,8 +372,7 @@ class _GPG:
 		encdata=res.read()
 		res.close()
 		self.parent._del_tempfile(f.name)
-		return _result,encdata
-
+		return result,encdata
 	@_dbg
 	def _decryptcommand_fromfile(self,sourcefile,binary):
 		cmd=[self.parent._GPGCMD, "--trust-model", "always", "-q","-r",self._recipient,"--homedir", 
@@ -441,12 +435,25 @@ class _SMIME:
 		if type(keyhome)==str:
 			self._keyhome = expanduser(keyhome)
 		else:
-			self._keyhome=expanduser(self._SMIMEKEYHOME)
+			self._keyhome=expanduser(self.parent._SMIMEKEYHOME)
 		self._recipient = ''
 		self._filename=''	
 		if type(recipient) == str:
 			self._recipient=recipient
 		self.parent.debug("_SMIME.__init__ end")
+	@_dbg
+	def public_keys(self):
+		result=list()
+		for user in self.parent._smimeuser:
+			result.append(user)
+		return result
+	@_dbg
+	def private_keys(self):
+		result=list()
+		for user in self.parent._smimeuser:
+			if self.parent._smimeuser[user][2]!=None:
+			 result.append(user)
+		return result
 	@_dbg
 	def set_filename(self, fname):
 		if type(fname)==str:
@@ -467,38 +474,44 @@ class _SMIME:
 	def recipient(self):
 		return self._recipient	
 	@_dbg
-	def has_key(self,key):
+	def has_public_key(self,key):
 		if type(key)!=str:
-			self.parent.debug("smime has_key, key not of type str")
+			self.parent.debug("smime has_public_key, key not of type str")
 			return False
 		try:
 			_u=self.parent._smimeuser[key]
 		except:
-			self.parent.debug("smime has_key, key not found for '%s'"%key)
+			self.parent.debug("smime has_public_key, key not found for '%s'"%key)
 			return False
 		return True
 	@_dbg
-	def encrypt_file(self,filename=None,binary=False):
+	def encrypt_file(self,filename=None,binary=False, recipient=None):
+		result=False
 		if filename:
-			set_filename(filename)
+			self.set_filename(filename)
 		if len(self._filename) == 0:
 			self.parent.log( 'Error: _SMIME: filename not set',"m")
-			return ''
+			return result,''
+		if recipient:
+			self.set_recipient(recipient)
+
 		f=self.parent._new_tempfile()
 		self.parent.debug("_SMIME.encrypt_file _new_tempfile %s"%f.name)
 		f.close()
-		_result = subprocess.call( ' '.join(self._command_fromfile(f.name,binary)),shell=True ) 
-		self.parent.debug("Encryption command: '%s'" %' '.join(self._command_fromfile(f.name,binary)))
+		_result = subprocess.call( ' '.join(self._command_encrypt_fromfile(f.name,binary)),shell=True ) 
+		self.parent.debug("Encryption command: '%s'" %' '.join(self._command_encrypt_fromfile(f.name,binary)))
 		if _result != 0:
 			self.parent.log("Error executing command (Error code %d)"%_result,"e")
+		else:
+			result=True
 		res=open(f.name,encoding="UTF-8")
 		encdata=res.read()
 		res.close()
 		self.parent._del_tempfile(f.name)
 		m=email.message_from_string(encdata)
-		return _result,m.get_payload()
+		return result,m.get_payload()
 	@_dbg
-	def _command_fromfile(self,sourcefile,binary):
+	def _command_encrypt_fromfile(self,sourcefile,binary):
 		_recipient=self.parent._smimeuser[self._recipient]
 		encrypt="des3" # RFC 3583
 		if _recipient[1]=="AES256":
@@ -509,6 +522,39 @@ class _SMIME:
 			encrypt="aes-192-cbc"
 		cmd=[self.parent._SMIMECMD, "smime", "-%s" %encrypt,"-encrypt", "-in",self._filename,"-out", sourcefile,  _recipient[0] ]
 		return cmd
+
+	def decrypt_file(self,filename=None,binary=False,recipient=None):
+		result=False
+		if filename:
+			self.set_filename(filename)
+		if len(self._filename) == 0:
+			self.parent.log( 'Error: _SMIME: filename not set',"m")
+			return result,''
+		if recipient:
+			self.set_recipient(recipient)
+		f=self.parent._new_tempfile()
+		self.parent.debug("_SMIME.decrypt_file _new_tempfile %s"%f.name)
+		f.close()
+		_result = subprocess.call( ' '.join(self._command_decrypt_fromfile(f.name,binary)),shell=True ) 
+		self.parent.debug("Decryption command: '%s'" %' '.join(self._command_decrypt_fromfile(f.name,binary)))
+		if _result != 0:
+			self.parent.log("Error executing command (Error code %d)"%_result,"e")
+		else:
+			result=True
+		res=open(f.name,encoding="UTF-8")
+		encdata=res.read()
+		res.close()
+		self.parent._del_tempfile(f.name)
+		m=email.message_from_string(encdata)
+		return result,m.get_payload()
+	@_dbg
+	def _command_decrypt_fromfile(self,sourcefile,binary):
+		_recipient=self.parent._smimeuser[self._recipient]
+		cmd=[self.parent._SMIMECMD, "smime","-decrypt", "-in",self._filename,"-out", sourcefile,"-inkey" , _recipient[2] ]
+		return cmd
+
+
+
 	@_dbg
 	def opensslcmd(self,cmd):
 		result=""
@@ -996,7 +1042,7 @@ class gme:
 		self._systemerrors=0
 		self._systemwarnings=0
 		self._GPGkeys=list()
-		self._GPGsecretkeys=list()
+		self._GPGprivatekeys=list()
 		self.init()
 	#########
 	#__exit__
@@ -1230,14 +1276,19 @@ class gme:
 		self._smimeuser.update(s.create_keylist(self._SMIMEKEYHOME))
 		if _cfg.has_section('smimeuser'):
 			self._smimeuser = dict()
+			privatepath=None
 			for (name, value) in _cfg.items('smimeuser'):
 				user=value.split(",")
 				cipher=self._SMIMECIPHER
-				if len(user)==2:
-					cipher=user[1].upper().strip()
-				path=os.path.expanduser(os.path.join(self._SMIMEKEYHOME,user[0]))
-				if os.path.isfile(path):
-					self._smimeuser[name] = [path,cipher]
+				if len(user)>1:
+					tmpcipher=user[1].upper().strip()
+					if len(tmpcipher)>0 and tmpcipher!="DEFAULT":
+						cipher=tmpcipher
+				if len(user)>2:
+					privatepath=os.path.expanduser(os.path.join(self._SMIMEKEYHOME,user[2]))
+				publicpath=os.path.expanduser(os.path.join(self._SMIMEKEYHOME,user[0]))
+				if os.path.isfile(publicpath):
+					self._smimeuser[name] = [publicpath,cipher,privatepath]
 		self._set_logmode()
 		if self._DEBUG:
 			for u in self._smimeuser:
@@ -1251,8 +1302,8 @@ class gme:
 		receiver=[]
 		try:
 			cl=sys.argv[1:]
-			_opts,_remainder=getopt.gnu_getopt(cl,'ac:de:f:hk:l:m:n:o:pvxy',
-	  		['addheader','config=','daemon','example','help','keyhome=','log=','output=','pgpmime','verbose','version'])
+			_opts,_remainder=getopt.gnu_getopt(cl,'ac:de:f:hk:l:m:n:o:vxy',
+	  		['addheader','config=','daemon','example','help','keyhome=','log=','output=','verbose','version'])
 		except getopt.GetoptError as e:
 			self._LOGGING=self.l_stderr
 			self.log("unknown commandline parameter '%s'"%e,"e")
@@ -1392,7 +1443,7 @@ class gme:
 			t=time.localtime(time.time())
 			_lntxt="Line %i:%s"%(ln,space)
 			tm=("%02d.%02d.%04d %02d:%02d:%02d:" % (t[2],t[1],t[0],t[3],t[4],t[5])).ljust(_lftmsg)
-			txt=_splitstring(msg,240)
+			txt=_splitstring(msg,320)
 			c=0
 			for t in txt:
 				if (ln>0):
@@ -1958,7 +2009,7 @@ class gme:
 		except:
 			self.debug("_addressmap to_addr not found")
 			gpg_to_addr=gaddr
-		if gpg.has_key(gpg_to_addr):
+		if gpg.has_public_key(gpg_to_addr):
 			if (len(self._DOMAINS)>0 and domain in self._DOMAINS.split(',')) or len(self._DOMAINS)==0:
 				found=True
 				self.debug("check_gpgrecipient: after in_key")
@@ -1984,7 +2035,7 @@ class gme:
 			self.debug("smime _addressmap to_addr not found")
 			smime_to_addr=saddr
 		self.debug("check_smimerecipient '%s'"%smime_to_addr)
-		if smime.has_key(smime_to_addr):
+		if smime.has_public_key(smime_to_addr):
 			found=True
 			self.debug("check_smimerecipient FOUND") 
 			if (len(self._DOMAINS)>0 and domain in self._DOMAINS.split(',')) or len(self._DOMAINS)==0:
@@ -2166,8 +2217,8 @@ class gme:
 				self.debug("addPGPextension gpg.encrypt_file")
 				result,pl=gpg.encrypt_file(binary=isBinaryattachment)
 			else:
-				result=1
-			if result==0:
+				result=False
+			if result==True:
 				if isBinaryattachment:
 					payload.set_payload(str(base64.encodebytes(pl),"ascii"))
 					payload["Content-Transfer-Encoding"]="base64"
@@ -2188,7 +2239,7 @@ class gme:
 				del payload['Content-Transfer-Encoding']
 			payload["Content-Transfer-Encoding"]="8bit"
 			result,pl=gpg.encrypt_file(binary=False) 
-			if result==0:
+			if result==True:
 				if contenttype=="text/html":
 					pl=htmlheader+"\n<br>\n"+re.sub('\n',"<br>\n",pl)+"<br>\n"+htmlfooter
 				if "Content-Transfer-Encoding" in payload:
@@ -2377,7 +2428,7 @@ class gme:
 			self.del_tempfile(fp.name)
 			return None
 		result,pl=gpg.encrypt_file(binary=False) 
-		if result==0:
+		if result==True:
 			attachment.set_payload(pl)
 		else:
 			self.log("Error during encryption pgpmime: payload will be unencrypted!","m")	
@@ -2551,7 +2602,7 @@ class gme:
 		fp.close()
 		smime.set_filename(fp.name)
 		result,pl=smime.encrypt_file()
-		if result==0:
+		if result==True:
 			self.debug("encrypt_smime_mail: send encrypted mail")
 			self._count_encryptedmails+=1
 			if self._ADDHEADER:
