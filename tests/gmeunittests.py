@@ -25,7 +25,7 @@ User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:31.0) Gecko/20100101 Thunderbird/
 To: testaddress@gpgmailencry.pt
 Subject: test
 MIME-Version: 1.0
-Content-Type: multipart/encrypted; charset="utf-8"; boundary="===============6271318822587357114=="; protocol="application/pgp-encrypted"
+cOnTeNt-Type: multipart/encrypted; charset="utf-8"; boundary="===============6271318822587357114=="; protocol="application/pgp-encrypted"
 
 This is an OpenPGP/MIME encrypted message (RFC 4880 and 3156)
 --===============6271318822587357114==
@@ -133,6 +133,11 @@ class gmetests(unittest.TestCase):
 			gme.adm_set_user("test","test")
 			self.assertTrue(gme._smtpd_passwords["test"] == "1a5d0013be0c4a28c9c5a29973febad6275e9b144aa92d23aa1b2a413af2bcb307d239ec1d265978f6b36e4c64e45218e22e4096d438fa969e090913b099f7ae")
 			gme.close()
+	def test_getcharset(self):
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			self.assertTrue(gme._find_charset(email_unencrypted)=="utf-8")
+			gme.close()
 	#GPGTESTS
 	def test_GPGpublickeys(self):
 		with gpgmailencrypt.gme() as gme:
@@ -173,6 +178,12 @@ class gmetests(unittest.TestCase):
 		with gpgmailencrypt.gme() as gme:
 			gme.set_configfile("./gmetest.conf")
 			self.assertTrue(gme.is_pgpinlineencrypted(email_gpginlineencrypted))
+			gme.close()
+	def test_isnotpgpinlineencrypted(self):
+		"test is_notpgpinlineencrypted"
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			self.assertFalse(gme.is_pgpinlineencrypted(email_gpgmimeencrypted))
 			gme.close()
 	def test_isunencrypted(self):
 		"test is_unencrypted"
