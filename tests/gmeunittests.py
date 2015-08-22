@@ -150,6 +150,16 @@ class gmetests(unittest.TestCase):
 			controllist.append("a@test.de")
 			gme.close()
 		self.assertTrue(pk==controllist)
+	def test_GPGprivatekeys(self):
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			gpg=gpgmailencrypt._GPG(gme)
+			pk=gpg.private_keys()
+			controllist=list()
+			controllist.append("testaddress@gpgmailencry.pt")
+			controllist.append("second.user@gpgmailencry.pt")
+			gme.close()
+		self.assertTrue(pk==controllist)
 	def test_hasgpgkey(self):
 		with gpgmailencrypt.gme() as gme:
 			gme.set_configfile("./gmetest.conf")

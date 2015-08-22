@@ -224,6 +224,12 @@ class _GPG:
 		return self.parent._GPGkeys
 
 	@_dbg
+	def private_keys(self):
+		if len(self.parent._GPGsecretkeys)==0:
+			self._get_private_keys()
+		return self.parent._GPGsecretkeys
+
+	@_dbg
 	def has_key(self,key):
 		self.parent.debug("gpg.has_key '%s'"%key)
 		if len(self.parent._GPGkeys)==0:
