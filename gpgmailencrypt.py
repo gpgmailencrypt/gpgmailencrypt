@@ -2991,7 +2991,6 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 		self.read_smtpdpasswordfile=read_smtpdpasswordfile
 		self.authenticate_function=authenticate_function
 	def handle_accept(self):
-		print("handle_accept")
 		pair = self.accept()
 		if pair is not None:
 			conn, addr = pair
@@ -3030,7 +3029,6 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 						sslkeyfile=self.sslkeyfile,
 						sslversion=self.sslversion)
 	def process_message(self, peer, mailfrom, receiver, data):
-		print("process_message")
 		self.parent.debug("hksmtpserver: _gpgmailencryptserver from '%s' to '%s'"%(mailfrom,receiver))
 		try:
 			self.parent.encrypt_mails(data,receiver)
