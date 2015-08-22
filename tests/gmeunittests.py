@@ -147,6 +147,7 @@ class gmetests(unittest.TestCase):
 			controllist=list()
 			controllist.append("testaddress@gpgmailencry.pt")
 			controllist.append("second.user@gpgmailencry.pt")
+			controllist.append("a@test.de")
 			gme.close()
 		self.assertTrue(pk==controllist)
 	def test_hasgpgkey(self):
@@ -162,7 +163,7 @@ class gmetests(unittest.TestCase):
 			gme.close()
 		self.assertFalse(success)
 	def test_isencrypted(self):
-		"test is_encrypted"
+		"test isencrypted"
 		with gpgmailencrypt.gme() as gme:
 			gme.set_configfile("./gmetest.conf")
 			self.assertTrue(gme.is_encrypted(email_gpgmimeencrypted))
@@ -191,6 +192,26 @@ class gmetests(unittest.TestCase):
 			gme.set_configfile("./gmetest.conf")
 			self.assertFalse(gme.is_encrypted(email_unencrypted))
 			gme.close()
+	def test_encryptdecryptgpg(self):
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			gpg=gpgmailencrypt._GPG(gme)
+			teststring="dies ist ein Täst"
+			f=tempfile.NamedTemporaryFile(mode='w',delete=False,prefix='unittest-')
+			f.write(teststring)
+			f.close()
+			success=False
+			_result,encdata=gpg.encrypt_file(filename=f.name,recipient="testaddress@gpgmailencry.pt")
+			if _result==0:
+				f=tempfile.NamedTemporaryFile(mode='w',delete=False,prefix='unittest-')
+				f.write(encdata)
+				f.close()
+				_result,encdata=gpg.decrypt_file(filename="/home/horst/gpgresult.gpg",recipient="testaddress@gpgmailencry.pt")
+				if _result==0:
+					success=(encdata==teststring)
+			
+			gme.close()
+		self.assertTrue(success)
 		
 	#SMIMETESTS
 	def test_issmimeencrypted(self):

@@ -272,13 +272,52 @@ class _GPG:
 			self.parent.log("Error opening keyring (Perhaps wrong directory '%s'?)"%self._keyhome,"e")
 			self.parent.log_traceback()
 
+
 	@_dbg
-	def encrypt_file(self,filename=None,binary=False):
+	def _get_private_keys( self ):
+		self.parent.debug("_GPG._get_private_keys")
+		self.parent._GPGsecretkeys = list()
+		cmd = '%s --homedir %s --list-secret-keys --with-colons' % (self.parent._GPGCMD, self._keyhome.replace("%user",self._recipient))
+		self.parent.debug("_GPG.private_keys command: '%s'"%cmd)
+		try:
+			p = subprocess.Popen( cmd.split(' '), stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+			p.wait()
+			for line in p.stdout.readlines():
+				res=line.decode(self.parent._encoding,_unicodeerror).split(":")
+				if res[0]=="pub" or res[0]=="uid":
+					email=res[9]
+					mail_id=res[4]
+					try:
+						found=re.search("[-a-zA-Z0-9_%\+\.]+@[-_0-9a-zA-Z\.]+\.[-_0-9a-zA-Z\.]+",email)
+					except:
+						self.parent.log_traceback()
+					if found != None:
+						try:
+							email=email[found.start():found.end()]
+						except:
+							self.parent.log("splitting email address didn't work","e")
+							email=""
+						email=email.lower()
+						if len(email)>0 and self.parent._GPGsecretkeys.count(email) == 0:
+							#self.parent.debug("add email address '%s'"%email)
+							self.parent._GPGsecretkeys.append(email)
+						#else:
+							#self.parent.debug("Email '%s' already added"%email)
+		except:
+			self.parent.log("Error opening keyring (Perhaps wrong directory '%s'?)"%self._keyhome,"e")
+			self.parent.log_traceback()
+	@_dbg
+	def encrypt_file(self,filename=None,binary=False, recipient=None):
 		if filename:
-			set_filename(filename)
+			self.set_filename(filename)
 		if len(self._filename) == 0:
 			self.parent.log( 'Error: GPGEncrypt: filename not set',"e")
 			return ''
+		if recipient:
+			self.set_recipient(recipient)
+		if len(self._recipient)==0:
+			log("GPG encrypt file: No recipient set!","e")
+			return False,None
 		f=self.parent._new_tempfile()
 		self.parent.debug("_GPG.encrypt_file _new_tempfile %s"%f.name)
 		f.close()
@@ -307,6 +346,45 @@ class _GPG:
 		if not binary:
 			cmd.insert(1,"-a")
 		return cmd
+
+	def decrypt_file(self,filename=None,binary=False,recipient=None):
+		if recipient:
+			self.set_recipient(recipient)
+		if filename:
+			self.set_filename(filename)
+		if len(self._filename) == 0:
+			self.parent.log( 'Error: GPGDecrypt: filename not set',"e")
+			return ''
+		f=self.parent._new_tempfile()
+		self.parent.debug("_GPG.decrypt_file _new_tempfile %s"%f.name)
+		f.close()
+		_result = subprocess.call( ' '.join(self._decryptcommand_fromfile(f.name,binary)),shell=True ) 
+		self.parent.debug("Encryption command: '%s'" %' '.join(self._decryptcommand_fromfile(f.name,binary)))
+		if _result != 0:
+			self.parent.log("Error executing command (Error code %d)"%_result,"e")
+		if binary:
+			res=open(f.name,mode="br")
+			self.parent.debug("GPG.decrypt_file binary open")
+		else:
+			res=open(f.name)
+			self.parent.debug("GPG.decrypt_file text open")
+		encdata=res.read()
+		res.close()
+		self.parent._del_tempfile(f.name)
+		return _result,encdata
+
+	@_dbg
+	def _decryptcommand_fromfile(self,sourcefile,binary):
+		cmd=[self.parent._GPGCMD, "--trust-model", "always", "-q","-r",self._recipient,"--homedir", 
+		self._keyhome.replace("%user",self._recipient), "--batch", "--yes", "--pgp7", "--no-secmem-warning", "--output",sourcefile, "-d",self._filename ]
+		if self.parent._ALLOWGPGCOMMENT==True:
+			cmd.insert(1,"'%s'"%self.parent._encryptgpgcomment)
+			cmd.insert(1,"--comment")
+		if not binary:
+			cmd.insert(1,"-a")
+		return cmd
+
+
 #############################
 #CLASS GPGENCRYPTEDATTACHMENT
 #############################
@@ -912,6 +990,7 @@ class gme:
 		self._systemerrors=0
 		self._systemwarnings=0
 		self._GPGkeys=list()
+		self._GPGsecretkeys=list()
 		self.init()
 	#########
 	#__exit__
@@ -1950,7 +2029,7 @@ class gme:
 		m=msg
 		if isinstance(msg,email.message.Message):
 			m=msg.as_string()
-		find=re.search("^Content-Type: application/pgp-encrypted",msg,re.I|re.MULTILINE)
+		find=re.search("^Content-Type: application/pgp-encrypted",m,re.I|re.MULTILINE)
 		if find:
 			return True
 		else:
@@ -1963,7 +2042,7 @@ class gme:
 		m=msg
 		if isinstance(msg,email.message.Message):
 			m=msg.as_string()
-		find=re.search("^Content-Type: application/pkcs7-mime",msg,re.I|re.MULTILINE)
+		find=re.search("^Content-Type: application/pkcs7-mime",m,re.I|re.MULTILINE)
 		if find:
 			return True
 		else:
