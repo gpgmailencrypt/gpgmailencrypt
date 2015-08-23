@@ -610,7 +610,7 @@ def encrypt_dir(arg,dirname,names):
 					continue
 			out=tempfile.NamedTemporaryFile(mode='wb',delete=False,prefix='mail-')
 			out.close()
-			cmd="%(CMD)s -l syslog  -a -p -k %(KEY)s -f '%(IN)s' -m %(OUT)s %(USER)s" %{"CMD":GPGMAILENCRYPT, "KEY":KEYHOME, "IN":f, "OUT":out.name, "USER":USER}
+			cmd="%(CMD)s -l syslog  -a -k %(KEY)s -f '%(IN)s' -m %(OUT)s %(USER)s" %{"CMD":GPGMAILENCRYPT, "KEY":KEYHOME, "IN":f, "OUT":out.name, "USER":USER}
 			_result = os.system(cmd)/256
 			if _result == 0:
 				try:
