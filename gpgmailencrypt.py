@@ -17,8 +17,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.0chi"
-DATE="22.08.2015"
+VERSION="2.0psi"
+DATE="23.08.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -32,7 +32,7 @@ from io import BytesIO as _BytesIO
 from os.path import expanduser
 import locale,traceback,hashlib
 from functools import wraps
-import smtpd,asyncore, signal,ssl,asynchat,socket,select
+import smtpd,asyncore, signal,ssl,asynchat,socket,select,threading
 
 try:
 	import readline
@@ -167,6 +167,52 @@ def _splitstring(txt,length=80):
 	def chunkstring(string, length):
 		return (string[0+i:length+i] for i in range(0, len(string), length))
 	return list(chunkstring(txt,length))
+#########
+#_mytimer
+#########
+class _mytimer:
+	def __init__(self):
+		self.counter=0
+		self.alarmtime=10
+		self.timer=1
+		self.running=False
+		self.alarmfunc=None
+		self.alarmfuncargs=[]
+		self.kwalarmfuncargs={}
+	def t_action(self):
+		if self.counter==1:
+			self.t_alert()
+		else:
+			if self.counter>0:
+				self.counter-=1
+			else:
+				if self.alarmfunc:
+					self.alarmfunc(*self.alarmfuncargs,**self.kwalarmfuncargs)
+			self._create_timer()
+	def t_alert(self):
+		if self.alarmfunc:
+			self.alarmfunc(*self.alarmfuncargs,**self.kwalarmfuncargs)
+		self.running=False
+	def _create_timer(self):
+		self.alarm=threading.Timer(self.timer,self.t_action)
+		self.running=True
+		self.alarm.start()
+	def is_running(self):
+		return self.running
+	def set_alive(self):
+		self.counter=self.alarmtime
+	def start(self,alarmtime=10,timerintervall=1, alarmfunction=None,alarmargs=(),kwalarmargs={}):
+		self.alarmtime=alarmtime
+		self.timer=timerintervall
+		self.alarmfunc=alarmfunction
+		self.alarmfuncargs=alarmargs
+		self.kwalarmfuncargs=kwalarmargs
+		self.counter=self.alarmtime
+		self._create_timer()
+	def stop(self):
+		self.alarm.cancel()
+		self.running=False
+
 
 ###################################
 #Definition of encryption functions
@@ -183,9 +229,9 @@ class _GPG:
 		self.count=counter
 		self.parent=parent
 		self.parent.debug("_GPG.__init__")
-		if type(recipient) == str:
+		if isinstance(recipient, str):
 			self.set_recipient(recipient)
-		if type(keyhome)==str:
+		if isinstance(keyhome,str):
 			self._keyhome = expanduser(keyhome)
 		elif self.parent and self.parent._GPGKEYHOME:
 			self._keyhome=expanduser(self.parent._GPGKEYHOME)
@@ -194,19 +240,19 @@ class _GPG:
 		self.parent.debug("_GPG.__init__ end")
 	@_dbg
 	def set_filename(self, fname):
-		if type(fname)==str:
+		if isinstance(fname,str):
 			self._filename=fname.strip()
 		else:
 			self._filename=''
 	@_dbg
 	def set_keyhome(self,keyhome):
-		if type(keyhome)==str:
+		if isinstance(keyhome,str):
 			self._keyhome=expanduser(keyhome.strip())
 		else:
 			self._keyhome=''
 	@_dbg
 	def set_recipient(self, recipient):
-		if type(recipient) == str:
+		if isinstance(recipient, str):
 			self._recipient=recipient
 			self.parent._GPGkeys = list()
 	@_dbg
@@ -227,7 +273,7 @@ class _GPG:
 		self.parent.debug("gpg.has_public_key '%s'"%key)
 		if len(self.parent._GPGkeys)==0:
 			self._get_public_keys()
-		if type(key)!=str:
+		if not isinstance(key,str):
 			self.parent.debug("has_public_key, key not of type str")
 			return False
 		if key in self.parent._GPGkeys:	
@@ -258,7 +304,7 @@ class _GPG:
 						try:
 							email=email[found.start():found.end()]
 						except:
-							self.parent.log("splitting email address didn't work","e")
+							self.parent.log("splitting email address (%s) didn't work"%email,"w")
 							email=""
 						email=email.lower()
 						if len(email)>0 and self.parent._GPGkeys.count(email) == 0:
@@ -291,7 +337,7 @@ class _GPG:
 						try:
 							email=email[found.start():found.end()]
 						except:
-							self.parent.log("splitting email address didn't work","e")
+							self.parent.log("splitting email address (%s) didn't work"%email,"w")
 							email=""
 						email=email.lower()
 						if len(email)>0 and self.parent._GPGprivatekeys.count(email) == 0:
@@ -309,7 +355,7 @@ class _GPG:
 			self.set_filename(filename)
 		if len(self._filename) == 0:
 			self.parent.log( 'Error: GPGEncrypt: filename not set',"e")
-			return result,''
+			return result,None
 		if recipient:
 			self.set_recipient(recipient)
 		if len(self._recipient)==0:
@@ -322,6 +368,7 @@ class _GPG:
 		self.parent.debug("Encryption command: '%s'" %' '.join(self._encryptcommand_fromfile(f.name,binary)))
 		if _result != 0:
 			self.parent.log("Error executing command (Error code %d)"%_result,"e")
+			return result,None
 		else:
 			result=True
 		if binary:
@@ -353,7 +400,7 @@ class _GPG:
 			self.set_filename(filename)
 		if len(self._filename) == 0:
 			self.parent.log( 'Error: GPGDecrypt: filename not set',"e")
-			return result,''
+			return result,None
 		f=self.parent._new_tempfile()
 		self.parent.debug("_GPG.decrypt_file _new_tempfile %s"%f.name)
 		f.close()
@@ -377,14 +424,9 @@ class _GPG:
 	def _decryptcommand_fromfile(self,sourcefile,binary):
 		cmd=[self.parent._GPGCMD, "--trust-model", "always", "-q","-r",self._recipient,"--homedir", 
 		self._keyhome.replace("%user",self._recipient), "--batch", "--yes", "--pgp7", "--no-secmem-warning", "--output",sourcefile, "-d",self._filename ]
-		if self.parent._ALLOWGPGCOMMENT==True:
-			cmd.insert(1,"'%s'"%self.parent._encryptgpgcomment)
-			cmd.insert(1,"--comment")
 		if not binary:
 			cmd.insert(1,"-a")
 		return cmd
-
-
 #############################
 #CLASS GPGENCRYPTEDATTACHMENT
 #############################
@@ -438,7 +480,7 @@ class _SMIME:
 			self._keyhome=expanduser(self.parent._SMIMEKEYHOME)
 		self._recipient = ''
 		self._filename=''	
-		if type(recipient) == str:
+		if isinstance(recipient, str):
 			self._recipient=recipient
 		self.parent.debug("_SMIME.__init__ end")
 	@_dbg
@@ -456,26 +498,26 @@ class _SMIME:
 		return result
 	@_dbg
 	def set_filename(self, fname):
-		if type(fname)==str:
+		if isinstance(fname,str):
 			self._filename=fname.strip()
 		else:
 			self._filename=''
 	@_dbg
 	def set_keyhome(self,keyhome):
-		if type(keyhome)==str:
+		if isinstance(keyhome,str):
 			self._keyhome=expanduser(keyhome.strip())
 		else:
 			self._keyhome=''
 	@_dbg
 	def set_recipient(self, recipient):
-		if type(recipient) == str:
+		if isinstance(recipient, str):
 			self._recipient=recipient
 	@_dbg
 	def recipient(self):
 		return self._recipient	
 	@_dbg
 	def has_public_key(self,key):
-		if type(key)!=str:
+		if not isinstance(key,str):
 			self.parent.debug("smime has_public_key, key not of type str")
 			return False
 		try:
@@ -494,7 +536,9 @@ class _SMIME:
 			return result,''
 		if recipient:
 			self.set_recipient(recipient)
-
+		if len(self._recipient)==0:
+			log("SMIME encrypt file: No recipient set!","e")
+			return result,None
 		f=self.parent._new_tempfile()
 		self.parent.debug("_SMIME.encrypt_file _new_tempfile %s"%f.name)
 		f.close()
@@ -502,6 +546,7 @@ class _SMIME:
 		self.parent.debug("Encryption command: '%s'" %' '.join(self._command_encrypt_fromfile(f.name,binary)))
 		if _result != 0:
 			self.parent.log("Error executing command (Error code %d)"%_result,"e")
+			return result,None
 		else:
 			result=True
 		res=open(f.name,encoding="UTF-8")
@@ -1314,7 +1359,7 @@ class gme:
 				exit(0)
 			if _opt  =='-l' or  _opt == '--log':
 				self._LOGGING=self.l_stderr
-				if type(_arg)==str:
+				if isinstance(_arg,str):
 					if _arg=="syslog":
 						self._LOGGING=self.l_syslog
 						self._prepare_syslog()
@@ -1355,7 +1400,7 @@ class gme:
 		   		self.debug("Set gpgkeyhome to '%s'"%self._GPGKEYHOME)
 			if _opt  =='-l' or  _opt == '--log':
 				self._LOGGING=l_stderr
-				if type(_arg)==str:
+				if isinstance(_arg,str):
 					if _arg=="syslog":
 						self._LOGGING=self.l_syslog
 					elif _arg=='file':
@@ -1364,7 +1409,7 @@ class gme:
 						self._LOGGING=self.l_stderr
 	
 			if _opt  =='-o' or  _opt == '--output':
-				if type(_arg)==str:
+				if isinstance(_arg,str):
 					if _arg=="mail":
 						self._OUTPUT=self.o_mail
 					elif _arg=="stdout":
@@ -1809,7 +1854,7 @@ class gme:
 	def _del_tempfile(self,f):
 		"deletes the tempfile, f is the name of the file"
 		n=""
-		if type(f)!=str:
+		if not isinstance(f,str):
 			return
 		self.debug("_del_tempfile:%s"%f)
 		try:
@@ -1825,7 +1870,7 @@ class gme:
 	##############
 	@_dbg
 	def _find_charset(self,msg):
-		if type(msg) != str:
+		if not isinstance(msg, str):
 			return None
 		find=re.search("^Content-Type:.*charset=[-_\.\'\"0-9A-Za-z]+",msg,re.I|re.MULTILINE)
 		if find==None:
@@ -1869,7 +1914,7 @@ class gme:
 	@_dbg
 	def set_output2file(self,mailfile):
 		"outgoing email will be written to file 'mailfile'"
-		if type(mailfile) != str:
+		if not isinstance(mailfile,str):
 			return
 		self._OUTFILE=expanduser(mailfile)
 		self._OUTPUT=self.o_file
@@ -1903,7 +1948,7 @@ class gme:
 	@_dbg
 	def set_locale(self,l):
 		"sets the locale"
-		if type(l)==str:
+		if isinstance(l,str):
 			l=l.strip()
 			if len(l)>0:
 				self._LOCALE=l
@@ -1954,7 +1999,7 @@ class gme:
 	@_dbg
 	def set_default_preferredencryption(self,mode):
 		"set the default preferred encryption. Valid values are SMIME,PGPMIME,PGPINLINE"
-		if type(mode)==str:
+		if isinstance(mode,str):
 			m=mode.upper()
 			if m in ["SMIME","PGPMIME","PGPINLINE"]:
 				self._PREFERRED_ENCRYPTION=mode.upper()
@@ -2053,10 +2098,9 @@ class gme:
 			return False
 		if type(msg)==bytes:
 			return False
-		if type(msg)==email.message.Message:
+		if isinstance(msg,email.message.Message):
 			msg=msg.as_string()
-		find=re.search("^Content-Type: application/pgp-encrypted",msg,re.I|re.MULTILINE)
-		if find:
+		if self.is_pgpmimeencrypted(msg):
 			return False
 		if "\n-----BEGIN PGP MESSAGE-----" in msg and "\n-----END PGP MESSAGE-----" in msg:
 			return True
@@ -2069,7 +2113,7 @@ class gme:
 			return True
 		if type(msg)==bytes:
 			return False
-		if type(msg)==str:
+		if isinstance(msg,str):
 			msg=email.message_from_string(msg)
 		for m in msg.walk():
 			charset=m.get_param("charset",header="Content-Type")
@@ -2269,7 +2313,7 @@ class gme:
 		except:
 			pass
 		cal_fname="%s.ics.pgp"%appointment
-		if type (message) == list:
+		if isinstance(message,list):
 			msg=message
 		else:
 			msg=message.walk()
@@ -2277,7 +2321,7 @@ class gme:
 			contenttype=message.get_content_type()	
 			self.debug("encrypt_pgpinline nach get_content_type")
 			self.debug("CONTENTTYPE %s"%contenttype)
-			if type( message.get_payload() ) == str:
+			if isinstance( message.get_payload(),str ):
 				self.debug("encrypt_pgpinlie: type( message.get_payload() ) == str")
 				charset=message.get_param("charset",header="Content-Type")
 				if charset==None or charset.upper()=="ASCII":
@@ -2299,7 +2343,7 @@ class gme:
 				payload.add_header('Content-Disposition', 'attachment;"')
 			if payload.get_content_maintype() == 'multipart':
 				continue
-			if( type( payload.get_payload() ) == list ):
+			if  isinstance( payload.get_payload() , list ):
 				continue
 			else:
 				self.debug("for in schleife for _encrypt payload %s" %type(payload))
@@ -2392,7 +2436,7 @@ class gme:
 		if contenttransferencoding!="None" and contenttransferencoding!=None and len(contenttransferencoding)>0:
 			bodymsg["Content-Transfer-Encoding"]=contenttransferencoding
 		rawpayload=raw_message.get_payload()
-		if type(rawpayload) == str:
+		if isinstance (rawpayload, str):
 			self.debug("Payload==String len=%i"%len(rawpayload))
 			if contenttype ==None:
 				contenttype="multipart/mixed"
@@ -2571,7 +2615,7 @@ class gme:
 		if contenttransferencoding!="None" and contenttransferencoding!=None and len(contenttransferencoding)>0:
 			bodymsg["Content-Transfer-Encoding"]=contenttransferencoding
 		rawpayload=raw_message.get_payload()
-		if type(rawpayload) == str:
+		if isinstance(rawpayload,str):
 			self.debug("Payload==String len=%i"%len(rawpayload))
 			if contenttype ==None:
 				contenttype="multipart/mixed"
@@ -2759,7 +2803,7 @@ class gme:
 		#####################
 		#_deferredlisthandler
 		#####################
-		def _deferredlisthandler(signum, frame):
+		def _deferredlisthandler():
 			self.check_deferred_list()
 			self.store_deferred_list()
 			if self._count_alarms>1:
@@ -2771,19 +2815,19 @@ class gme:
 					self._count_alarms=0
 				if self._count_alarms>0:
 					self._log_statistics() #log statistics every 24 hours
-			signal.alarm(3600) # once every hour
 		##################
 		self._RUNMODE=self.m_daemon
 		self._daemonstarttime=datetime.datetime.now()
+		alarm=_mytimer()
+		alarm.start(0,3600,alarmfunction=_deferredlisthandler)
 		try:
 			self._count_alarms=24//self._STATISTICS_PER_DAY
 		except:
 			self._count_alarms=0
-		signal.signal(signal.SIGALRM, _deferredlisthandler)
-		signal.alarm(5)
 		signal.signal(signal.SIGTERM, _sigtermhandler)
 		self.load_deferred_list()
 		smtpd.__version__="gpgmailencrypt smtp server %s"%VERSION
+		_deferredlisthandler()
 		self.log("gpgmailencrypt %s starts as daemon on %s:%s"%(VERSION,self._SERVERHOST,self._SERVERPORT) )
 		if self._SMTPD_USE_AUTH:
 			self._read_smtpdpasswordfile(self._SMTPD_PASSWORDFILE)
@@ -2808,6 +2852,7 @@ class gme:
 		except:
 			self.log("Bug:Exception occured!","e")
 			self.log_traceback()
+		alarm.stop()
 	#############
 	#adm_set_user
 	#############
@@ -2892,6 +2937,7 @@ def start_adminconsole(host,port):
 			self.smtp= smtplib.SMTP()
 			self.host="localhost"
 			self.port=0
+			self.timer=_mytimer()
 
 		def _sendcmd(self, cmd,arg=""):
 		        self.smtp.putcmd(cmd,arg)
@@ -2921,10 +2967,16 @@ def start_adminconsole(host,port):
 				print("Authentication failed")
 				exit(1)
 			print("Welcome. Enter 'HELP' for a list of commands")
+			self.timer.start(10,60)
 			while True:
 				i=""
 				try:
 					i=input("> ").upper()
+					self.timer.set_alive()
+					if not self.timer.is_running():
+						print("Automatic logout due to inactivity")
+						self._sendcmd("QUIT")
+						break
 					res=i.split(" ")
 					i=res[0].upper()
 					args=""
@@ -2942,8 +2994,10 @@ def start_adminconsole(host,port):
 						print("Error: command '%s' unknown"%i)
 				except:
 					print("Error sending admin command, perhaps server is down")
+					print( sys.exc_info())
 				if i=="QUIT":
 					break
+			self.timer.stop()
 		def print_help(self):
 			print("\nAllowed commands:")
 			print("=================")
