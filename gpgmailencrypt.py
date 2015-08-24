@@ -2972,7 +2972,11 @@ def start_adminconsole(host,port):
 			while True:
 				i=""
 				try:
-					i=input("> ").upper()
+					try:
+						i=input("> ").upper()
+					except (KeyboardInterrupt,EOFError):
+						self._sendcmd("QUIT")
+						break
 					self.timer.set_alive()
 					if not self.timer.is_running():
 						print("Automatic logout due to inactivity")
