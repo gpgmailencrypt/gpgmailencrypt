@@ -2243,7 +2243,7 @@ class gme:
 				try:
 					f=self._LOCALEDB[self._LOCALE][1]
 				except:
-					self.log("wrong locale '%s'"%self._LOCALE,"e")
+					self.log("wrong locale '%s'"%self._LOCALE,"w")
 					f=self._LOCALEDB["EN"][1]
 				filename=('%s%s.'%(f,count))+guess_fileextension(contenttype)
 			f,e=os.path.splitext(filename)
@@ -2691,6 +2691,7 @@ class gme:
 		if self.is_encrypted(mailtext):
 			m="Email already encrypted"
 			self.debug(m)
+			self._count_alreadyencryptedmails+=1
 			self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
 			return
 		if _prefer_gpg:
