@@ -18,7 +18,7 @@ Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
 VERSION="2.0psi"
-DATE="23.08.2015"
+DATE="25.08.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -2990,7 +2990,7 @@ def start_adminconsole(host,port):
 					except:
 						pass
 					cmd=""
-					if i in ["STATISTICS","FLUSH","RELOAD","HELP","QUIT","SETUSER","DELUSER"]:
+					if i in ["STATISTICS","FLUSH","RELOAD","HELP","QUIT","SETUSER","DELUSER","DEBUG"]:
 						if i=="HELP":
 							self.print_help()
 						else:
@@ -3006,15 +3006,16 @@ def start_adminconsole(host,port):
 		def print_help(self):
 			print("\nAllowed commands:")
 			print("=================")
-			print("flush		tries to re-send deferred emails")
-			print("deluser		deletes a user")
-			print("		example: 'deluser john'")
-			print("help		this help")
-			print("setuser		adds a new user or changes the password for an existing user")
-			print("		example: 'setuser john password'")
-			print("quit		leave the console")
-			print("reload		reloads the configuration file")
-			print("statistics	print statistic information")
+			print("flush			tries to re-send deferred emails")
+			print("debug true/false	sets the debug mode")
+			print("deluser			deletes a user")
+			print("			example: 'deluser john'")
+			print("help			this help")
+			print("quit			leave the console")
+			print("reload			reloads the configuration file")
+			print("setuser			adds a new user or changes the password for an existing user")
+			print("			example: 'setuser john johnspassword'")
+			print("statistics		print statistic information")
 	g=gmeadmin()
 	g.start(host,port)
 
@@ -3176,6 +3177,20 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		self.user=""
 		self.password=""
 		self.seen_greeting=False
+	def smtp_DEBUG(self,arg):
+		if not arg:
+			self.push("501 Syntax error: DEBUG TRUE|FALSE")
+			return
+		command=arg.upper()
+		if command=="TRUE":
+			res=True
+		elif command=="FALSE":
+			res=False
+		else:
+			self.push("501 Syntax error: DEBUG TRUE|FALSE")
+			return
+		self.parent.set_debug(res)
+		self.push("250 OK")
 	def smtp_AUTH(self,arg):
 		self.parent.debug("hksmtpserver: AUTH")
 		if not arg:
@@ -3294,13 +3309,12 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		SIMPLECOMMANDS=["EHLO","HELO","RSET","NOOP","QUIT","STARTTLS"]
 		if not self.use_authentication and not self.adminmode :
 			SIMPLECOMMANDS+=["ADMIN"]
-		ADMINCOMMANDS=["STATISTICS","RELOAD","FLUSH","SETUSER","DELUSER"]
+		ADMINCOMMANDS=["STATISTICS","RELOAD","FLUSH","SETUSER","DELUSER","DEBUG"]
 		if (self.use_authentication or self.adminmode) and not self.is_authenticated:
 			if not command in SIMPLECOMMANDS+["AUTH"]:
 				self.push("530 Authentication required.")
 				self._SMTPChannel__line=[]
 				return
-		
 		if not self.is_admin:
 			if command in ADMINCOMMANDS:
 				self.push("530 Admin authentication required.")
