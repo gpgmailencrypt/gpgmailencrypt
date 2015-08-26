@@ -123,6 +123,7 @@ Content-Transfer-Encoding: base64
 """
 
 class gmetests(unittest.TestCase):
+
 	#General tests
 	def test_configcomment(self):
 		with gpgmailencrypt.gme() as gme:
@@ -165,6 +166,21 @@ class gmetests(unittest.TestCase):
 				except:
 					pass
 			self.assertTrue(result)
+			gme.close()
+	def test_admgetusers(self):
+		with gpgmailencrypt.gme() as gme:
+			gme.adm_set_user("normal1","test")
+			gme.adm_set_user("testadmin","test")
+			gme.adm_set_user("testadmin2","test")
+			gme.adm_set_user("normal2","test")
+			gme.set_configfile("./gmetest.conf")
+			users=gme.adm_get_users()
+			self.assertTrue(len(users)==4)
+			for u in users:
+				if u["user"]in ["normal1","normal2"]:
+					self.assertTrue(u["admin"]==False)
+				if u["user"]in ["testadmin","testadmin2"]:
+					self.assertTrue(u["admin"]==True)
 			gme.close()
 	def test_getcharset(self):
 		with gpgmailencrypt.gme() as gme:
@@ -305,7 +321,6 @@ class gmetests(unittest.TestCase):
 			success,user=gme.check_smimerecipient("second.user@gpgmailencry.pt")
 			gme.close()
 		self.assertFalse(success)
-
 	def test_encryptdecryptsmime(self):
 		with gpgmailencrypt.gme() as gme:
 			gme.set_configfile("./gmetest.conf")

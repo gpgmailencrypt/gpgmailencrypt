@@ -2293,7 +2293,6 @@ class gme:
 			else:
 				self.log("Error during encryption: payload will be unencrypted!","m")	
 		self._del_tempfile(fp.name)
-		self.debug("_encrypt_payload END")
 		return payload
 	###################
 	#encrypt_pgpinline
@@ -2526,7 +2525,6 @@ class gme:
 			return None
 		if self.is_encrypted( raw_message ):
 			self.debug("encrypt_gpg_mail, is already encrypted")
-			self._count_alreadyencryptedmails+=1
 			return None
 		self.log("Encrypting email to: %s" % to_addr )
 		if use_pgpmime:
@@ -2554,7 +2552,6 @@ class gme:
 		if self.is_encrypted(raw_message):
 			self.debug("encrypt_smime_mail:mail is already encrypted")
 			self.debug("Mail was already encrypted")
-			self._count_alreadyencryptedmails+=1
 			return None
 		splitmsg=re.split("\n\n",mailtext,1)
 		if len(splitmsg)!=2:
@@ -2854,6 +2851,12 @@ class gme:
 			self.log("Bug:Exception occured!","e")
 			self.log_traceback()
 		alarm.stop()
+	
+	def adm_get_users(self):
+		users=[]
+		for user in self._smtpd_passwords:
+			users.append({"user":user,"admin":self.is_admin(user)})
+		return users
 	#############
 	#adm_set_user
 	#############
@@ -3196,7 +3199,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		if not arg:
 			self.push("501 Syntax error: AUTH PLAIN")
 			return
-		#debug("hksmtpserver: Original ARG: %s"%arg)
+		#self.parent.debug("hksmtpserver: Original ARG: %s"%arg)
 		res=arg.split(" ")
 		if len(res)<2:
 			self.push("454 Temporary authentication failure.")
