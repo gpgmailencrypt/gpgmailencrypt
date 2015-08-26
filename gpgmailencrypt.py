@@ -18,7 +18,7 @@ Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
 VERSION="2.0psi"
-DATE="25.08.2015"
+DATE="26.08.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -2854,6 +2854,7 @@ class gme:
 	##############
 	#adm_get_users
 	##############
+	@_dbg
 	def adm_get_users(self):
 		"returns a list of all users and whether or not the user is a admin"
 		users=[]
@@ -2996,7 +2997,7 @@ def start_adminconsole(host,port):
 					except:
 						pass
 					cmd=""
-					if i in ["STATISTICS","FLUSH","RELOAD","HELP","QUIT","SETUSER","DELUSER","DEBUG"]:
+					if i in _gpgmailencryptserver.ADMINCOMMANDS+["HELP","QUIT"]:
 						if i=="HELP":
 							self.print_help()
 						else:
@@ -3022,6 +3023,7 @@ def start_adminconsole(host,port):
 			print("setuser			adds a new user or changes the password for an existing user")
 			print("			example: 'setuser john johnspassword'")
 			print("statistics		print statistic information")
+			print("users			print users")
 	g=gmeadmin()
 	g.start(host,port)
 
@@ -3030,6 +3032,8 @@ def start_adminconsole(host,port):
 #####################
 class _gpgmailencryptserver(smtpd.SMTPServer):
 	"encryption smtp server based on smtpd"
+	ADMINCOMMANDS=["STATISTICS","RELOAD","FLUSH","SETUSER","DELUSER","DEBUG","USERS"]
+
 	def __init__(self, 
 			parent,
 			localaddr,
@@ -3266,6 +3270,22 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		self.parent.init()
 		self.parent._parse_commandline()
 		self.push("250 OK")
+	def smtp_USERS(self,arg):
+		if arg:
+			self.push("501 Syntax error: no arguments allowed")
+			return
+		c=0
+		users=self.parent.adm_get_users()
+		for user in users:
+			dash="-"
+			if c==len(users)-1:
+				dash=" "
+			adm=""
+			if user["admin"]:
+				adm="is admin"
+			self.push("250%s%s %s"%(dash,user["user"],adm))
+			c+=1
+
 	def smtp_SETUSER(self,arg):
 		if not arg:
 			self.push("501 Syntax error: SETUSER user password")
@@ -3315,19 +3335,18 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		SIMPLECOMMANDS=["EHLO","HELO","RSET","NOOP","QUIT","STARTTLS"]
 		if not self.use_authentication and not self.adminmode :
 			SIMPLECOMMANDS+=["ADMIN"]
-		ADMINCOMMANDS=["STATISTICS","RELOAD","FLUSH","SETUSER","DELUSER","DEBUG"]
 		if (self.use_authentication or self.adminmode) and not self.is_authenticated:
 			if not command in SIMPLECOMMANDS+["AUTH"]:
 				self.push("530 Authentication required.")
 				self._SMTPChannel__line=[]
 				return
 		if not self.is_admin:
-			if command in ADMINCOMMANDS:
+			if command in _gpgmailencryptserver.ADMINCOMMANDS:
 				self.push("530 Admin authentication required.")
 				self._SMTPChannel__line=[]
 				return
 		if self.use_tls and self.force_tls and not self.tls_active:
-			if not command in SIMPLECOMMANDS+ADMINCOMMANDS:
+			if not command in SIMPLECOMMANDS+_gpgmailencryptserver.ADMINCOMMANDS:
 				self.push("530 STARTTLS before authentication required.")
 				self._SMTPChannel__line=[]
 				return
