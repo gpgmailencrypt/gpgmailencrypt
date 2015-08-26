@@ -2851,8 +2851,11 @@ class gme:
 			self.log("Bug:Exception occured!","e")
 			self.log_traceback()
 		alarm.stop()
-	
+	##############
+	#adm_get_users
+	##############
 	def adm_get_users(self):
+		"returns a list of all users and whether or not the user is a admin"
 		users=[]
 		for user in self._smtpd_passwords:
 			users.append({"user":user,"admin":self.is_admin(user)})
