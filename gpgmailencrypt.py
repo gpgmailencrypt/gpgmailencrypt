@@ -17,8 +17,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.0psi"
-DATE="26.08.2015"
+VERSION="2.0omega"
+DATE="01.09.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -1388,7 +1388,7 @@ class gme:
 					self._PREFERRED_ENCRYPTION="NONE"
 				else:
 					self._PREFERRED_ENCRYPTION="PGPINLINE"
-			self.debug("Set _PREFERRED_ENCRYPTION to '%s'"%self._PREFERRED_ENCRYPTION)
+				self.debug("Set _PREFERRED_ENCRYPTION to '%s'"%self._PREFERRED_ENCRYPTION)
 			if _opt  =='-f':
 		   		self._INFILE=expanduser(_arg)
 		   		self.debug("Set _INFILE to '%s'"%self._INFILE)
@@ -1986,6 +1986,14 @@ class gme:
 			"systemerrors":self._systemerrors,
 			"systemwarnings":self._systemwarnings,
 			}
+	###########
+	#get_uptime
+	###########
+	@_dbg
+	def get_uptime(self):
+		"returns the time since the server has started"
+		_now=datetime.datetime.now()
+		return _now-self._daemonstarttime
 	#############
 	#is_debugging
 	#############
@@ -2847,6 +2855,8 @@ class gme:
 			asyncore.loop()
 		except SystemExit as m:
 			exit(0)
+		except (KeyboardInterrupt,EOFError):
+			self.log("Keyboard Exit")
 		except:
 			self.log("Bug:Exception occured!","e")
 			self.log_traceback()
@@ -2982,13 +2992,11 @@ def start_adminconsole(host,port):
 					try:
 						i=input("> ").upper()
 					except (KeyboardInterrupt,EOFError):
-						self._sendcmd("QUIT")
-						break
+						i="QUIT"
 					self.timer.set_alive()
 					if not self.timer.is_running():
 						print("Automatic logout due to inactivity")
-						self._sendcmd("QUIT")
-						break
+						i="QUIT"
 					res=i.split(" ")
 					i=res[0].upper()
 					args=""
@@ -2997,7 +3005,7 @@ def start_adminconsole(host,port):
 					except:
 						pass
 					cmd=""
-					if i in _gpgmailencryptserver.ADMINCOMMANDS+["HELP","QUIT"]:
+					if i in _gpgmailencryptserver.ADMINALLCOMMANDS:
 						if i=="HELP":
 							self.print_help()
 						else:
@@ -3024,16 +3032,51 @@ def start_adminconsole(host,port):
 			print("			example: 'setuser john johnspassword'")
 			print("statistics		print statistic information")
 			print("users			print users")
+	class MyCompleter(object):  # Custom completer
+		#class taken from http://stackoverflow.com/questions/20625642/autocomplete-with-readline-in-python3
+		def __init__(self, options):
+			self.options = sorted(options)
+		def complete(self, text, state):
+			if state == 0:  # on first trigger, build possible matches
+				if not text:
+					self.matches = self.options[:]
+				else:
+					self.matches = [s for s in self.options if s and s.upper().startswith(text.upper())]
+			try:
+				return self.matches[state]
+			except IndexError:
+				return None
+		def display_matches(self, substitution, matches, longest_match_length):
+			line_buffer = readline.get_line_buffer()
+			columns = environ.get("COLUMNS", 80)
+			print()
+			tpl = "{:<" + str(int(max(map(len, matches)) * 1.2)) + "}"
+			buffer = ""
+			for match in matches:
+				match = tpl.format(match[len(substitution):])
+				if len(buffer + match) > columns:
+					print(buffer)
+					buffer = ""
+				buffer += match
+			if buffer:
+				print(buffer)
+			print("> ", end="")
+			print(line_buffer, end="")
+			sys.stdout.flush()
+	completer = MyCompleter(_gpgmailencryptserver.ADMINALLCOMMANDS)
+	readline.set_completer_delims(' \t\n;')
+	readline.set_completer(completer.complete)
+	readline.parse_and_bind('tab: complete')
+	readline.set_completion_display_matches_hook(completer.display_matches)
 	g=gmeadmin()
 	g.start(host,port)
-
-#####################
+######################
 #_gpgmailencryptserver
-#####################
+######################
 class _gpgmailencryptserver(smtpd.SMTPServer):
 	"encryption smtp server based on smtpd"
 	ADMINCOMMANDS=["STATISTICS","RELOAD","FLUSH","SETUSER","DELUSER","DEBUG","USERS"]
-
+	ADMINALLCOMMANDS=ADMINCOMMANDS+["HELP","QUIT"]
 	def __init__(self, 
 			parent,
 			localaddr,
@@ -3251,11 +3294,11 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		self.push("250-gpgmailencrypt version %s (%s)"%(VERSION,DATE))
 		_now=datetime.datetime.now()
 		self.push("250-Server runs %s"%(_now-self.parent._daemonstarttime))
-		for s in statistics:
+		for s in sorted(statistics):
 			dash="-"
 			if c==len(statistics)-1:
 				dash=" "
-			self.push("250%s%s %i"%(dash,s,statistics[s]) )
+			self.push("250%s%s %i"%(dash,s.ljust(20),statistics[s]) )
 			c+=1
 	def smtp_FLUSH(self,arg):
 		self.parent.log("FLUSH")
