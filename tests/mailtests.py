@@ -2,7 +2,7 @@
 import sys,os,os.path,email,smtplib,ssl,subprocess,time
 sys.path.append("..")
 import gpgmailencrypt
-
+from time import sleep
 TESTTO=["horst.knorr@knorrnet.de"]
 TESTFROM="test@knorrnet.de"
 maildir="./emails"
@@ -39,6 +39,8 @@ def send_scripttestmails():
 			print(m,e)
 			g.set_default_preferredencryption(e)
 			send_singlemail(mail)
+			if g.get_output()==g.o_mail:
+				sleep(2)
 			
 def send_testmails():
 	send_scripttestmails()
@@ -80,9 +82,9 @@ def servertests():
 #servertests()
 g=gpgmailencrypt.gme()
 
-g.set_debug(False)
+g.set_debug(True)
 
-#moduletests()
+moduletests()
 print("All testmails via script passed")
 print(g.get_statistics())
 
