@@ -17,8 +17,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.0omega"
-DATE="01.09.2015"
+VERSION="2.0.0"
+DATE="02.09.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -158,6 +158,7 @@ that should be encrypted, empty is all")
 	print ("authenticate = False    			#users must authenticate")
 	print ("smtppasswords = /etc/gpgmailencrypt.pw		#file that includes users and passwords")
 	print ("						#file format 'user=password'")
+	print ("admins=admin1,admin2				#comma separated list of admins, that can use the admin console")
 	print ("statistics=1					#how often per day should statistical data be logged (0=none) max is 24")
 
 #############
