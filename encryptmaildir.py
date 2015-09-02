@@ -1,13 +1,13 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*- 
 #License GPL v3
 #Author Horst Knorr 
-from ConfigParser import RawConfigParser
-from cStringIO import StringIO
+from configparser import RawConfigParser
+from io import StringIO
 from os.path import expanduser
 import re,sys,tempfile,os,subprocess,atexit,time,getopt,random,syslog,inspect,time,signal,gzip,bz2,shutil,socket
-VERSION="0.5.1"
-DATE="23.10.2013"
+VERSION="1.0.0"
+DATE="02.09.2015"
 ZIP_EMAILS=True
 #################################
 #Definition of general functions#
@@ -17,7 +17,7 @@ ZIP_EMAILS=True
 #log
 ####
 def log(msg,infotype="m",ln=-1):
- 	global logfile,SYSLOG
+	global logfile,SYSLOG
 	if ln==-1:
 		ln=inspect.currentframe().f_back.f_lineno
 	if LOGGING:
@@ -30,7 +30,7 @@ def log(msg,infotype="m",ln=-1):
 		elif infotype=='d':
 			prefix="Debug"
 		t=time.localtime(time.time())
- 		_lntxt="Line %i: "%ln
+		_lntxt="Line %i: "%ln
 		tm=("%02d.%02d.%04d %02d:%02d:%02d:" % (t[2],t[1],t[0],t[3],t[4],t[5])).ljust(_lftmsg)
 		if (ln>0):
 			msg=_lntxt+str(msg)
@@ -70,34 +70,34 @@ def lineno():
 #print_usage
 ############
 def print_usage():
-	print "encryptmaildir"
-	print "=============="
-	print "License: GPL 3"
-	print "Author:  Horst Knorr"
-	print "Version: %s from %s"%(VERSION,DATE)
-	print "\nUsage:\n"
-	print "encryptmaildir [options] directory1 [directory2 ...]"
-	print "\nOptions:\n"
-	print "-c f --config f: adds the configfile 'f'"
-	print "-d --debug:      print debugging information into logfile"
-	print "-h --help :      print this help"
-	print "-k f --keyhome f:sets gpg key directory to 'f'"
-	print "-u --user:	user email address"
-	print "-v --dovecot:	uses Dovecot maildirlock"
-	print "-x --example:    print example config file"
-	print "-y --syslog:     log to syslog, otherwise to logfile"
-	print "\n"
+	print("encryptmaildir")
+	print("==============")
+	print("License: GPL 3")
+	print("Author:  Horst Knorr")
+	print("Version: %s from %s"%(VERSION,DATE))
+	print("\nUsage:\n")
+	print("encryptmaildir [options] directory1 [directory2 ...]")
+	print("\nOptions:\n")
+	print("-c f --config f: adds the configfile 'f'")
+	print("-d --debug:      print debugging information into logfile")
+	print("-h --help :      print this help")
+	print("-k f --keyhome f:sets gpg key directory to 'f'")
+	print("-u --user:	user email address")
+	print("-v --dovecot:	uses Dovecot maildirlock")
+	print("-x --example:    print example config file")
+	print("-y --syslog:     log to syslog, otherwise to logfile")
+	print("\n")
 ####################
 #print_exampleconfig
 ####################
 def print_exampleconfig():
-	print "\n[default]"
-	print "gpgmailencrypt = /usr/local/bin/gpgmailencrypt.py"
-	print
-	print "[mail]"
-	print "dovecot = no"
-	print "maildirlock = /usr/lib/dovecot/maildirlock"
-	print "\n"
+	print("\n[default]")
+	print("gpgmailencrypt = /usr/local/bin/gpgmailencrypt.py")
+	print()
+	print("[mail]")
+	print("dovecot = no")
+	print("maildirlock = /usr/lib/dovecot/maildirlock")
+	print("\n")
 ###############
 #prepare_syslog
 ###############
@@ -182,7 +182,7 @@ class maildirname:
 		def name(self):
 			n=self._leftpart+"."+self._middlepart+"."+self._rightpart
 			dvflags=[]
-			for f in self._dovecotflags.keys():
+			for f in list(self._dovecotflags.keys()):
 				dvflags.append(f+"="+self._dovecotflags[f])
 			dvflags=",".join(dvflags)
 			if len(dvflags)>0:
@@ -223,21 +223,21 @@ class maildirname:
 				for f in df:
 					r=f.split("=")
 					if len(r)!=2:
-						print "Flag '%s' does not fit the convention name=value"%f
+						print("Flag '%s' does not fit the convention name=value"%f)
 					else:
 						self._dovecotflags[r[0]]=r[1]
 		def debug(self):
-			print "name:'%s'"%self._name
-			print "left:'%s'"%self._leftpart
-			print "middle:'%s'"%self._middlepart
-			print "right:'%s'"%self._rightpart
-			print "flags:'%s'"%self._flags
-			print "dovecotflags:'%s'"%self._dovecotflags
-			if self._dovecotflags.has_key("S"):
-				print "dovecot filesize=%s"%self._dovecotflags["S"]
-			if self._dovecotflags.has_key("W"):
-				print "dovecot wflag=%s"%self._dovecotflags["W"]
-			print "End debug name:'%s'"%self._name
+			print("name:'%s'"%self._name)
+			print("left:'%s'"%self._leftpart)
+			print("middle:'%s'"%self._middlepart)
+			print("right:'%s'"%self._rightpart)
+			print("flags:'%s'"%self._flags)
+			print("dovecotflags:'%s'"%self._dovecotflags)
+			if "S" in self._dovecotflags:
+				print("dovecot filesize=%s"%self._dovecotflags["S"])
+			if "W" in self._dovecotflags:
+				print("dovecot wflag=%s"%self._dovecotflags["W"])
+			print("End debug name:'%s'"%self._name)
 
 ###########
 #is_gzipped
@@ -508,13 +508,13 @@ def read_configfile():
 		cfg[sect] = dict()
 		for (name, value) in _cfg.items(sect):
 			cfg[sect][name] = value
-	if cfg.has_key('default'):
-		if cfg['default'].has_key('gpgmailencrypt'):
+	if 'default' in cfg:
+		if 'gpgmailencrypt' in cfg['default']:
 			GPGMAILENCRYPT=cfg['default']['gpgmailencrypt']
-	if cfg.has_key('mail'):
-		if cfg['mail'].has_key('dovecot') and cfg['mail']['dovecot']=="yes":
+	if 'mail' in cfg:
+		if 'dovecot' in cfg['mail'] and cfg['mail']['dovecot']=="yes":
 			DOVECOT=True
-		if cfg['mail'].has_key('maildirlock'):
+		if 'maildirlock' in cfg['mail']:
 			MAILDIRLOCK=cfg['mail']['maildirlock']
 ##################
 #parse_commandline
@@ -524,8 +524,8 @@ def parse_commandline():
 	global CONFIGFILE,DEBUG,DOVECOT,DIRECTORIES,KEYHOME,USER,LOGFILE,LOGGING,SYSLOG
 	try:
 		cl=sys.argv[1:]
-  		_opts,_remainder=getopt.gnu_getopt(cl,'c:dhk:n:u:vxy',['config=','debug','dovecot','example', 'help', 'keyhome=' ,'user=','syslog'])
-	except getopt.GetoptError, e:
+		_opts,_remainder=getopt.gnu_getopt(cl,'c:dhk:n:u:vxy',['config=','debug','dovecot','example', 'help', 'keyhome=' ,'user=','syslog'])
+	except getopt.GetoptError as e:
 		log("unknown commandline parameter '%s'"%str(e),"e",lineno())
 		exit(2)
 	for _opt, _arg in _opts:
@@ -610,7 +610,7 @@ def encrypt_dir(arg,dirname,names):
 					continue
 			out=tempfile.NamedTemporaryFile(mode='wb',delete=False,prefix='mail-')
 			out.close()
-			cmd="%(CMD)s -l syslog  -a -p -k %(KEY)s -f '%(IN)s' -m %(OUT)s %(USER)s" %{"CMD":GPGMAILENCRYPT, "KEY":KEYHOME, "IN":f, "OUT":out.name, "USER":USER}
+			cmd="%(CMD)s -l syslog  -a -k %(KEY)s -f '%(IN)s' -m %(OUT)s %(USER)s" %{"CMD":GPGMAILENCRYPT, "KEY":KEYHOME, "IN":f, "OUT":out.name, "USER":USER}
 			_result = os.system(cmd)/256
 			if _result == 0:
 				try:
@@ -700,7 +700,7 @@ parse_commandline()
 try:
 	for directory in DIRECTORIES:
 		debug("DIR: '%s'"%directory,lineno())
-		os.path.walk(directory,encrypt_dir,None)
+		os.walk(directory,encrypt_dir,None)
 except KeyboardInterrupt:
 	log("Keyboard: CTRL-C Exit ...",ln=lineno())
 except:
