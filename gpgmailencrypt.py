@@ -17,8 +17,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.0.0"
-DATE="02.09.2015"
+VERSION="2.0.1alpha"
+DATE="03.09.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -1149,6 +1149,9 @@ class gme:
 		self._count_deferredmails=0
 		self._count_alreadyencryptedmails=0
 		self._count_alarms=0
+		self._count_smimemails=0
+		self._count_pgpmimemails=0
+		self._count_pgpinlinemails=0
 		#GLOBAL CONFIG VARIABLES
 		self._STATISTICS_PER_DAY=1
 		self._DEBUG=False
@@ -1716,6 +1719,7 @@ class gme:
 				f.write(message)
 				f.close()
 				self._mailcount+=1
+				self._remove_mail_from_queue(m_id)
 				return True
 			except:
 				self.log("Could not open Outputfile '%s'"%self._OUTFILE,"e")
@@ -1723,6 +1727,7 @@ class gme:
 				return False
 		else:
 			print (message)
+			self._remove_mail_from_queue(m_id)
 			return True
 	###################
 	#load_deferred_list
@@ -1979,10 +1984,13 @@ class gme:
 	def get_statistics(self):
 		"returns how many mails were handeled"
 		return {"total":self._count_totalmails,
-			"encrypt":self._count_encryptedmails,
+			"total encrypt":self._count_encryptedmails,
 			"deferred":self._count_deferredmails,
 			"still deferred":len(self._deferred_emails),
-			"already encrypted":self._count_alreadyencryptedmails,
+			"total already encrypted":self._count_alreadyencryptedmails,
+			"total smime":self._count_smimemails,
+			"total pgpmime":self._count_pgpmimemails,
+			"total pgpinline":self._count_pgpinlinemails,
 			"systemerrors":self._systemerrors,
 			"systemwarnings":self._systemwarnings,
 			}
@@ -2543,6 +2551,11 @@ class gme:
 		if mail==None:
 			return None
 		self._count_encryptedmails+=1
+		if use_pgpmime:
+			self._count_pgpmimemails+=1
+		else:
+			self._count_pgpinlinemails+=1
+
 		return mail
 	#####################
 	# encrypt_smime_mail 
@@ -2654,6 +2667,7 @@ class gme:
 		if result==True:
 			self.debug("encrypt_smime_mail: send encrypted mail")
 			self._count_encryptedmails+=1
+			self._count_smimemails+=1
 			if self._ADDHEADER:
 				if self._encryptheader in newmsg:
 					del newmsg[self._encryptheader]
@@ -3047,9 +3061,12 @@ def start_adminconsole(host,port):
 			except IndexError:
 				return None
 		def display_matches(self, substitution, matches, longest_match_length):
-			line_buffer = readline.get_line_buffer()
-			columns = environ.get("COLUMNS", 80)
 			print()
+			print(matches)
+			print("> %s"%substitution,end="")
+			sys.stdout.flush()
+			columns = environ.get("COLUMNS", 80)
+			line_buffer = readline.get_line_buffer()
 			tpl = "{:<" + str(int(max(map(len, matches)) * 1.2)) + "}"
 			buffer = ""
 			for match in matches:
@@ -3298,7 +3315,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			dash="-"
 			if c==len(statistics)-1:
 				dash=" "
-			self.push("250%s%s %i"%(dash,s.ljust(20),statistics[s]) )
+			self.push("250%s%s %i"%(dash,s.ljust(25),statistics[s]) )
 			c+=1
 	def smtp_FLUSH(self,arg):
 		self.parent.log("FLUSH")
