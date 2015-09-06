@@ -18,7 +18,7 @@ Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
 VERSION="2.0.1alpha"
-DATE="03.09.2015"
+DATE="06.09.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -212,8 +212,6 @@ class _mytimer:
 	def stop(self):
 		self.alarm.cancel()
 		self.running=False
-
-
 ###################################
 #Definition of encryption functions
 ###################################
@@ -597,9 +595,6 @@ class _SMIME:
 		_recipient=self.parent._smimeuser[self._recipient]
 		cmd=[self.parent._SMIMECMD, "smime","-decrypt", "-in",self._filename,"-out", sourcefile,"-inkey" , _recipient[2] ]
 		return cmd
-
-
-
 	@_dbg
 	def opensslcmd(self,cmd):
 		result=""
@@ -656,7 +651,6 @@ class _SMIME:
 		self._copyfile(fname,targetname)
 		os.remove(fname)
 		return targetname
-	
 	@_dbg
 	def create_keylist(self,directory):
 		result={}
@@ -675,13 +669,11 @@ class _SMIME:
 			  		for e in emailaddress:
 			  			result[e] = [f,self.parent._SMIMECIPHER]
 		return result
-
 	@_dbg
 	def verify_certificate(self,cert):
 		cmd=[self._SMIMECMD,"verify",cert,"&>/dev/null"]
 		_result = subprocess.call( " ".join(cmd) ,shell=True) 
 		return _result==0
-
 	@_dbg
 	def _copyfile(self,src, dst):
 		length=16*1024
@@ -740,7 +732,6 @@ class _htmldecode(html.parser.HTMLParser):
 		self.dbg=False
 		self.abbrtitle=None
 		self.parent=parent
-
 	def get_attrvalue(self,tag,attrs):
 		if attrs==None:
 			return None
@@ -750,12 +741,10 @@ class _htmldecode(html.parser.HTMLParser):
 			if i[0]==tag:
 				return i[1]
 		return None
-				
 	def handle_starttag(self, tag, attrs):
 		if self.dbg:
 			self.parent.debug( "<%s>"%tag)
 		self.handle_tag(tag,attrs)
-
 	def handle_entityref(self, name):
 		c = ""
 		e=None
@@ -767,20 +756,16 @@ class _htmldecode(html.parser.HTMLParser):
 			c=e
 		else:
 			c="&%s"%name
-
 		self.data+=c
-
 	def handle_endtag(self, tag):
 		if self.dbg:
 			self.parent.debug("</%s>"%tag)
 		self.handle_tag(tag,starttag=False)
-
 	def handle_startendtag(self,tag,attrs):
 		if self.dbg:
 			self.parent.debug("< %s/>"%tag)
 		if tag=="br":
 			self.handle_tag(tag,attrs,starttag=False)
-
 	def handle_data(self, data):
 		if self.in_throwaway==0:
 			if self.dbg:
@@ -789,7 +774,6 @@ class _htmldecode(html.parser.HTMLParser):
 				self.data+=data
 			elif len(data.strip())>0:
 				self.data+=data.replace("\n","").replace("\r\n","")
-
 	def handle_charref(self, name):
 		if self.dbg:
 			self.parent.debug("handle_charref '%s'"%name)
@@ -798,7 +782,6 @@ class _htmldecode(html.parser.HTMLParser):
 		else:
 			c = chr(int(name))
 		self.data+=c
- 
 	def handle_tag(self,tag,attrs=None,starttag=True):
 		if tag in ("style","script","title"):
 			if starttag:
@@ -1827,7 +1810,6 @@ class gme:
 			except:
 				self.log("mail couldn't be removed from email queue")
 				self.log_traceback()
-		
 	#########
 	#is_admin
 	#########
@@ -2787,7 +2769,7 @@ class gme:
 	#scriptmode
 	###########
 	@_dbg
-	def scriptmode(self):
+	def scriptmode(self,receiver):
 		"run gpgmailencrypt a script"
 		try:
 			#read message
@@ -2970,16 +2952,13 @@ def start_adminconsole(host,port):
 			self.host="localhost"
 			self.port=0
 			self.timer=_mytimer()
-
 		def _sendcmd(self, cmd,arg=""):
 		        self.smtp.putcmd(cmd,arg)
 		        (code, msg) = self.getreply()
 		        print(msg.decode("UTF-8"))
 		        return (code, msg)
-
 		def getreply(self):
 			return self.smtp.getreply()	
-	
 		def start(self,host="localhost",port=0):
 			self.host=host
 			self.port=port
@@ -3028,7 +3007,8 @@ def start_adminconsole(host,port):
 						print("Error: command '%s' unknown"%i)
 				except:
 					print("Error sending admin command, perhaps server is down")
-					print( sys.exc_info())
+					#print( sys.exc_info())
+					i="QUIT"
 				if i=="QUIT":
 					break
 			self.timer.stop()
@@ -3442,16 +3422,21 @@ def _get_hash(txt):
 ################
 def _sigtermhandler(signum, frame):
 	exit(0)
-#############################
-# gpgmailencrypt main program
-#############################
-if __name__ == "__main__":
+#####
+#main
+#####
+def main():
+	"main routine which will be called when gpgmailencrypt is started as a script, not as a module"
 	with gme() as g:
 		receiver=g._parse_commandline()
 		g._set_logmode()
 		if g._RUNMODE==g.m_daemon:
 			g.daemonmode()
 		else:
-			g.scriptmode()
-
+			g.scriptmode(receiver)
+#############################
+# gpgmailencrypt main program
+#############################
+if __name__ == "__main__":
+	main()
 
