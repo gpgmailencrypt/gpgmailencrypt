@@ -17,8 +17,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.0.1alpha"
-DATE="06.09.2015"
+VERSION="2.0.1beta"
+DATE="07.09.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -1066,12 +1066,25 @@ class gme:
 		self._RUNMODE=None
 		self._LOGGING=False
 		self._level=0
+		self.reset_statistics()
 		self._DEBUG=False
-		self._systemerrors=0
-		self._systemwarnings=0
 		self._GPGkeys=list()
 		self._GPGprivatekeys=list()
 		self.init()
+	#################
+	#reset_statistics
+	#################
+	def reset_statistics(self):
+		self._systemerrors=0
+		self._systemwarnings=0
+		self._count_totalmails=0
+		self._count_encryptedmails=0
+		self._count_deferredmails=0
+		self._count_alreadyencryptedmails=0
+		self._count_alarms=0
+		self._count_smimemails=0
+		self._count_pgpmimemails=0
+		self._count_pgpinlinemails=0
 	#########
 	#__exit__
 	#########
@@ -1127,14 +1140,6 @@ class gme:
 		self._deferdir=expanduser("~/gpgmaildirtmp")
 		if not os.path.exists(self._deferdir):
 			os.makedirs(self._deferdir)
-		self._count_totalmails=0
-		self._count_encryptedmails=0
-		self._count_deferredmails=0
-		self._count_alreadyencryptedmails=0
-		self._count_alarms=0
-		self._count_smimemails=0
-		self._count_pgpmimemails=0
-		self._count_pgpinlinemails=0
 		#GLOBAL CONFIG VARIABLES
 		self._STATISTICS_PER_DAY=1
 		self._DEBUG=False
@@ -3022,6 +3027,7 @@ def start_adminconsole(host,port):
 			print("help			this help")
 			print("quit			leave the console")
 			print("reload			reloads the configuration file")
+			print("resetstatistics		sets all statistic values to 0")
 			print("setuser			adds a new user or changes the password for an existing user")
 			print("			example: 'setuser john johnspassword'")
 			print("statistics		print statistic information")
@@ -3072,7 +3078,7 @@ def start_adminconsole(host,port):
 ######################
 class _gpgmailencryptserver(smtpd.SMTPServer):
 	"encryption smtp server based on smtpd"
-	ADMINCOMMANDS=["STATISTICS","RELOAD","FLUSH","SETUSER","DELUSER","DEBUG","USERS"]
+	ADMINCOMMANDS=["STATISTICS","RELOAD","FLUSH","SETUSER","DELUSER","DEBUG","USERS","RESETSTATISTICS"]
 	ADMINALLCOMMANDS=ADMINCOMMANDS+["HELP","QUIT"]
 	def __init__(self, 
 			parent,
@@ -3282,6 +3288,12 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				self.parent.log("User '%s' failed to login"%user,"w")
 		else:
 			self.push("454 Temporary authentication failure.")
+	def smtp_RESETSTATISTICS(self,arg):
+		if arg:
+			self.push("501 Syntax error: no arguments allowed")
+			return
+		self.parent.reset_statistics()
+		self.push("250 OK")
 	def smtp_STATISTICS(self,arg):
 		if arg:
 			self.push("501 Syntax error: no arguments allowed")
@@ -3395,7 +3407,11 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			self.push('502 Error: command "STARTTLS" not implemented' )
 			self._SMTPChannel__line=[]
 			return
+##########
+#file_auth
+##########
 def file_auth(parent,user,password):
+	"checks user authentication against a password file"
 	parent.debug("hksmtpserver: file_auth")
 	try:
 		pw=parent._smtpd_passwords[user]
