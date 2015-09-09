@@ -17,8 +17,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.0.0"
-DATE="02.09.2015"
+VERSION="2.0.1"
+DATE="09.09.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -212,8 +212,6 @@ class _mytimer:
 	def stop(self):
 		self.alarm.cancel()
 		self.running=False
-
-
 ###################################
 #Definition of encryption functions
 ###################################
@@ -597,9 +595,6 @@ class _SMIME:
 		_recipient=self.parent._smimeuser[self._recipient]
 		cmd=[self.parent._SMIMECMD, "smime","-decrypt", "-in",self._filename,"-out", sourcefile,"-inkey" , _recipient[2] ]
 		return cmd
-
-
-
 	@_dbg
 	def opensslcmd(self,cmd):
 		result=""
@@ -656,7 +651,6 @@ class _SMIME:
 		self._copyfile(fname,targetname)
 		os.remove(fname)
 		return targetname
-	
 	@_dbg
 	def create_keylist(self,directory):
 		result={}
@@ -675,13 +669,11 @@ class _SMIME:
 			  		for e in emailaddress:
 			  			result[e] = [f,self.parent._SMIMECIPHER]
 		return result
-
 	@_dbg
 	def verify_certificate(self,cert):
 		cmd=[self._SMIMECMD,"verify",cert,"&>/dev/null"]
 		_result = subprocess.call( " ".join(cmd) ,shell=True) 
 		return _result==0
-
 	@_dbg
 	def _copyfile(self,src, dst):
 		length=16*1024
@@ -740,7 +732,6 @@ class _htmldecode(html.parser.HTMLParser):
 		self.dbg=False
 		self.abbrtitle=None
 		self.parent=parent
-
 	def get_attrvalue(self,tag,attrs):
 		if attrs==None:
 			return None
@@ -750,12 +741,10 @@ class _htmldecode(html.parser.HTMLParser):
 			if i[0]==tag:
 				return i[1]
 		return None
-				
 	def handle_starttag(self, tag, attrs):
 		if self.dbg:
 			self.parent.debug( "<%s>"%tag)
 		self.handle_tag(tag,attrs)
-
 	def handle_entityref(self, name):
 		c = ""
 		e=None
@@ -767,20 +756,16 @@ class _htmldecode(html.parser.HTMLParser):
 			c=e
 		else:
 			c="&%s"%name
-
 		self.data+=c
-
 	def handle_endtag(self, tag):
 		if self.dbg:
 			self.parent.debug("</%s>"%tag)
 		self.handle_tag(tag,starttag=False)
-
 	def handle_startendtag(self,tag,attrs):
 		if self.dbg:
 			self.parent.debug("< %s/>"%tag)
 		if tag=="br":
 			self.handle_tag(tag,attrs,starttag=False)
-
 	def handle_data(self, data):
 		if self.in_throwaway==0:
 			if self.dbg:
@@ -789,7 +774,6 @@ class _htmldecode(html.parser.HTMLParser):
 				self.data+=data
 			elif len(data.strip())>0:
 				self.data+=data.replace("\n","").replace("\r\n","")
-
 	def handle_charref(self, name):
 		if self.dbg:
 			self.parent.debug("handle_charref '%s'"%name)
@@ -798,7 +782,6 @@ class _htmldecode(html.parser.HTMLParser):
 		else:
 			c = chr(int(name))
 		self.data+=c
- 
 	def handle_tag(self,tag,attrs=None,starttag=True):
 		if tag in ("style","script","title"):
 			if starttag:
@@ -1083,12 +1066,25 @@ class gme:
 		self._RUNMODE=None
 		self._LOGGING=False
 		self._level=0
+		self.reset_statistics()
 		self._DEBUG=False
-		self._systemerrors=0
-		self._systemwarnings=0
 		self._GPGkeys=list()
 		self._GPGprivatekeys=list()
 		self.init()
+	#################
+	#reset_statistics
+	#################
+	def reset_statistics(self):
+		self._systemerrors=0
+		self._systemwarnings=0
+		self._count_totalmails=0
+		self._count_encryptedmails=0
+		self._count_deferredmails=0
+		self._count_alreadyencryptedmails=0
+		self._count_alarms=0
+		self._count_smimemails=0
+		self._count_pgpmimemails=0
+		self._count_pgpinlinemails=0
 	#########
 	#__exit__
 	#########
@@ -1144,11 +1140,6 @@ class gme:
 		self._deferdir=expanduser("~/gpgmaildirtmp")
 		if not os.path.exists(self._deferdir):
 			os.makedirs(self._deferdir)
-		self._count_totalmails=0
-		self._count_encryptedmails=0
-		self._count_deferredmails=0
-		self._count_alreadyencryptedmails=0
-		self._count_alarms=0
 		#GLOBAL CONFIG VARIABLES
 		self._STATISTICS_PER_DAY=1
 		self._DEBUG=False
@@ -1716,6 +1707,7 @@ class gme:
 				f.write(message)
 				f.close()
 				self._mailcount+=1
+				self._remove_mail_from_queue(m_id)
 				return True
 			except:
 				self.log("Could not open Outputfile '%s'"%self._OUTFILE,"e")
@@ -1723,6 +1715,7 @@ class gme:
 				return False
 		else:
 			print (message)
+			self._remove_mail_from_queue(m_id)
 			return True
 	###################
 	#load_deferred_list
@@ -1822,7 +1815,6 @@ class gme:
 			except:
 				self.log("mail couldn't be removed from email queue")
 				self.log_traceback()
-		
 	#########
 	#is_admin
 	#########
@@ -1836,6 +1828,7 @@ class gme:
 	def _log_statistics(self):
 		self.log("Mail statistics: total: %i, encrypt: %i, were encrypted: %i, total deferred: %i, still deferred: %i" %\
 		(self._count_totalmails,self._count_encryptedmails,self._count_alreadyencryptedmails,self._count_deferredmails,len(self._deferred_emails)))
+		self.log("PGPMIME: %i, PGPINLINE: %i, SMIME: %i"%(self._count_pgpmimemails,self._count_pgpinlinemails,self._count_smimemails))
 		self.log("systemerrors: %i, systemwarnings: %i" %(self._systemerrors,self._systemwarnings))
 	##############
 	#_new_tempfile
@@ -1979,10 +1972,13 @@ class gme:
 	def get_statistics(self):
 		"returns how many mails were handeled"
 		return {"total":self._count_totalmails,
-			"encrypt":self._count_encryptedmails,
+			"total encrypt":self._count_encryptedmails,
 			"deferred":self._count_deferredmails,
 			"still deferred":len(self._deferred_emails),
-			"already encrypted":self._count_alreadyencryptedmails,
+			"total already encrypted":self._count_alreadyencryptedmails,
+			"total smime":self._count_smimemails,
+			"total pgpmime":self._count_pgpmimemails,
+			"total pgpinline":self._count_pgpinlinemails,
 			"systemerrors":self._systemerrors,
 			"systemwarnings":self._systemwarnings,
 			}
@@ -2543,6 +2539,11 @@ class gme:
 		if mail==None:
 			return None
 		self._count_encryptedmails+=1
+		if use_pgpmime:
+			self._count_pgpmimemails+=1
+		else:
+			self._count_pgpinlinemails+=1
+
 		return mail
 	#####################
 	# encrypt_smime_mail 
@@ -2654,6 +2655,7 @@ class gme:
 		if result==True:
 			self.debug("encrypt_smime_mail: send encrypted mail")
 			self._count_encryptedmails+=1
+			self._count_smimemails+=1
 			if self._ADDHEADER:
 				if self._encryptheader in newmsg:
 					del newmsg[self._encryptheader]
@@ -2773,7 +2775,7 @@ class gme:
 	#scriptmode
 	###########
 	@_dbg
-	def scriptmode(self):
+	def scriptmode(self,receiver):
 		"run gpgmailencrypt a script"
 		try:
 			#read message
@@ -2956,16 +2958,13 @@ def start_adminconsole(host,port):
 			self.host="localhost"
 			self.port=0
 			self.timer=_mytimer()
-
 		def _sendcmd(self, cmd,arg=""):
 		        self.smtp.putcmd(cmd,arg)
 		        (code, msg) = self.getreply()
 		        print(msg.decode("UTF-8"))
 		        return (code, msg)
-
 		def getreply(self):
 			return self.smtp.getreply()	
-	
 		def start(self,host="localhost",port=0):
 			self.host=host
 			self.port=port
@@ -3014,7 +3013,8 @@ def start_adminconsole(host,port):
 						print("Error: command '%s' unknown"%i)
 				except:
 					print("Error sending admin command, perhaps server is down")
-					print( sys.exc_info())
+					#print( sys.exc_info())
+					i="QUIT"
 				if i=="QUIT":
 					break
 			self.timer.stop()
@@ -3028,6 +3028,7 @@ def start_adminconsole(host,port):
 			print("help			this help")
 			print("quit			leave the console")
 			print("reload			reloads the configuration file")
+			print("resetstatistics		sets all statistic values to 0")
 			print("setuser			adds a new user or changes the password for an existing user")
 			print("			example: 'setuser john johnspassword'")
 			print("statistics		print statistic information")
@@ -3047,9 +3048,12 @@ def start_adminconsole(host,port):
 			except IndexError:
 				return None
 		def display_matches(self, substitution, matches, longest_match_length):
-			line_buffer = readline.get_line_buffer()
-			columns = environ.get("COLUMNS", 80)
 			print()
+			print(matches)
+			print("> %s"%substitution,end="")
+			sys.stdout.flush()
+			columns = environ.get("COLUMNS", 80)
+			line_buffer = readline.get_line_buffer()
 			tpl = "{:<" + str(int(max(map(len, matches)) * 1.2)) + "}"
 			buffer = ""
 			for match in matches:
@@ -3075,7 +3079,7 @@ def start_adminconsole(host,port):
 ######################
 class _gpgmailencryptserver(smtpd.SMTPServer):
 	"encryption smtp server based on smtpd"
-	ADMINCOMMANDS=["STATISTICS","RELOAD","FLUSH","SETUSER","DELUSER","DEBUG","USERS"]
+	ADMINCOMMANDS=["STATISTICS","RELOAD","FLUSH","SETUSER","DELUSER","DEBUG","USERS","RESETSTATISTICS"]
 	ADMINALLCOMMANDS=ADMINCOMMANDS+["HELP","QUIT"]
 	def __init__(self, 
 			parent,
@@ -3285,6 +3289,12 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				self.parent.log("User '%s' failed to login"%user,"w")
 		else:
 			self.push("454 Temporary authentication failure.")
+	def smtp_RESETSTATISTICS(self,arg):
+		if arg:
+			self.push("501 Syntax error: no arguments allowed")
+			return
+		self.parent.reset_statistics()
+		self.push("250 OK")
 	def smtp_STATISTICS(self,arg):
 		if arg:
 			self.push("501 Syntax error: no arguments allowed")
@@ -3298,7 +3308,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			dash="-"
 			if c==len(statistics)-1:
 				dash=" "
-			self.push("250%s%s %i"%(dash,s.ljust(20),statistics[s]) )
+			self.push("250%s%s %s"%(dash,s.ljust(25),str(statistics[s]).rjust(4)) )
 			c+=1
 	def smtp_FLUSH(self,arg):
 		self.parent.log("FLUSH")
@@ -3398,7 +3408,11 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			self.push('502 Error: command "STARTTLS" not implemented' )
 			self._SMTPChannel__line=[]
 			return
+##########
+#file_auth
+##########
 def file_auth(parent,user,password):
+	"checks user authentication against a password file"
 	parent.debug("hksmtpserver: file_auth")
 	try:
 		pw=parent._smtpd_passwords[user]
@@ -3425,16 +3439,21 @@ def _get_hash(txt):
 ################
 def _sigtermhandler(signum, frame):
 	exit(0)
-#############################
-# gpgmailencrypt main program
-#############################
-if __name__ == "__main__":
+#####
+#main
+#####
+def main():
+	"main routine which will be called when gpgmailencrypt is started as a script, not as a module"
 	with gme() as g:
 		receiver=g._parse_commandline()
 		g._set_logmode()
 		if g._RUNMODE==g.m_daemon:
 			g.daemonmode()
 		else:
-			g.scriptmode()
-
+			g.scriptmode(receiver)
+#############################
+# gpgmailencrypt main program
+#############################
+if __name__ == "__main__":
+	main()
 
