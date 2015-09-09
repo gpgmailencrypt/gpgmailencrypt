@@ -17,8 +17,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.0.1beta"
-DATE="07.09.2015"
+VERSION="2.0.1"
+DATE="09.09.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -1828,6 +1828,7 @@ class gme:
 	def _log_statistics(self):
 		self.log("Mail statistics: total: %i, encrypt: %i, were encrypted: %i, total deferred: %i, still deferred: %i" %\
 		(self._count_totalmails,self._count_encryptedmails,self._count_alreadyencryptedmails,self._count_deferredmails,len(self._deferred_emails)))
+		self.log("PGPMIME: %i, PGPINLINE: %i, SMIME: %i"%(self._count_pgpmimemails,self._count_pgpinlinemails,self._count_smimemails))
 		self.log("systemerrors: %i, systemwarnings: %i" %(self._systemerrors,self._systemwarnings))
 	##############
 	#_new_tempfile
@@ -3307,7 +3308,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			dash="-"
 			if c==len(statistics)-1:
 				dash=" "
-			self.push("250%s%s %i"%(dash,s.ljust(25),statistics[s]) )
+			self.push("250%s%s %s"%(dash,s.ljust(25),str(statistics[s]).rjust(4)) )
 			c+=1
 	def smtp_FLUSH(self,arg):
 		self.parent.log("FLUSH")
