@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 #based on gpg-mailgate
 #License GPL v3
@@ -9,6 +9,7 @@ It supports
 * PGP/Inline
 * PGP/Mime
 * S/Mime
+* encrypted PDF
 
 It can be used normally as a script doing everything on command line, in daemon mode, where gpgmailencrypt acts as an encrypting smtp server or as a module for programmers. 
 It takes e-mails and  returns the e-mail encrypted to another e-mail server if a encryption key exists for the receiver. Otherwise it returns the e-mail unencrypted.
@@ -17,12 +18,14 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.0.1"
-DATE="09.09.2015"
+VERSION="2.1.0.alpha"
+DATE="13.09.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
 import email.utils as emailutils
 import html.parser,base64,quopri,uu,binascii
 import re,sys,tempfile,os,stat,subprocess,atexit,time,datetime,getopt,random,syslog,inspect,gzip
@@ -33,6 +36,7 @@ from os.path import expanduser
 import locale,traceback,hashlib
 from functools import wraps
 import smtpd,asyncore, signal,ssl,asynchat,socket,select,threading
+import string, random
 try:
 	import readline
 except:
@@ -133,7 +137,7 @@ that should be encrypted, empty is all")
 	print("						#file format 'user=password'")
 	print ("")
 	print ("[encryptionmap]    ")
-	print ("user@domain.com = PGPMIME			#PGPMIME|PGPINLINE|SMIME|NONE")
+	print ("user@domain.com = PGPMIME			#PGPMIME|PGPINLINE|SMIME|PDF|NONE")
 	print ("")
 	print ("[usermap]")
 	print ("#user_nokey@domain.com = user_key@otherdomain.com")
@@ -144,6 +148,8 @@ that should be encrypted, empty is all")
 	print ("defaultcipher = DES3				#DES3|AES128|AES192|AES256")
 	print ("extractkey= no					#automatically scan emails and extract smime public keys to 'keyextractdir'")
 	print ("keyextractdir=~/.smime/extract")
+	print ("")
+	print ("[pdf]")
 	print ("")
 	print ("[smimeuser]")
 	print ("smime.user@domain.com = user.pem[,cipher]	#public S/MIME key file [,used cipher, see defaultcipher]")
@@ -156,7 +162,6 @@ that should be encrypted, empty is all")
 	print ("sslcertfile = /etc/gpgsmtp.crt			#the x509 certificate cert file")
 	print ("authenticate = False    			#users must authenticate")
 	print ("smtppasswords = /etc/gpgmailencrypt.pw		#file that includes users and passwords")
-	print ("						#file format 'user=password'")
 	print ("admins=admin1,admin2				#comma separated list of admins, that can use the admin console")
 	print ("statistics=1					#how often per day should statistical data be logged (0=none) max is 24")
 
@@ -218,7 +223,6 @@ class _mytimer:
 ###########
 #CLASS _GPG
 ###########
-
 class _GPG:
 	@_dbg
 	def __init__(self, parent,keyhome=None, recipient = None, counter=0):
@@ -429,31 +433,25 @@ class _GPG:
 #CLASS GPGENCRYPTEDATTACHMENT
 #############################
 class _GPGEncryptedAttachment(email.message.Message):
-
     def  __init__(self):
     	email.message.Message. __init__(self)
     	self._masterboundary=None
     	self._filename=None
     	self.set_type("text/plain")
-
     def as_string(self, unixfrom=False):
         fp = _StringIO()
         g = Generator(fp)
         g.flatten(self, unixfrom=unixfrom)
         return fp.getvalue()
-
     def set_filename(self,f):
     	self._filename=f
-
     def get_filename(self):
     	if self._filename != None:
     		return self._filename
     	else:
     		return email.message.Message.get_filename(self)
-
     def set_masterboundary(self,b):
     	self._masterboundary=b
-
     def _write_headers(self,g):
         print ('Content-Type: application/pgp-encrypted',file=g._fp)
         print ('Content-Description: PGP/MIME version identification\n\nVersion: 1\n', file=g._fp)
@@ -688,6 +686,101 @@ class _SMIME:
 		except:
 			self.parent.log("Class smime._copyfile: Couldn't copy file!","e")
 			self.parent.log_traceback()
+###########
+#CLASS _PDF
+###########
+class _PDF:
+	@_dbg
+	def __init__(self, parent,keyhome=None,  counter=0):
+		self._recipient = ''
+		self._filename=''	
+		self.count=counter
+		self.parent=parent
+		self.parent.debug("_PDF.__init__")
+		if isinstance(keyhome,str):
+			self._keyhome = expanduser(keyhome)
+		elif self.parent and self.parent._GPGKEYHOME:
+			self._keyhome=expanduser(self.parent._GPGKEYHOME)
+		else:
+			self._keyhome=expanduser('~/.gnupg')
+		self.parent.debug("_PDF.__init__ end")
+	@_dbg
+	def set_filename(self, fname):
+		if isinstance(fname,str):
+			self._filename=fname.strip()
+		else:
+			self._filename=''
+	@_dbg
+	def set_keyhome(self,keyhome):
+		if isinstance(keyhome,str):
+			self._keyhome=expanduser(keyhome.strip())
+		else:
+			self._keyhome=''
+	@_dbg
+	def create_password(self,pwlength=10,locale="en"):
+	  pwkeys="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstvwxyz0123456789:?/&%$§!<>;*+-@#^"
+	  if locale=="de":
+	  	pwkeys+="äöüßÄÖÜ"
+	  return ''.join(random.SystemRandom().choice(pwkeys) for _ in range(pwlength))	
+	@_dbg
+	def create_pdffile(self,filename=None,password=None):
+		result=False
+		if filename:
+			self.set_filename(filename)
+		if len(self._filename) == 0:
+			self.parent.log( 'Error: create_pdffile: filename not set',"e")
+			return result,None
+		f=self.parent._new_tempfile(delete=True)
+		self.parent.debug("_PDF.create_file _new_tempfile %s"%f.name)
+		f.close()
+		try:
+			os.remove(f.name)
+		except:
+			pass
+		self.parent.debug("PDF creation command: '%s'" %' '.join(self._createpdfcommand_fromfile(f.name)))
+		_result = subprocess.call( ' '.join(self._createpdfcommand_fromfile(f.name)),shell=True ) 
+		if _result !=0:
+			self.parent.log("Error executing command (Error code %d)"%_result,"e")
+			return result,None
+		else:
+			result=True
+		pw=self.create_password()
+		self.parent.log("Password '%s'"%pw)
+		_res,encryptedfile=self.encrypt_pdffile(f.name,pw)
+		if _res==False:
+			self.parent.log("Error encrypting pdf file (Error code %d)"%_res,"e")
+			return False,None
+		res=open(encryptedfile,mode="br")
+		self.parent.debug("PDF.encrypt_file binary open")
+		encdata=res.read()
+		res.close()
+		self.parent._del_tempfile(f.name)
+		self.parent._del_tempfile(encryptedfile)
+		return result,encdata
+		#./email2pdf -i ~/gpgtest/svbhorstmimekey.eml 
+	@_dbg
+	def _createpdfcommand_fromfile(self,resultfile):
+		cmd=[self.parent._PDFCREATECMD, "-i",self._filename, "-o",resultfile]
+		return cmd
+	@_dbg
+	def encrypt_pdffile(self,inputfilename,password):
+		#pdftk alex.pdf output encrypt2.pdf  user_pw geheim
+		result=False
+		f=self.parent._new_tempfile()
+		self.parent.debug("_PDF.encrypt_file _new_tempfile %s"%f.name)
+		self.parent.debug("Encryption command: '%s'" %' '.join(self._encryptcommand_fromfile(inputfilename,f.name,password)))
+		_result = subprocess.call( ' '.join(self._encryptcommand_fromfile(inputfilename,f.name,password)),shell=True ) 
+		if _result != 0:
+			self.parent.log("Error executing command (Error code %d)"%_result,"e")
+			return result,None
+		else:
+			result=True
+		return result,f.name
+	@_dbg
+	def _encryptcommand_fromfile(self,fromfile,tofile,password):
+		cmd=[self.parent._PDFENCRYPTCMD,fromfile, "output",tofile,"user_pw","\"%s\""%password]
+		return cmd
+
 #############
 #_decode_html
 #############
@@ -1178,6 +1271,9 @@ class gme:
 		self._SMTPD_PASSWORDFILE="/etc/gpgmailencrypt.pw"
 		self._SMTPD_SSL_KEYFILE="/etc/gpgsmtpd.key"
 		self._SMTPD_SSL_CERTFILE="/etc/gpgsmtpd.cert"
+		self._USEPDF=False
+		self._PDFCREATECMD="/usr/local/bin/email2pdf"
+		self._PDFENCRYPTCMD="/usr/bin/pdftk"
 		self._ADMINS=[]
 		self._read_configfile()
 		if self._DEBUG:
@@ -1220,6 +1316,8 @@ class gme:
 					self._PREFERRED_ENCRYPTION="SMIME"
 				elif p=="pgpmime":
 					self._PREFERRED_ENCRYPTION="PGPMIME"
+				elif p=="pdf":
+					self._PREFERRED_ENCRYPTION="PDF"
 				else:
 					self._PREFERRED_ENCRYPTION="PGPINLINE"
 		if _cfg.has_section('logging'):
@@ -1293,6 +1391,15 @@ class gme:
 				admins=_cfg.get('daemon','admins').split(",")
 				for a in admins:
 					self._ADMINS.append(a.strip())
+		if _cfg.has_section('pdf'):
+			if _cfg.has_option('pdf','useenryptpdf'):
+				self._USEPDF=_cfg.getboolean('pdf','useenryptpdf')
+			if not self._USEPDF and self._PREFERRED_ENCRYPTION=="PDF":
+				self._PREFERRED_ENCRYPTION="PGPINLINE"
+			if _cfg.has_option('pdf','email2pdfcommand'):
+				self._PDFCREATECMD=_cfg.get('pdf','email2pdfcommand')
+			if _cfg.has_option('pdf','pdftkcommand'):
+				self._PDFENCRYPTCMD=_cfg.get('pdf','pdftkcommand')
 		if _cfg.has_section('smime'):
 			if _cfg.has_option('smime','opensslcommand'):
 				self._SMIMECMD=_cfg.get('smime','opensslcommand')
@@ -1834,9 +1941,9 @@ class gme:
 	#_new_tempfile
 	##############
 	@_dbg
-	def _new_tempfile(self):
+	def _new_tempfile(self,delete=False):
 		"creates a new tempfile"
-		f=tempfile.NamedTemporaryFile(mode='wb',delete=False,prefix='mail-')
+		f=tempfile.NamedTemporaryFile(mode='wb',delete=delete,prefix='mail-')
 		self._tempfiles.append(f.name)
 		self.debug("_new_tempfile %s"%f.name)
 		return f
@@ -2388,6 +2495,7 @@ class gme:
 		except:
 			self.log("creating new message failed","w")
 			self.log_traceback()
+			return None
 		contenttype="text/plain"
 		contenttransferencoding=None
 		contentboundary=None
@@ -2505,7 +2613,7 @@ class gme:
 		except:
 			self.debug("get_preferredencryptionmethod User '%s/%s' not found"%(user,_u))
 			return method
-		if _m in ("PGPMIME","PGPINLINE","SMIME","NONE"):
+		if _m in ("PGPMIME","PGPINLINE","SMIME","PDF","NONE"):
 			self.debug("get_preferredencryptionmethod User %s (=> %s) :'%s'"%(user,_u,_m))
 			return _m
 		else:
@@ -2667,12 +2775,55 @@ class gme:
 			newmsg=None
 		self._del_tempfile(fp.name)
 		return newmsg
+	##################
+	# encrypt_pdf_mail 
+	##################
+	@_dbg
+	def encrypt_pdf_mail(self,message,pdfuser,from_addr,to_addr):
+		splitmsg=re.split("\n\n",message,1)
+		if len(splitmsg)!=2:
+			splitmsg=re.split("\r\n\r\n",message,1)
+		if len(splitmsg)!=2:
+			self.debug("Mail could not be split in header and body part (mailsize=%i)"%len(message))
+			return None
+		header,body=splitmsg 
+		header+="\n\n"
+		try:
+			newmsg=MIMEMultipart()
+			newmsg.set_type("multipart/mixed")
+		except:
+			self.log("creating new message failed","w")
+			self.log_traceback()
+			return None
+		pdf=_PDF(self)
+		fp=self._new_tempfile()
+		fp.write(message.encode("UTF-8",_unicodeerror))
+		fp.close()
+		pdf.set_filename(fp.name)
+		result,pdffile=pdf.create_pdffile()
+		if result==True:
+			msg = MIMEBase("application","pdf")
+			msg.set_payload(pdffile)
+			msg.add_header('Content-Disposition', 'attachment', filename="emailcontent.pdf")
+			encoders.encode_base64(msg)
+			newmsg.attach(msg)
+			
+		else:
+			newmsg=None
+		#oldmsg=email.message_from_string(message)
+		#for m in oldmsg.walk():
+		#	if m.get_param( 'attachment', None, 'Content-Disposition' ) is not None:
+		#		newmsg.attach(m)
+		self._del_tempfile(fp.name)
+		return newmsg
 	####################
 	#encrypt_single_mail
 	####################	
 	@_dbg
 	def encrypt_single_mail(self,queue_id,mailtext,from_addr,to_addr):
 		_pgpmime=False
+		_prefer_gpg=True
+		_prefer_pdf=False
 		g_r,to_gpg=self.check_gpgrecipient(to_addr)
 		s_r,to_smime=self.check_smimerecipient(to_addr)
 		method=self.get_preferredencryptionmethod(to_addr)
@@ -2687,10 +2838,12 @@ class gme:
 			_pgpmime=False
 		if method=="SMIME":
 			_prefer_gpg=False
+		if method=="PDF":
+			_prefer_pdf=True
 		if method=="NONE":
 			g_r=False
 			s_r=False
-		if not s_r and not g_r:
+		if not s_r and not g_r and not _prefer_pdf:
 			m="Email not encrypted, public key for '%s' not found"%to_addr
 			self.log(m)
 			self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
@@ -2701,7 +2854,16 @@ class gme:
 			self._count_alreadyencryptedmails+=1
 			self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
 			return
-		if _prefer_gpg:
+		if _prefer_pdf:
+			self.debug("PREFER PDF")
+			try:
+				pdf_to_addr=self._addressmap[to_addr]
+			except:
+				self.debug("preferpdf _addressmap to_addr not found")
+				pdf_to_addr=to_addr
+
+			mresult=self.encrypt_pdf_mail(mailtext,pdf_to_addr,from_addr,to_addr)
+		elif _prefer_gpg:
 			self.debug("PREFER GPG")
 			if g_r:
 				mresult=self.encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
