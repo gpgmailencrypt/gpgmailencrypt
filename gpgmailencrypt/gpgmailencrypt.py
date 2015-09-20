@@ -159,11 +159,8 @@ Fallback encryption is encrypted pdf")
 	print ("pdftkcommand=/usr/bin/pdftk			#path where to find pdftk (needed for encrypting pdf files")
 	print ("pdfdomains=localhost				#a comma separated list of sender domains, which are allowed to use pdf-encrypt")
 	print ("passwordlength=20				#Length of the automatic created password")
-
-
-
-
-
+	print ("passwordlifetime=172800				#lifetime for autocreated passwods in seconds. Default is 48 hours")
+	print ("")
 	print ("[smimeuser]")
 	print ("smime.user@domain.com = user.pem[,cipher]	#public S/MIME key file [,used cipher, see defaultcipher]")
 	print ("")
@@ -1202,6 +1199,24 @@ class gme:
 		self._count_pgpmimemails=0
 		self._count_pgpinlinemails=0
 		self._count_pdfmails=0
+	###################
+	#reset_pdfpasswords
+	###################
+	def reset_pdfpasswords(self):
+		self._pdfpasswords=dict()
+	#####################
+	#del_old_pdfpasswords
+	#####################
+	def del_old_pdfpasswords(self,age=48*60*60):
+		"age in seconds"
+		deluser=[]
+		for user in self._pdfpasswords:
+			date=self._pdfpasswords[user][1]
+			if date + age < time.time():
+				deluser.append(user)
+		for user in deluser:
+			del self._pdfpasswords[user]
+			self.debug("Password for user '%s' deleted"%user)
 	#########
 	#__exit__
 	#########
@@ -1247,6 +1262,7 @@ class gme:
 		self._encryptionmap = dict()
 		self._smimeuser = dict()
 		self._tempfiles = list()
+		self._pdfpasswords=dict()
 		self._mailcount=0
 		self._encryptgpgcomment="Encrypted by gpgmailencrypt version %s"%VERSION
 		self._smtpd_passwords=dict()
@@ -1303,6 +1319,7 @@ class gme:
 		self._PDFENCRYPTCMD="/usr/bin/pdftk"
 		self._PDFDOMAINS=["localhost"]
 		self._PDFPASSWORDLENGTH=10
+		self._PDFPASSWORDLIFETIME=48*60*60
 		self._ADMINS=[]
 		self._read_configfile()
 		if self._DEBUG:
@@ -1443,6 +1460,8 @@ class gme:
 					self._PDFDOMAINS.append(d.lower().strip())	
 			if _cfg.has_option('pdf','passwordlength'):
 				self._PDFPASSWORDLENGTH=_cfg.getint('pdf','passwordlength')
+			if _cfg.has_option('pdf','passwordlifetime'):
+				self._PDFPASSWORDLIFETIME=_cfg.getint('pdf','passwordlifetime')
 
 		if _cfg.has_section('smime'):
 			if _cfg.has_option('smime','opensslcommand'):
@@ -1744,12 +1763,19 @@ class gme:
 	################
 	@_dbg
 	def set_pdfpassword(self,user,password):
-		pass
+		self._pdfpasswords[user]=(password,time.time())
 	################
 	#get_pdfpassword
 	################
 	@_dbg
 	def get_pdfpassword(self,user):
+		pw=None
+		try:
+			pw=self._pdfpasswords[user]
+			return pw[0]
+		except:	
+			pass
+
 		pw= self._create_password(self._PDFPASSWORDLENGTH)
 		self.set_pdfpassword(user,pw)
 		return pw
@@ -3123,9 +3149,10 @@ Password: %PASSWORD%
 					self._email_queue[self._queue_id]=[fname,from_addr,to_addr,time.time()]
 				else:
 					self._queue_id=-1
-				self.encrypt_single_mail(self._queue_id,mailtext,from_addr,to_addr)
+				mailid=self._queue_id
 				if self._RUNMODE==self.m_daemon:
 					self._queue_id+=1
+				self.encrypt_single_mail(mailid,mailtext,from_addr,to_addr)
 		except:
 			self.log_traceback()
 	#######################################
@@ -3183,6 +3210,7 @@ Password: %PASSWORD%
 					self._count_alarms=0
 				if self._count_alarms>0:
 					self._log_statistics() #log statistics every 24 hours
+			self.del_old_pdfpasswords(self._PDFPASSWORDLIFETIME)
 		##################
 		self._RUNMODE=self.m_daemon
 		self._daemonstarttime=datetime.datetime.now()
