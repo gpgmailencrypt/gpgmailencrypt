@@ -4,7 +4,7 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 """
-gpgmailencrypt can encrypt e-mails.
+gpgmailencrypt is an encrypting e-mail-gateway, that  can encrypt e-mails.
 It supports
 * PGP/Inline
 * PGP/Mime
@@ -18,8 +18,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.1.0.alpha"
-DATE="16.09.2015"
+VERSION="2.1.0.beta"
+DATE="20.09.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -118,6 +118,10 @@ that should be encrypted, empty is all")
 	print ("spamsubject =***SPAM				# Spam recognition string, spam will not be encrypted")
 	print ("output=mail 					# valid values are 'mail'or 'stdout'")
 	print ("locale=en 					# DE|EN|ES|FR|IT|NL|PL|PT|RU|SE'")
+	print ("mailtemplatedir=/etc/gpgmailencrypt/mailtemplates #directory where mail templates are stored")
+	print ("systemmailfrom=gpgmailencrypt@localhost		# e-mail address used when sending system mails")
+	print ("alwaysencrypt=False				#if True e-mails will be sent encrypted, even if there is no key. \
+Fallback encryption is encrypted pdf")
 	print ("")
 	print ("[gpg]")
 	print ("keyhome = /var/lib/gpgmailencrypt/.gnupg   	# home directory of public  gpgkeyring")
@@ -150,7 +154,16 @@ that should be encrypted, empty is all")
 	print ("keyextractdir=~/.smime/extract")
 	print ("")
 	print ("[pdf]")
-	print ("")
+	print ("email2pdfcommand=/usr/bin/email2pdf		#path where to find email2pdf (needed for creating pdfs,")
+	print ("						#see https://github.com/andrewferrier/email2pdf)")
+	print ("pdftkcommand=/usr/bin/pdftk			#path where to find pdftk (needed for encrypting pdf files")
+	print ("pdfdomains=localhost				#a comma separated list of sender domains, which are allowed to use pdf-encrypt")
+	print ("passwordlength=20				#Length of the automatic created password")
+
+
+
+
+
 	print ("[smimeuser]")
 	print ("smime.user@domain.com = user.pem[,cipher]	#public S/MIME key file [,used cipher, see defaultcipher]")
 	print ("")
