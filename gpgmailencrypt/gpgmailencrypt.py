@@ -781,7 +781,7 @@ class _PDF:
 		return result,encdata
 	@_dbg
 	def _createpdfcommand_fromfile(self,resultfile):
-		cmd=[self.parent._PDFCREATECMD, "-i",self._filename, "-o",resultfile,"--headers","--no-attachments","--mostly-hide-warning"]
+		cmd=[self.parent._PDFCREATECMD, "-i",self._filename, "-o",resultfile,"--headers","--overwrite","--no-attachments","--mostly-hide-warning"]
 		return cmd
 	@_dbg
 	def _encrypt_pdffile(self,inputfilename,password):
@@ -1155,16 +1155,16 @@ class gme:
 	m_script=2
 	_LOCALEDB={
 	#"CN":("审读","文件"),
-	"DE":("Termin","Datei"),
-	"EN":("appointment","file"),
-	"ES":("cita","fichero"),
-	"FR":("rendez-vous","fichier"),
-	"IT":("appuntamento","file"),
-	"NL":("Termijn","Bestand"),
-	"PL":("termin","plik"),
-	"PT":("hora","ficheiro"),
-	"RU":("срок","файл"),
-	"SE":("möte","fil"),
+	"DE":("Termin","Datei","Inhalt"),
+	"EN":("appointment","file","content"),
+	"ES":("cita","fichero","contenido"),
+	"FR":("rendez-vous","fichier","contenu"),
+	"IT":("appuntamento","file","capacità"),
+	"NL":("Termijn","Bestand","content"),
+	"PL":("termin","plik","content"),
+	"PT":("hora","ficheiro","conteúdo"),
+	"RU":("срок","файл","содержа́ние"),
+	"SE":("möte","fil","content"),
 	}
 	_encryptheader="X-GPGMailencrypt"
 	#########
@@ -1207,12 +1207,12 @@ class gme:
 	#####################
 	#del_old_pdfpasswords
 	#####################
-	def del_old_pdfpasswords(self,age=48*60*60):
+	def del_old_pdfpasswords(self,age):
 		"age in seconds"
 		deluser=[]
 		for user in self._pdfpasswords:
 			date=self._pdfpasswords[user][1]
-			if date + age < time.time():
+			if age>0 and date + age < time.time():
 				deluser.append(user)
 		for user in deluser:
 			del self._pdfpasswords[user]
@@ -1757,13 +1757,18 @@ class gme:
 	def _load_mailmaster(self,identifier,defaulttext):
 		mail=self._load_rawmailmaster("00-template","<html><body>%EMAILTEXT%</body></html>")
 		txt=self._load_rawmailmaster(identifier,defaulttext)
-		return replace_variables(mail,{"EMAILTEXT":txt})
+		return replace_variables(mail,{"EMAILTEXT":txt,"VERSION":VERSION,"DATE":DATE})
 	################
 	#set_pdfpassword
 	################
 	@_dbg
-	def set_pdfpassword(self,user,password):
-		self._pdfpasswords[user]=(password,time.time())
+	def set_pdfpassword(self,user,password,autodelete=True):
+		if autodelete==True:
+			starttime=time.time()
+		else:
+			starttime=0
+		
+		self._pdfpasswords[user]=(password,starttime)
 	################
 	#get_pdfpassword
 	################
@@ -2962,7 +2967,6 @@ class gme:
 		header+="\n\n"
 		try:
 			newmsg=MIMEMultipart()
-			#newmsg.set_type("multipart/mixed")
 			m=email.message_from_string(header)
 			for k in m.keys():
 				newmsg[k]=m[k]
@@ -2976,7 +2980,7 @@ class gme:
 		fp.close()
 		pdf.set_filename(fp.name)
 		pw=self.get_pdfpassword(to_addr)
-		self.log("Password '%s'"%pw)
+		self.debug("Password '%s'"%pw)
 		result,pdffile=pdf.create_pdffile(pw)
 		if result==True:
 			domain=''
@@ -3019,7 +3023,12 @@ Password: %PASSWORD%
 			newmsg.attach(msg)
 			msg = MIMEBase("application","pdf")
 			msg.set_payload(pdffile)
-			msg.add_header('Content-Disposition', 'attachment', filename="emailcontent.pdf")
+			try:
+				f=self._LOCALEDB[self._LOCALE][2]
+			except:
+				self.log("wrong locale '%s'"%self._LOCALE,"w")
+				f=self._LOCALEDB["EN"][2]
+			msg.add_header('Content-Disposition', 'attachment', filename="%s.pdf"%f)
 			encoders.encode_base64(msg)
 			newmsg.attach(msg)
 			self._count_pdfmails+=1
@@ -3030,6 +3039,35 @@ Password: %PASSWORD%
 		oldmsg=email.message_from_string(message)
 		for m in oldmsg.walk():
 			if m.get_param( 'attachment', None, 'Content-Disposition' ) is not None:
+				contenttype=m.get_content_type()
+				if contenttype=="application/pdf":
+					fp=self._new_tempfile()
+					fp.write(m.get_payload(decode=True))
+					fp.close()
+					pdf.set_filename(fp.name)
+					result,pdffile=pdf._encrypt_pdffile(fp.name,pw)
+					
+					if result==True:
+						try:
+							f=open(pdffile,"rb")
+							encryptedpdf=f.read()
+							f.close()
+							f=open("/home/horst/RES.PDF","wb")
+							f.write(encryptedpdf)
+							f.close()
+							filename = m.get_filename()
+							msg= MIMEBase("application", "pdf")
+							msg.set_payload(encryptedpdf)
+							filenamecD,filenamecT=_encodefilename(filename)
+
+							msg.add_header('Content-Disposition', 'attachment; filename*="%s"' % filenamecD)
+							msg.set_param( 'name', filenamecT )
+
+							encoders.encode_base64(msg)
+							m=msg
+						except:
+							self.log_traceback()
+							
 				newmsg.attach(m)
 		self._del_tempfile(fp.name)
 		return newmsg
