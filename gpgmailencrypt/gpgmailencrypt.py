@@ -19,7 +19,7 @@ Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
 VERSION="2.1.0.alpha"
-DATE="13.09.2015"
+DATE="16.09.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -217,6 +217,26 @@ class _mytimer:
 	def stop(self):
 		self.alarm.cancel()
 		self.running=False
+###################
+#replace_variables
+###################
+def replace_variables(text,dictionary,startdelimiter="%",enddelimiter="%"):
+	"replaces variables with the values of the dictionary. A variable is embraced of % and consists of capital letters, e.g. %MYVARIABLE%"
+	result=""
+	begin=0
+	while True:
+		found=re.search("%s[A-Z]+%s"%(startdelimiter,enddelimiter),text[begin:])
+		if found== None:
+			result+=text[begin:]
+			return result
+		result+=text[begin:begin+found.start()]
+		key=text[begin+found.start():begin+found.end()].replace(startdelimiter,"").replace(enddelimiter,"")
+		try:
+			result+=dictionary[key]
+		except:
+			result+=startdelimiter+key+enddelimiter
+			raise
+		begin+=found.end()
 ###################################
 #Definition of encryption functions
 ###################################
@@ -717,13 +737,7 @@ class _PDF:
 		else:
 			self._keyhome=''
 	@_dbg
-	def create_password(self,pwlength=10,locale="en"):
-	  pwkeys="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstvwxyz0123456789:?/&%$§!<>;*+-@#^"
-	  if locale=="de":
-	  	pwkeys+="äöüßÄÖÜ"
-	  return ''.join(random.SystemRandom().choice(pwkeys) for _ in range(pwlength))	
-	@_dbg
-	def create_pdffile(self,filename=None,password=None):
+	def create_pdffile(self,password,filename=None):
 		result=False
 		if filename:
 			self.set_filename(filename)
@@ -744,9 +758,7 @@ class _PDF:
 			return result,None
 		else:
 			result=True
-		pw=self.create_password()
-		self.parent.log("Password '%s'"%pw)
-		_res,encryptedfile=self.encrypt_pdffile(f.name,pw)
+		_res,encryptedfile=self._encrypt_pdffile(f.name,password)
 		if _res==False:
 			self.parent.log("Error encrypting pdf file (Error code %d)"%_res,"e")
 			return False,None
@@ -757,14 +769,12 @@ class _PDF:
 		self.parent._del_tempfile(f.name)
 		self.parent._del_tempfile(encryptedfile)
 		return result,encdata
-		#./email2pdf -i ~/gpgtest/svbhorstmimekey.eml 
 	@_dbg
 	def _createpdfcommand_fromfile(self,resultfile):
-		cmd=[self.parent._PDFCREATECMD, "-i",self._filename, "-o",resultfile]
+		cmd=[self.parent._PDFCREATECMD, "-i",self._filename, "-o",resultfile,"--headers","--no-attachments","--mostly-hide-warning"]
 		return cmd
 	@_dbg
-	def encrypt_pdffile(self,inputfilename,password):
-		#pdftk alex.pdf output encrypt2.pdf  user_pw geheim
+	def _encrypt_pdffile(self,inputfilename,password):
 		result=False
 		f=self.parent._new_tempfile()
 		self.parent.debug("_PDF.encrypt_file _new_tempfile %s"%f.name)
@@ -931,7 +941,7 @@ class _htmldecode(html.parser.HTMLParser):
 					self.data=self.data[0:len(self.data)-1]
 					self.data+="\r\n"
 				else:
-					if lastchar not in ("\n"," ","\t"):
+					if lastchar not in ("\n","\t"):
 						self.data+="\r\n"
 			if tag=="abbr" and self.attrtitle!=None:
 				self.data+=" [%s] "%self.attrtitle
@@ -1178,6 +1188,7 @@ class gme:
 		self._count_smimemails=0
 		self._count_pgpmimemails=0
 		self._count_pgpinlinemails=0
+		self._count_pdfmails=0
 	#########
 	#__exit__
 	#########
@@ -1235,6 +1246,8 @@ class gme:
 			os.makedirs(self._deferdir)
 		#GLOBAL CONFIG VARIABLES
 		self._STATISTICS_PER_DAY=1
+		self._SYSTEMMAILFROM="gpgmailencrypt@localhost"
+		self._ALWAYSENCRYPT=False
 		self._DEBUG=False
 		self._LOGGING=self.l_none
 		self._LOGFILE=""
@@ -1249,6 +1262,7 @@ class gme:
 		self._SMTP_PASSWORD=""
 		self._DOMAINS=""
 		self._CONFIGFILE='/etc/gpgmailencrypt.conf'
+		self._MAILTEMPLATEDIR="/etc/gpgmailencrypt/mailtemplates"
 		self._INFILE=""
 		self._OUTFILE=""
 		self._PREFERRED_ENCRYPTION="PGPINLINE"
@@ -1274,6 +1288,8 @@ class gme:
 		self._USEPDF=False
 		self._PDFCREATECMD="/usr/local/bin/email2pdf"
 		self._PDFENCRYPTCMD="/usr/bin/pdftk"
+		self._PDFDOMAINS=["localhost"]
+		self._PDFPASSWORDLENGTH=10
 		self._ADMINS=[]
 		self._read_configfile()
 		if self._DEBUG:
@@ -1306,6 +1322,10 @@ class gme:
 					self._OUTPUT=self.o_stdout
 			if _cfg.has_option('default','locale'):
 				self._LOCALE=_cfg.get('default','locale').upper().strip()
+			if _cfg.has_option('default','systemmailfrom'):
+				self._SYSTEMMAILFROM=_cfg.get('default','systemmailfrom').strip
+			if _cfg.has_option('default','mailtemplatedir'):
+				self._MAILTEMPLATEDIR=_cfg.get('default','mailtemplatedir').strip()
 			if _cfg.has_option('default','domains'):
 				self._DOMAINS=_cfg.get('default','domains')
 			if _cfg.has_option('default','spamsubject'):
@@ -1320,6 +1340,9 @@ class gme:
 					self._PREFERRED_ENCRYPTION="PDF"
 				else:
 					self._PREFERRED_ENCRYPTION="PGPINLINE"
+			if _cfg.has_option('default','alwaysencrypt'):
+				self._ALWAYSENCRYPT=_cfg.getboolean('default','alwaysencrypt')
+		
 		if _cfg.has_section('logging'):
 			if _cfg.has_option('logging','log'):
 				l=_cfg.get('logging','log').lower()
@@ -1400,6 +1423,14 @@ class gme:
 				self._PDFCREATECMD=_cfg.get('pdf','email2pdfcommand')
 			if _cfg.has_option('pdf','pdftkcommand'):
 				self._PDFENCRYPTCMD=_cfg.get('pdf','pdftkcommand')
+			if _cfg.has_option('pdf','pdfdomains'):
+				domains=_cfg.get('pdf','pdfdomains').split(",")
+				self._PDFDOMAINS=[]
+				for d in domains:
+					self._PDFDOMAINS.append(d.lower().strip())	
+			if _cfg.has_option('pdf','passwordlength'):
+				self._PDFPASSWORDLENGTH=_cfg.getint('pdf','passwordlength')
+
 		if _cfg.has_section('smime'):
 			if _cfg.has_option('smime','opensslcommand'):
 				self._SMIMECMD=_cfg.get('smime','opensslcommand')
@@ -1649,6 +1680,66 @@ class gme:
 						return False
 				return True
 		return False
+	#################
+	#_create_password
+	#################
+	@_dbg
+	def _create_password(self,pwlength=10):
+		#prior to pdf 1.7 only ASCII characters are allowed and maximum 32 characters
+		if pwlength<5:
+			pwlength=5
+		elif pwlength>32:
+			pwlength=32
+		nonletters="0123456789:?_/$&%!<>*+-@#^~;,."
+		pwkeys="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstvwxyz"+nonletters
+		return ''.join(random.SystemRandom().choice(pwkeys) for _ in range(pwlength))
+	####################
+	#_load_rawmailmaster
+	####################
+	@_dbg
+	def _load_rawmailmaster(self,identifier,defaulttext):
+		f=None
+		self.debug("_load_mailmaster '%s'"% identifier)
+		try:
+			f=open("%s/%s/%s.html"%(self._MAILTEMPLATEDIR,self._LOCALE,identifier))
+			self.debug("template found in %s"%("%s/%s/%s.html"%(self._MAILTEMPLATEDIR,self._LOCALE,identifier)))
+		except:
+			pass
+		if f==None:
+			try:
+				f=open("%s/EN/%s.html"%(self._MAILTEMPLATEDIR,identifier))
+				self.debug("template found in %s"%("%s/EN/%s.html"%(self._MAILTEMPLATEDIR,identifier)))
+			except:
+				pass
+		if f==None:
+			self.debug("template not found, returning defaulttext")
+			return defaulttext
+		
+		txt=f.read()
+		f.close()
+		txt=re.sub(r'(?:\r\n|\n|\r(?!\n))', "\r\n", txt)
+		return txt
+	#################
+	#_load_mailmaster
+	#################
+	def _load_mailmaster(self,identifier,defaulttext):
+		mail=self._load_rawmailmaster("00-template","<html><body>%EMAILTEXT%</body></html>")
+		txt=self._load_rawmailmaster(identifier,defaulttext)
+		return replace_variables(mail,{"EMAILTEXT":txt})
+	################
+	#set_pdfpassword
+	################
+	@_dbg
+	def set_pdfpassword(self,user,password):
+		pass
+	################
+	#get_pdfpassword
+	################
+	@_dbg
+	def get_pdfpassword(self,user):
+		pw= self._create_password(self._PDFPASSWORDLENGTH)
+		self.set_pdfpassword(user,pw)
+		return pw
 	#############
 	#_set_logmode
 	#############
@@ -1935,7 +2026,8 @@ class gme:
 	def _log_statistics(self):
 		self.log("Mail statistics: total: %i, encrypt: %i, were encrypted: %i, total deferred: %i, still deferred: %i" %\
 		(self._count_totalmails,self._count_encryptedmails,self._count_alreadyencryptedmails,self._count_deferredmails,len(self._deferred_emails)))
-		self.log("PGPMIME: %i, PGPINLINE: %i, SMIME: %i"%(self._count_pgpmimemails,self._count_pgpinlinemails,self._count_smimemails))
+		self.log("PGPMIME: %i, PGPINLINE: %i, SMIME: %i, PDF: %i"%(self._count_pgpmimemails,
+				self._count_pgpinlinemails, self._count_smimemails ,self._count_pdfmails))
 		self.log("systemerrors: %i, systemwarnings: %i" %(self._systemerrors,self._systemwarnings))
 	##############
 	#_new_tempfile
@@ -2084,6 +2176,7 @@ class gme:
 			"still deferred":len(self._deferred_emails),
 			"total already encrypted":self._count_alreadyencryptedmails,
 			"total smime":self._count_smimemails,
+			"total_pdf":self._count_pdfmails,
 			"total pgpmime":self._count_pgpmimemails,
 			"total pgpinline":self._count_pgpinlinemails,
 			"systemerrors":self._systemerrors,
@@ -2154,10 +2247,11 @@ class gme:
 	def check_gpgrecipient(self,gaddr):
 		"returns True and the effective key-emailaddress if emails to address 'gaddr' can be GPG encrcrypted"
 		self.debug("check_gpgrecipient: start '%s'"%gaddr)
+		gaddr=emailutils.parseaddr(gaddr)[1]
 		addr=gaddr.split('@')
 		domain=''
 		if len(addr)==2:
-			domain = gaddr.split('@')[1]
+			domain = addr[1]
 		found =False
 		gpg = _GPG( self,self._GPGKEYHOME)
 		try:
@@ -2179,10 +2273,11 @@ class gme:
 	def check_smimerecipient(self,saddr):
 		"returns True and the effective key-emailaddress if emails to address 'saddr' can be SMIME encrcrypted"
 		self.debug("check_smimerecipient: start '%s'"%saddr)
+		saddr=emailutils.parseaddr(saddr)[1]
 		addr=saddr.split('@')
 		domain=''
 		if len(addr)==2:
-			domain = saddr.split('@')[1]
+			domain = addr[1]
 		found =False
 		smime = _SMIME(self,self._SMIMEKEYHOME)
 		try:
@@ -2200,6 +2295,22 @@ class gme:
 				self.debug("smime key exists, but '%s' is not in _DOMAINS [%s]"%(domain,self._DOMAINS))
 				found=False
 		return found, smime_to_addr
+	#################
+	#check_encryptpdf
+	#################
+	@_dbg
+	def check_encryptpdf(self,mailtext):
+		mail=email.message_from_string(mailtext)
+		subject=self._decode_header(mail["Subject"])
+		self.debug("subject: %s"%mail["Subject"])
+		find=re.search("^#encrypt ",subject,re.I)
+		self.debug("check_encryptpdf %s"%find)
+		if find:
+			return True
+		else:
+			return False
+
+	
 	#############################
 	#is_encrypted function family
 	#############################
@@ -2602,6 +2713,7 @@ class gme:
 		self.debug("get_preferredencryptionmethod :'%s'"%user)
 		method=self._PREFERRED_ENCRYPTION
 		_m=""
+		user=emailutils.parseaddr(user)[1]
 		_u=user
 		try:
 			_u=self._addressmap[user]
@@ -2775,6 +2887,27 @@ class gme:
 			newmsg=None
 		self._del_tempfile(fp.name)
 		return newmsg
+	###############
+	#_decode_header
+	###############
+	@_dbg
+	def _decode_header(self,header):
+		if not header:
+			return None
+		h=email.header.decode_header(header)
+		result=""
+		for m in h:
+			try:
+				if m[1]==None:
+					if isinstance(m[0],str):
+						result+=m[0]+" "
+					else:
+						result+=m[0].decode("UTF-8")+" "
+				else:
+					result+=m[0].decode(m[1])+" "
+			except:
+				pass
+		return result
 	##################
 	# encrypt_pdf_mail 
 	##################
@@ -2790,7 +2923,10 @@ class gme:
 		header+="\n\n"
 		try:
 			newmsg=MIMEMultipart()
-			newmsg.set_type("multipart/mixed")
+			#newmsg.set_type("multipart/mixed")
+			m=email.message_from_string(header)
+			for k in m.keys():
+				newmsg[k]=m[k]
 		except:
 			self.log("creating new message failed","w")
 			self.log_traceback()
@@ -2800,20 +2936,62 @@ class gme:
 		fp.write(message.encode("UTF-8",_unicodeerror))
 		fp.close()
 		pdf.set_filename(fp.name)
-		result,pdffile=pdf.create_pdffile()
+		pw=self.get_pdfpassword(to_addr)
+		self.log("Password '%s'"%pw)
+		result,pdffile=pdf.create_pdffile(pw)
 		if result==True:
+			domain=''
+			addr= emailutils.parseaddr(from_addr)[1].split('@')
+			if len(addr)==2:
+				domain = addr[1]
+			if domain in self._PDFDOMAINS:
+				msgtxt=self._load_mailmaster("01-pdfpassword","""
+Subject:  %SUBJECT%
+From:     %FROM%
+To:       %TO%
+Date:     %DATE%
+Password: %PASSWORD%
+""")
+				msgtxt=replace_variables(msgtxt,{"FROM":from_addr,
+								"TO":self._decode_header(newmsg["To"]),
+								"DATE":newmsg["Date"],
+								"PASSWORD":html.escape(pw),
+								"SUBJECT":self._decode_header(newmsg["Subject"])})
+				msg=MIMEMultipart()
+				msg.set_type("multipart/alternative")
+				res,htmlheader,htmlbody,htmlfooter=self._split_html(msgtxt)
+				htmlmsg=MIMEText(msgtxt,"html")
+				plainmsg=MIMEText(htmlbody)
+				msg.attach(plainmsg)
+				msg.attach(htmlmsg)
+				msg['Subject'] = 'Password' 
+				msg['To'] = from_addr
+				msg['From'] = self._SYSTEMMAILFROM
+				self.encrypt_mails(msg.as_string(),from_addr)
+				
+			msgtxt=self._load_mailmaster("02-pdfmail","Content of this email is stored in an pdf attachment")
+			msg=MIMEMultipart()
+			msg.set_type("multipart/alternative")
+			res,htmlheader,htmlbody,htmlfooter=self._split_html(msgtxt)
+			htmlmsg=MIMEText(msgtxt,"html")
+			plainmsg=MIMEText(htmlbody)
+			msg.attach(plainmsg)
+			msg.attach(htmlmsg)
+			newmsg.attach(msg)
 			msg = MIMEBase("application","pdf")
 			msg.set_payload(pdffile)
 			msg.add_header('Content-Disposition', 'attachment', filename="emailcontent.pdf")
 			encoders.encode_base64(msg)
 			newmsg.attach(msg)
+			self._count_pdfmails+=1
+			
 			
 		else:
 			newmsg=None
-		#oldmsg=email.message_from_string(message)
-		#for m in oldmsg.walk():
-		#	if m.get_param( 'attachment', None, 'Content-Disposition' ) is not None:
-		#		newmsg.attach(m)
+		oldmsg=email.message_from_string(message)
+		for m in oldmsg.walk():
+			if m.get_param( 'attachment', None, 'Content-Disposition' ) is not None:
+				newmsg.attach(m)
 		self._del_tempfile(fp.name)
 		return newmsg
 	####################
@@ -2823,7 +3001,7 @@ class gme:
 	def encrypt_single_mail(self,queue_id,mailtext,from_addr,to_addr):
 		_pgpmime=False
 		_prefer_gpg=True
-		_prefer_pdf=False
+		_prefer_pdf=self.check_encryptpdf(mailtext)
 		g_r,to_gpg=self.check_gpgrecipient(to_addr)
 		s_r,to_smime=self.check_smimerecipient(to_addr)
 		method=self.get_preferredencryptionmethod(to_addr)
@@ -2838,8 +3016,13 @@ class gme:
 			_pgpmime=False
 		if method=="SMIME":
 			_prefer_gpg=False
-		if method=="PDF":
-			_prefer_pdf=True
+		if method=="PDF" or self._ALWAYSENCRYPT or _prefer_pdf:
+			domain=''
+			addr=emailutils.parseaddr(from_addr)[1].split('@')
+			if len(addr)==2:
+				domain = addr[1]
+			if domain in self._PDFDOMAINS:
+				_prefer_pdf=True
 		if method=="NONE":
 			g_r=False
 			s_r=False
@@ -2895,6 +3078,8 @@ class gme:
 		example:
 		encrypt_mails(myemailtext,['agentj@mib','agentk@mib'])
 		"""
+		if isinstance(receiver,str):
+			receiver=[receiver]
 		try:
 			if self._debug_keepmail(mailtext): #DEBUG
 				self._store_temporaryfile(mailtext)
