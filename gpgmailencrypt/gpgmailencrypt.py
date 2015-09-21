@@ -18,8 +18,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.1.0.beta"
-DATE="20.09.2015"
+VERSION="2.1.0.gamma"
+DATE="21.09.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -36,7 +36,7 @@ from os.path import expanduser
 import locale,traceback,hashlib
 from functools import wraps
 import smtpd,asyncore, signal,ssl,asynchat,socket,select,threading
-import string, random
+import string, random, shutil
 try:
 	import readline
 except:
@@ -160,6 +160,7 @@ Fallback encryption is encrypted pdf")
 	print ("pdfdomains=localhost				#a comma separated list of sender domains, which are allowed to use pdf-encrypt")
 	print ("passwordlength=20				#Length of the automatic created password")
 	print ("passwordlifetime=172800				#lifetime for autocreated passwods in seconds. Default is 48 hours")
+	print ("7zipcommand=/usr/bin7za				#path where to find 7za")
 	print ("")
 	print ("[smimeuser]")
 	print ("smime.user@domain.com = user.pem[,cipher]	#public S/MIME key file [,used cipher, see defaultcipher]")
@@ -747,6 +748,33 @@ class _PDF:
 		else:
 			self._keyhome=''
 	@_dbg
+	def create_zipfile(self,directory,password):
+		f=self.parent._new_tempfile(delete=True)
+		self.parent.debug("_PDF.create_file _new_tempfile %s"%f.name)
+		f.close()
+		try:
+			os.remove(f.name)
+		except:
+			pass
+		self.parent.debug("ZIP creation command: '%s'" %' '.join(self._createzipcommand_fromdir(f.name,directory,password)))
+		_result = subprocess.call( ' '.join(self._createzipcommand_fromdir(f.name,directory,password)),shell=True ) 
+		if _result !=0:
+			self.parent.log("Error executing command (Error code %d)"%_result,"e")
+			return result,None
+		else:
+			result=True
+		res=open(f.name+".zip",mode="br")
+		self.parent.debug("ZIP_file binary open")
+		encdata=res.read()
+		res.close()
+		self.parent._del_tempfile(f.name)
+		return result,encdata
+	@_dbg
+	def _createzipcommand_fromdir(self,resultfile,directory,password):
+		#7za a myfile.zip test.txt -tzip -mem=AES256 -mx9 -pmypassword
+		cmd=[self.parent._7ZIPCMD, "a",resultfile, "%s/*"%directory,"-tzip","-mem=AES256","-mx9","-p%s"%password,">/dev/null"]
+		return cmd
+	@_dbg
 	def create_pdffile(self,password,filename=None):
 		result=False
 		if filename:
@@ -1155,16 +1183,16 @@ class gme:
 	m_script=2
 	_LOCALEDB={
 	#"CN":("审读","文件"),
-	"DE":("Termin","Datei","Inhalt"),
-	"EN":("appointment","file","content"),
-	"ES":("cita","fichero","contenido"),
-	"FR":("rendez-vous","fichier","contenu"),
-	"IT":("appuntamento","file","capacità"),
-	"NL":("Termijn","Bestand","content"),
-	"PL":("termin","plik","content"),
-	"PT":("hora","ficheiro","conteúdo"),
-	"RU":("срок","файл","содержа́ние"),
-	"SE":("möte","fil","content"),
+	"DE":("Termin","Datei","Inhalt","Anhang"),
+	"EN":("appointment","file","content","attachment"),
+	"ES":("cita","fichero","contenido","attachment"),
+	"FR":("rendez-vous","fichier","contenu","attachment"),
+	"IT":("appuntamento","file","capacità","attachment"),
+	"NL":("Termijn","Bestand","content","attachment"),
+	"PL":("termin","plik","content","attachment"),
+	"PT":("hora","ficheiro","conteúdo","attachment"),
+	"RU":("срок","файл","содержа́ние","attachment"),
+	"SE":("möte","fil","content","attachment"),
 	}
 	_encryptheader="X-GPGMailencrypt"
 	#########
@@ -1320,6 +1348,7 @@ class gme:
 		self._PDFDOMAINS=["localhost"]
 		self._PDFPASSWORDLENGTH=10
 		self._PDFPASSWORDLIFETIME=48*60*60
+		self._7ZIPCMD="/usr/bin/7za"
 		self._ADMINS=[]
 		self._read_configfile()
 		if self._DEBUG:
@@ -1449,6 +1478,8 @@ class gme:
 				self._USEPDF=_cfg.getboolean('pdf','useenryptpdf')
 			if not self._USEPDF and self._PREFERRED_ENCRYPTION=="PDF":
 				self._PREFERRED_ENCRYPTION="PGPINLINE"
+			if _cfg.has_option('pdf','7zipcommand'):
+				self._7ZIPCMD=_cfg.get('pdf','7zipcommand')
 			if _cfg.has_option('pdf','email2pdfcommand'):
 				self._PDFCREATECMD=_cfg.get('pdf','email2pdfcommand')
 			if _cfg.has_option('pdf','pdftkcommand'):
@@ -1462,7 +1493,6 @@ class gme:
 				self._PDFPASSWORDLENGTH=_cfg.getint('pdf','passwordlength')
 			if _cfg.has_option('pdf','passwordlifetime'):
 				self._PDFPASSWORDLIFETIME=_cfg.getint('pdf','passwordlifetime')
-
 		if _cfg.has_section('smime'):
 			if _cfg.has_option('smime','opensslcommand'):
 				self._SMIMECMD=_cfg.get('smime','opensslcommand')
@@ -1722,8 +1752,8 @@ class gme:
 			pwlength=5
 		elif pwlength>32:
 			pwlength=32
-		nonletters="0123456789:?_/$&%!<>*+-@#^~;,."
-		pwkeys="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstvwxyz"+nonletters
+		nonletters="0123456789+-*/"
+		pwkeys="ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstvwxyz"+nonletters
 		return ''.join(random.SystemRandom().choice(pwkeys) for _ in range(pwlength))
 	####################
 	#_load_rawmailmaster
@@ -3037,39 +3067,37 @@ Password: %PASSWORD%
 		else:
 			newmsg=None
 		oldmsg=email.message_from_string(message)
+		attachments=0
+		tempdir = tempfile.mkdtemp()
 		for m in oldmsg.walk():
 			if m.get_param( 'attachment', None, 'Content-Disposition' ) is not None:
 				contenttype=m.get_content_type()
-				if contenttype=="application/pdf":
-					fp=self._new_tempfile()
-					fp.write(m.get_payload(decode=True))
-					fp.close()
-					pdf.set_filename(fp.name)
-					result,pdffile=pdf._encrypt_pdffile(fp.name,pw)
-					
-					if result==True:
-						try:
-							f=open(pdffile,"rb")
-							encryptedpdf=f.read()
-							f.close()
-							f=open("/home/horst/RES.PDF","wb")
-							f.write(encryptedpdf)
-							f.close()
-							filename = m.get_filename()
-							msg= MIMEBase("application", "pdf")
-							msg.set_payload(encryptedpdf)
-							filenamecD,filenamecT=_encodefilename(filename)
-
-							msg.add_header('Content-Disposition', 'attachment; filename*="%s"' % filenamecD)
-							msg.set_param( 'name', filenamecT )
-
-							encoders.encode_base64(msg)
-							m=msg
-						except:
-							self.log_traceback()
-							
-				newmsg.attach(m)
+				filename = m.get_filename()
+				fp=open("%s/%s"%(tempdir,filename),"wb")
+				fp.write(m.get_payload(decode=True))
+				fp.close()
+				attachments+=1
+		if attachments>0:
+			result,zipfile=pdf.create_zipfile(tempdir,pw)
+			if result==True:
+				msg= MIMEBase("application", "zip")
+				msg.set_payload(zipfile)
+				try:
+					f=self._LOCALEDB[self._LOCALE][3]
+				except:
+					self.log("wrong locale '%s'"%self._LOCALE,"w")
+					f=self._LOCALEDB["EN"][3]
+				filenamecD,filenamecT=_encodefilename("%s.zip"%f)
+				msg.add_header('Content-Disposition', 'attachment; filename*="%s"' % filenamecD)
+				msg.set_param( 'name', filenamecT )
+				encoders.encode_base64(msg)
+				newmsg.attach(msg)
 		self._del_tempfile(fp.name)
+		try:
+			shutil.rmtree(tempdir)
+		except:
+			self.log("Couldn't delete tempdir '%s'"%tempdir)
+			self.log_traceback()
 		return newmsg
 	####################
 	#encrypt_single_mail
