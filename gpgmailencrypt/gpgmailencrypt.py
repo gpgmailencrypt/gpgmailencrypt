@@ -767,6 +767,7 @@ class _PDF:
 		self.parent.debug("ZIP_file binary open")
 		encdata=res.read()
 		res.close()
+		os.rename(f.name+".zip",f.name)
 		self.parent._del_tempfile(f.name)
 		return result,encdata
 	@_dbg
