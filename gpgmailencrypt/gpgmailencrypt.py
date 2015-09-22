@@ -18,8 +18,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.1.0.gamma"
-DATE="21.09.2015"
+VERSION="2.1.0.delta"
+DATE="22.09.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -235,6 +235,9 @@ def replace_variables(text,dictionary,startdelimiter="%",enddelimiter="%"):
 	"replaces variables with the values of the dictionary. A variable is embraced of % and consists of capital letters, e.g. %MYVARIABLE%"
 	result=""
 	begin=0
+	dictionary["COPYRIGHT"]="© 2015 Horst Knorr&lt;gpgmailencrypt@gmx.de>"
+	dictionary["VERSION"]=VERSION
+	dictionary["VERSIONDATE"]=DATE
 	while True:
 		found=re.search("%s[A-Z]+%s"%(startdelimiter,enddelimiter),text[begin:])
 		if found== None:
@@ -748,16 +751,30 @@ class _PDF:
 		else:
 			self._keyhome=''
 	@_dbg
-	def create_zipfile(self,directory,password):
-		f=self.parent._new_tempfile(delete=True)
+	def create_zipfile(self,directory,password,containerfile=None):
+		f=self.parent._new_tempfile()
 		self.parent.debug("_PDF.create_file _new_tempfile %s"%f.name)
 		f.close()
-		try:
-			os.remove(f.name)
-		except:
-			pass
+		fname=f.name
+		if containerfile!=None:
+			tempdir = tempfile.mkdtemp()
+			fname="%s/%s"%(tempdir,containerfile)
+			self.parent.debug("ZIP creation command: '%s'" %' '.join(self._createzipcommand_fromdir(fname,directory,password)))
+			_result = subprocess.call( ' '.join(self._createzipcommand_fromdir(fname,directory,None,compress=False)),shell=True ) 
+			directory=tempdir
+			if _result !=0:
+				self.parent.log("Error executing command (Error code %d)"%_result,"e")
+				try:
+					shutil.rmtree(tempdir)
+				except:
+					pass
+				return result,None
 		self.parent.debug("ZIP creation command: '%s'" %' '.join(self._createzipcommand_fromdir(f.name,directory,password)))
 		_result = subprocess.call( ' '.join(self._createzipcommand_fromdir(f.name,directory,password)),shell=True ) 
+		try:
+			shutil.rmtree(tempdir)
+		except:
+			pass
 		if _result !=0:
 			self.parent.log("Error executing command (Error code %d)"%_result,"e")
 			return result,None
@@ -771,9 +788,12 @@ class _PDF:
 		self.parent._del_tempfile(f.name)
 		return result,encdata
 	@_dbg
-	def _createzipcommand_fromdir(self,resultfile,directory,password):
-		#7za a myfile.zip test.txt -tzip -mem=AES256 -mx9 -pmypassword
-		cmd=[self.parent._7ZIPCMD, "a",resultfile, "%s/*"%directory,"-tzip","-mem=AES256","-mx9","-p%s"%password,">/dev/null"]
+	def _createzipcommand_fromdir(self,resultfile,directory,password, compress=True):
+		cmd=[self.parent._7ZIPCMD, "a",resultfile, "%s/*"%directory,"-tzip","-mem=AES256",">/dev/null"]
+		if password!=None:
+			cmd.insert(4,"-p%s"%password)
+		if compress==True:
+			cmd.insert(4,"-mx5")
 		return cmd
 	@_dbg
 	def create_pdffile(self,password,filename=None):
@@ -1186,12 +1206,12 @@ class gme:
 	#"CN":("审读","文件"),
 	"DE":("Termin","Datei","Inhalt","Anhang"),
 	"EN":("appointment","file","content","attachment"),
-	"ES":("cita","fichero","contenido","attachment"),
-	"FR":("rendez-vous","fichier","contenu","attachment"),
-	"IT":("appuntamento","file","capacità","attachment"),
-	"NL":("Termijn","Bestand","content","attachment"),
-	"PL":("termin","plik","content","attachment"),
-	"PT":("hora","ficheiro","conteúdo","attachment"),
+	"ES":("cita","fichero","contenido","apéndice"),
+	"FR":("rendez-vous","fichier","contenu","attachement"),
+	"IT":("appuntamento","file","capacità","allegato"),
+	"NL":("Termijn","Bestand","content","e-mailbijlage"),
+	"PL":("termin","plik","content","załącznik"),
+	"PT":("hora","ficheiro","conteúdo","anexo"),
 	"RU":("срок","файл","содержа́ние","attachment"),
 	"SE":("möte","fil","content","attachment"),
 	}
@@ -1788,7 +1808,7 @@ class gme:
 	def _load_mailmaster(self,identifier,defaulttext):
 		mail=self._load_rawmailmaster("00-template","<html><body>%EMAILTEXT%</body></html>")
 		txt=self._load_rawmailmaster(identifier,defaulttext)
-		return replace_variables(mail,{"EMAILTEXT":txt,"VERSION":VERSION,"DATE":DATE})
+		return replace_variables(mail,{"EMAILTEXT":txt})
 	################
 	#set_pdfpassword
 	################
@@ -3019,18 +3039,14 @@ class gme:
 			if len(addr)==2:
 				domain = addr[1]
 			if domain in self._PDFDOMAINS:
-				msgtxt=self._load_mailmaster("01-pdfpassword","""
-Subject:  %SUBJECT%
-From:     %FROM%
-To:       %TO%
-Date:     %DATE%
-Password: %PASSWORD%
-""")
-				msgtxt=replace_variables(msgtxt,{"FROM":from_addr,
-								"TO":self._decode_header(newmsg["To"]),
+				msgtxt=self._load_mailmaster("01-pdfpassword","<table><tr><td>Subject:</td><td>%SUBJECT%</td></tr>\
+<tr><td>SFrom:</td><td>%FROM%</td></tr><tr><td>STo:</td><td>%TO%</td></tr><tr><td>SDate:</td><td>%DATE%</td></tr>\
+<tr><td>SPassword:</td><td>%PASSWORD%</td></tr></table>")
+				msgtxt=replace_variables(msgtxt,{"FROM":html.escape(from_addr),
+								"TO":html.escape(self._decode_header(newmsg["To"])),
 								"DATE":newmsg["Date"],
 								"PASSWORD":html.escape(pw),
-								"SUBJECT":self._decode_header(newmsg["Subject"])})
+								"SUBJECT":html.escape(self._decode_header(newmsg["Subject"])}))
 				msg=MIMEMultipart()
 				msg.set_type("multipart/alternative")
 				res,htmlheader,htmlbody,htmlfooter=self._split_html(msgtxt)
@@ -3043,7 +3059,7 @@ Password: %PASSWORD%
 				msg['From'] = self._SYSTEMMAILFROM
 				self.encrypt_mails(msg.as_string(),from_addr)
 				
-			msgtxt=self._load_mailmaster("02-pdfmail","Content of this email is stored in an pdf attachment")
+			msgtxt=self._load_mailmaster("02-pdfmail","Content of this e-mail is stored in an pdf attachment")
 			msg=MIMEMultipart()
 			msg.set_type("multipart/alternative")
 			res,htmlheader,htmlbody,htmlfooter=self._split_html(msgtxt)
@@ -3063,8 +3079,6 @@ Password: %PASSWORD%
 			encoders.encode_base64(msg)
 			newmsg.attach(msg)
 			self._count_pdfmails+=1
-			
-			
 		else:
 			newmsg=None
 		oldmsg=email.message_from_string(message)
@@ -3079,7 +3093,7 @@ Password: %PASSWORD%
 				fp.close()
 				attachments+=1
 		if attachments>0:
-			result,zipfile=pdf.create_zipfile(tempdir,pw)
+			result,zipfile=pdf.create_zipfile(tempdir,pw,containerfile="attachmentcontainer.zip")
 			if result==True:
 				msg= MIMEBase("application", "zip")
 				msg.set_payload(zipfile)
@@ -3096,6 +3110,7 @@ Password: %PASSWORD%
 		self._del_tempfile(fp.name)
 		try:
 			shutil.rmtree(tempdir)
+			pass
 		except:
 			self.log("Couldn't delete tempdir '%s'"%tempdir)
 			self.log_traceback()
