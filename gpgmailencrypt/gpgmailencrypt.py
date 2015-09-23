@@ -1773,7 +1773,7 @@ class gme:
 			pwlength=5
 		elif pwlength>32:
 			pwlength=32
-		nonletters="0123456789+-*/"
+		nonletters="0123456789+-*/@"
 		pwkeys="ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstvwxyz"+nonletters
 		return ''.join(random.SystemRandom().choice(pwkeys) for _ in range(pwlength))
 	####################
@@ -3046,7 +3046,7 @@ class gme:
 								"TO":html.escape(self._decode_header(newmsg["To"])),
 								"DATE":newmsg["Date"],
 								"PASSWORD":html.escape(pw),
-								"SUBJECT":html.escape(self._decode_header(newmsg["Subject"])}))
+								"SUBJECT":html.escape(self._decode_header(newmsg["Subject"]))})
 				msg=MIMEMultipart()
 				msg.set_type("multipart/alternative")
 				res,htmlheader,htmlbody,htmlfooter=self._split_html(msgtxt)
@@ -3079,8 +3079,9 @@ class gme:
 			encoders.encode_base64(msg)
 			newmsg.attach(msg)
 			self._count_pdfmails+=1
+			self._count_encryptedmails+=1
 		else:
-			newmsg=None
+			return None
 		oldmsg=email.message_from_string(message)
 		attachments=0
 		tempdir = tempfile.mkdtemp()
