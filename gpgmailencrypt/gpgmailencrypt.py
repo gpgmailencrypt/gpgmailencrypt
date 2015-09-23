@@ -18,8 +18,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.1.0.delta"
-DATE="22.09.2015"
+VERSION="2.1.0epsilon"
+DATE="23.09.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -161,6 +161,8 @@ Fallback encryption is encrypted pdf")
 	print ("passwordlength=20				#Length of the automatic created password")
 	print ("passwordlifetime=172800				#lifetime for autocreated passwods in seconds. Default is 48 hours")
 	print ("7zipcommand=/usr/bin7za				#path where to find 7za")
+	print ("securezipcontainer=False			#attachments will be stored in an encrypted zip file. If this option is true,")
+	print ("						#the directory will be also encrypted")
 	print ("")
 	print ("[smimeuser]")
 	print ("smime.user@domain.com = user.pem[,cipher]	#public S/MIME key file [,used cipher, see defaultcipher]")
@@ -1367,6 +1369,7 @@ class gme:
 		self._PDFCREATECMD="/usr/local/bin/email2pdf"
 		self._PDFENCRYPTCMD="/usr/bin/pdftk"
 		self._PDFDOMAINS=["localhost"]
+		self._PDFSECUREZIPCONTAINER=True
 		self._PDFPASSWORDLENGTH=10
 		self._PDFPASSWORDLIFETIME=48*60*60
 		self._7ZIPCMD="/usr/bin/7za"
@@ -1514,6 +1517,8 @@ class gme:
 				self._PDFPASSWORDLENGTH=_cfg.getint('pdf','passwordlength')
 			if _cfg.has_option('pdf','passwordlifetime'):
 				self._PDFPASSWORDLIFETIME=_cfg.getint('pdf','passwordlifetime')
+			if _cfg.has_option('pdf','securezipcontainer'):
+				self._PDFSECUREZIPCONTAINER=_cfg.getboolean('pdf','securezipcontainer')
 		if _cfg.has_section('smime'):
 			if _cfg.has_option('smime','opensslcommand'):
 				self._SMIMECMD=_cfg.get('smime','opensslcommand')
@@ -3094,7 +3099,16 @@ class gme:
 				fp.close()
 				attachments+=1
 		if attachments>0:
-			result,zipfile=pdf.create_zipfile(tempdir,pw,containerfile="attachmentcontainer.zip")
+			if self._PDFSECUREZIPCONTAINER==True:
+				try:
+					content=self._LOCALEDB[self._LOCALE][2]
+				except:
+					self.log("wrong locale '%s'"%self._LOCALE,"w")
+					content=self._LOCALEDB["EN"][2]
+				content="%s.zip"%content
+			else:
+				content=None
+			result,zipfile=pdf.create_zipfile(tempdir,pw,containerfile=content)
 			if result==True:
 				msg= MIMEBase("application", "zip")
 				msg.set_payload(zipfile)
