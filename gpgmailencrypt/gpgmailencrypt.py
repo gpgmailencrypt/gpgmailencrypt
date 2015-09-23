@@ -753,51 +753,6 @@ class _PDF:
 		else:
 			self._keyhome=''
 	@_dbg
-	def create_zipfile(self,directory,password,containerfile=None):
-		f=self.parent._new_tempfile()
-		self.parent.debug("_PDF.create_file _new_tempfile %s"%f.name)
-		f.close()
-		fname=f.name
-		if containerfile!=None:
-			tempdir = tempfile.mkdtemp()
-			fname="%s/%s"%(tempdir,containerfile)
-			self.parent.debug("ZIP creation command: '%s'" %' '.join(self._createzipcommand_fromdir(fname,directory,password)))
-			_result = subprocess.call( ' '.join(self._createzipcommand_fromdir(fname,directory,None,compress=False)),shell=True ) 
-			directory=tempdir
-			if _result !=0:
-				self.parent.log("Error executing command (Error code %d)"%_result,"e")
-				try:
-					shutil.rmtree(tempdir)
-				except:
-					pass
-				return result,None
-		self.parent.debug("ZIP creation command: '%s'" %' '.join(self._createzipcommand_fromdir(f.name,directory,password)))
-		_result = subprocess.call( ' '.join(self._createzipcommand_fromdir(f.name,directory,password)),shell=True ) 
-		try:
-			shutil.rmtree(tempdir)
-		except:
-			pass
-		if _result !=0:
-			self.parent.log("Error executing command (Error code %d)"%_result,"e")
-			return result,None
-		else:
-			result=True
-		res=open(f.name+".zip",mode="br")
-		self.parent.debug("ZIP_file binary open")
-		encdata=res.read()
-		res.close()
-		os.rename(f.name+".zip",f.name)
-		self.parent._del_tempfile(f.name)
-		return result,encdata
-	@_dbg
-	def _createzipcommand_fromdir(self,resultfile,directory,password, compress=True):
-		cmd=[self.parent._7ZIPCMD, "a",resultfile, "%s/*"%directory,"-tzip","-mem=AES256",">/dev/null"]
-		if password!=None:
-			cmd.insert(4,"-p%s"%password)
-		if compress==True:
-			cmd.insert(4,"-mx5")
-		return cmd
-	@_dbg
 	def create_pdffile(self,password,filename=None):
 		result=False
 		if filename:
@@ -850,6 +805,58 @@ class _PDF:
 	@_dbg
 	def _encryptcommand_fromfile(self,fromfile,tofile,password):
 		cmd=[self.parent._PDFENCRYPTCMD,fromfile, "output",tofile,"user_pw","\"%s\""%password]
+		return cmd
+###########
+#CLASS _ZIP
+###########
+class _ZIP:
+	def __init__(self, parent):
+		self.parent=parent
+		self.compresslevel=5
+	@_dbg
+	def create_zipfile(self,directory,password,containerfile=None):
+		f=self.parent._new_tempfile()
+		self.parent.debug("_PDF.create_file _new_tempfile %s"%f.name)
+		f.close()
+		fname=f.name
+		if containerfile!=None:
+			tempdir = tempfile.mkdtemp()
+			fname="%s/%s"%(tempdir,containerfile)
+			self.parent.debug("ZIP creation command: '%s'" %' '.join(self._createzipcommand_fromdir(fname,directory,password)))
+			_result = subprocess.call( ' '.join(self._createzipcommand_fromdir(fname,directory,None,compress=False)),shell=True ) 
+			directory=tempdir
+			if _result !=0:
+				self.parent.log("Error executing command (Error code %d)"%_result,"e")
+				try:
+					shutil.rmtree(tempdir)
+				except:
+					pass
+				return result,None
+		self.parent.debug("ZIP creation command: '%s'" %' '.join(self._createzipcommand_fromdir(f.name,directory,password)))
+		_result = subprocess.call( ' '.join(self._createzipcommand_fromdir(f.name,directory,password)),shell=True ) 
+		try:
+			shutil.rmtree(tempdir)
+		except:
+			pass
+		if _result !=0:
+			self.parent.log("Error executing command (Error code %d)"%_result,"e")
+			return result,None
+		else:
+			result=True
+		res=open(f.name+".zip",mode="br")
+		self.parent.debug("ZIP_file binary open")
+		encdata=res.read()
+		res.close()
+		os.rename(f.name+".zip",f.name)
+		self.parent._del_tempfile(f.name)
+		return result,encdata
+	@_dbg
+	def _createzipcommand_fromdir(self,resultfile,directory,password, compress=True):
+		cmd=[self.parent._7ZIPCMD, "a",resultfile, "%s/*"%directory,"-tzip","-mem=AES256",">/dev/null"]
+		if password!=None:
+			cmd.insert(4,"-p%s"%password)
+		if compress==True:
+			cmd.insert(4,"-mx%i"%self.compresslevel)
 		return cmd
 
 #############
@@ -3063,8 +3070,7 @@ class gme:
 				msg['To'] = from_addr
 				msg['From'] = self._SYSTEMMAILFROM
 				self.encrypt_mails(msg.as_string(),from_addr)
-				
-			msgtxt=self._load_mailmaster("02-pdfmail","Content of this e-mail is stored in an pdf attachment")
+			msgtxt=self._load_mailmaster("02-pdfmail","Content of this e-mail is stored in an pdf attachment.")
 			msg=MIMEMultipart()
 			msg.set_type("multipart/alternative")
 			res,htmlheader,htmlbody,htmlfooter=self._split_html(msgtxt)
@@ -3090,6 +3096,7 @@ class gme:
 		oldmsg=email.message_from_string(message)
 		attachments=0
 		tempdir = tempfile.mkdtemp()
+		Zip=_ZIP(self)
 		for m in oldmsg.walk():
 			if m.get_param( 'attachment', None, 'Content-Disposition' ) is not None:
 				contenttype=m.get_content_type()
@@ -3108,7 +3115,7 @@ class gme:
 				content="%s.zip"%content
 			else:
 				content=None
-			result,zipfile=pdf.create_zipfile(tempdir,pw,containerfile=content)
+			result,zipfile=Zip.create_zipfile(tempdir,pw,containerfile=content)
 			if result==True:
 				msg= MIMEBase("application", "zip")
 				msg.set_payload(zipfile)
