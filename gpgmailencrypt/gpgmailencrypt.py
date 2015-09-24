@@ -160,7 +160,12 @@ Fallback encryption is encrypted pdf")
 	print ("pdfdomains=localhost				#a comma separated list of sender domains, which are allowed to use pdf-encrypt")
 	print ("passwordlength=20				#Length of the automatic created password")
 	print ("passwordlifetime=172800				#lifetime for autocreated passwods in seconds. Default is 48 hours")
+	print ("")
+	print ("[zip]")
 	print ("7zipcommand=/usr/bin7za				#path where to find 7za")
+	print ("defaultcipher=ZipCrypto				#ZipCrypto|AES128|AES256")
+	print ("compressionlevel=5				#1,3,5,7,9  with 1:lowest compression, but very fast, 9 is ")
+	print ("						# highest compression, but very slow, default is 5")
 	print ("securezipcontainer=False			#attachments will be stored in an encrypted zip file. If this option is true,")
 	print ("						#the directory will be also encrypted")
 	print ("")
@@ -812,7 +817,6 @@ class _PDF:
 class _ZIP:
 	def __init__(self, parent):
 		self.parent=parent
-		self.compresslevel=5
 	@_dbg
 	def create_zipfile(self,directory,password,containerfile=None):
 		f=self.parent._new_tempfile()
@@ -852,11 +856,16 @@ class _ZIP:
 		return result,encdata
 	@_dbg
 	def _createzipcommand_fromdir(self,resultfile,directory,password, compress=True):
-		cmd=[self.parent._7ZIPCMD, "a",resultfile, "%s/*"%directory,"-tzip","-mem=AES256",">/dev/null"]
+		cipher="ZipCrypto"
+		if self.parent._ZIPCIPHER=="AES128":
+			cipher="AES128"
+		elif self.parent._ZIPCIPHER=="AES256":
+			cipher="AES256"
+		cmd=[self.parent._7ZIPCMD, "a",resultfile, "%s/*"%directory,"-tzip","-mem=%s"%cipher,">/dev/null"]
 		if password!=None:
 			cmd.insert(4,"-p%s"%password)
 		if compress==True:
-			cmd.insert(4,"-mx%i"%self.compresslevel)
+			cmd.insert(4,"-mx%i"%self.parent._ZIPCOMPRESSION)
 		return cmd
 
 #############
@@ -1376,10 +1385,12 @@ class gme:
 		self._PDFCREATECMD="/usr/local/bin/email2pdf"
 		self._PDFENCRYPTCMD="/usr/bin/pdftk"
 		self._PDFDOMAINS=["localhost"]
-		self._PDFSECUREZIPCONTAINER=True
+		self._PDFSECUREZIPCONTAINER=False
 		self._PDFPASSWORDLENGTH=10
 		self._PDFPASSWORDLIFETIME=48*60*60
 		self._7ZIPCMD="/usr/bin/7za"
+		self._ZIPCIPHER="ZipCrypto"
+		self._ZIPCOMPRESSION=5
 		self._ADMINS=[]
 		self._read_configfile()
 		if self._DEBUG:
@@ -1509,8 +1520,6 @@ class gme:
 				self._USEPDF=_cfg.getboolean('pdf','useenryptpdf')
 			if not self._USEPDF and self._PREFERRED_ENCRYPTION=="PDF":
 				self._PREFERRED_ENCRYPTION="PGPINLINE"
-			if _cfg.has_option('pdf','7zipcommand'):
-				self._7ZIPCMD=_cfg.get('pdf','7zipcommand')
 			if _cfg.has_option('pdf','email2pdfcommand'):
 				self._PDFCREATECMD=_cfg.get('pdf','email2pdfcommand')
 			if _cfg.has_option('pdf','pdftkcommand'):
@@ -1524,8 +1533,25 @@ class gme:
 				self._PDFPASSWORDLENGTH=_cfg.getint('pdf','passwordlength')
 			if _cfg.has_option('pdf','passwordlifetime'):
 				self._PDFPASSWORDLIFETIME=_cfg.getint('pdf','passwordlifetime')
-			if _cfg.has_option('pdf','securezipcontainer'):
-				self._PDFSECUREZIPCONTAINER=_cfg.getboolean('pdf','securezipcontainer')
+		if _cfg.has_section('zip'):
+			try:
+				self._PDFSECUREZIPCONTAINER=_cfg.getboolean('zip','securezipcontainer')
+			except:
+				pass
+			try:
+				self._7ZIPCMD=_cfg.get('zip','7zipcommand')
+			except:
+				pass
+			try:
+				self._ZIPCIPHER=_cfg.get('zip','defaultcipher').upper().strip()
+			except:
+				pass
+			try:
+				self._ZIPCOMPRESSION=_cfg.getint('zip','compressionlevel')
+				if self._ZIPCOMPRESSION not in [1,3,5,7,9]:
+					self._ZIPCOMPRESSION=5
+			except:
+				pass
 		if _cfg.has_section('smime'):
 			if _cfg.has_option('smime','opensslcommand'):
 				self._SMIMECMD=_cfg.get('smime','opensslcommand')
