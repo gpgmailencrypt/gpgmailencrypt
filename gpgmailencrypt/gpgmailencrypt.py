@@ -4,7 +4,7 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 """
-gpgmailencrypt is an encrypting e-mail-gateway, that  can encrypt e-mails.
+gpgmailencrypt is an encrypting e-mail gateway, that  can encrypt e-mails.
 It supports
 * PGP/Inline
 * PGP/Mime
@@ -18,8 +18,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.1.0epsilon"
-DATE="23.09.2015"
+VERSION="2.1.0zeta"
+DATE="25.09.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -402,7 +402,7 @@ class _GPG:
 		if recipient:
 			self.set_recipient(recipient)
 		if len(self._recipient)==0:
-			log("GPG encrypt file: No recipient set!","e")
+			self.parent.log("GPG encrypt file: No recipient set!","e")
 			return result,None
 		f=self.parent._new_tempfile()
 		self.parent.debug("_GPG.encrypt_file _new_tempfile %s"%f.name)
@@ -574,7 +574,7 @@ class _SMIME:
 		if recipient:
 			self.set_recipient(recipient)
 		if len(self._recipient)==0:
-			log("SMIME encrypt file: No recipient set!","e")
+			self.parent.log("SMIME encrypt file: No recipient set!","e")
 			return result,None
 		f=self.parent._new_tempfile()
 		self.parent.debug("_SMIME.encrypt_file _new_tempfile %s"%f.name)
@@ -1234,6 +1234,7 @@ class gme:
 	"SE":("möte","fil","content","attachment"),
 	}
 	_encryptheader="X-GPGMailencrypt"
+	_pdfencryptheader="X-PDFEncrypted"
 	#########
 	#__init__
 	#########
@@ -1406,7 +1407,7 @@ class gme:
 		try:
 			_cfg.read(self._CONFIGFILE)
 		except:
-			log("Could not read config file '%s'"%self._CONFIGFILE,"e")
+			self.log("Could not read config file '%s'"%self._CONFIGFILE,"e")
 			return
 		if _cfg.has_section('default'):
 			if _cfg.has_option('default','add_header'):
@@ -1698,8 +1699,8 @@ class gme:
 		try:
 			f=open(pwfile)
 		except:
-			log("hksmtpserver: Config file could not be read","e")
-			log_traceback()
+			self.log("hksmtpserver: Config file could not be read","e")
+			self.log_traceback()
 			exit(5)
 		txt=f.read()
 		f.close()
@@ -2504,9 +2505,22 @@ class gme:
 		else:
 			return False
 	@_dbg
+	def is_pdfencrypted(self,msg):
+		"returns whether or not the email is already PDF encrypted"
+		if type(msg)==bytes:
+			return False
+		m=msg
+		if isinstance(msg,email.message.Message):
+			m=msg.as_string()
+		find=re.search("^%s:"%self._pdfencryptheader,m,re.I|re.MULTILINE)
+		if find:
+			return True
+		else:
+			return False
+	@_dbg
 	def is_encrypted(self,msg):
 		"returns whether or not the email is already encrypted"
-		if self.is_pgpmimeencrypted(msg) or self.is_pgpinlineencrypted(msg) or self.is_smimeencrypted(msg):
+		if self.is_pgpmimeencrypted(msg) or self.is_pgpinlineencrypted(msg) or self.is_smimeencrypted(msg) or self.is_pdfencrypted(msg):
 			return True
 		else:
 			return False
@@ -3077,9 +3091,9 @@ class gme:
 			if len(addr)==2:
 				domain = addr[1]
 			if domain in self._PDFDOMAINS:
-				msgtxt=self._load_mailmaster("01-pdfpassword","<table><tr><td>Subject:</td><td>%SUBJECT%</td></tr>\
-<tr><td>SFrom:</td><td>%FROM%</td></tr><tr><td>STo:</td><td>%TO%</td></tr><tr><td>SDate:</td><td>%DATE%</td></tr>\
-<tr><td>SPassword:</td><td>%PASSWORD%</td></tr></table>")
+				msgtxt=self._load_mailmaster("01-pdfpassword","<table><tr><td>Subject:</td><td>%SUBJECT%</td></tr>"
+					"<tr><td>From:</td><td>%FROM%</td></tr><tr><td>To:</td><td>%TO%</td></tr><tr><td>Date:</td><td>%DATE%</td></tr>"
+					"<tr><td>Password:</td><td>%PASSWORD%</td></tr></table>")
 				msgtxt=replace_variables(msgtxt,{"FROM":html.escape(from_addr),
 								"TO":html.escape(self._decode_header(newmsg["To"])),
 								"DATE":newmsg["Date"],
@@ -3162,6 +3176,8 @@ class gme:
 		except:
 			self.log("Couldn't delete tempdir '%s'"%tempdir)
 			self.log_traceback()
+		if not self._pdfencryptheader in newmsg:
+			newmsg.add_header(self._pdfencryptheader,self._encryptgpgcomment)
 		return newmsg
 	####################
 	#encrypt_single_mail
