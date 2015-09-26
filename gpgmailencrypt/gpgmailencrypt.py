@@ -2041,8 +2041,10 @@ class gme:
 				return False
 		if maintype=="application":
 			#compressed archives
-			if subtype in ["zip","x-compressed","x-gzip","x-gtar",
-					"x-rar-compressed","x-7z-compressed","x-bzip","x-bzip2","pdf"]:
+			if subtype in ["zip","x-compressed","x-compress","x-gzip","x-gtar","x-lzip",
+					"x-lzma","x-lzh","x-lzop","x-zoo","x-rar-compressed","x-7z-compressed",
+					"x-bzip","x-bzip2","vnd.android.package-archive","pdf",
+					"x-arj","vnd.ms-cab-compressed","x-cfs-compressed","x-stuffit","x-stuffitx"]:
 				return False
 			#Microsoft Office
 			elif subtype in ["application/vnd.openxmlformats-officedocument.wordprocessingml.document",
