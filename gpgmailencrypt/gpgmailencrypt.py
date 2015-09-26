@@ -104,6 +104,7 @@ def show_usage():
 	print ("-o p --output p: valid values for p are 'mail' or 'stdout', alternatively you can set an outputfile with -m")
 	print ("-x --example:    print example config file")
 	print ("-v --verbose:    print debugging information into _logfile")
+	print ("-z --zip:        zip attachments")
 	print ("")
 ####################
 #print_exampleconfig
@@ -1392,7 +1393,7 @@ class gme:
 		self._7ZIPCMD="/usr/bin/7za"
 		self._ZIPCIPHER="ZipCrypto"
 		self._ZIPCOMPRESSION=5
-		self._ZIPATTACHMENTS=True
+		self._ZIPATTACHMENTS=False
 		self._ADMINS=[]
 		self._read_configfile()
 		if self._DEBUG:
@@ -1554,6 +1555,11 @@ class gme:
 					self._ZIPCOMPRESSION=5
 			except:
 				pass
+			try:
+				self._ZIPATTACHMENTS=_cfg.getboolean('zip','zipattachments')
+			except:
+				pass
+	
 		if _cfg.has_section('smime'):
 			if _cfg.has_option('smime','opensslcommand'):
 				self._SMIMECMD=_cfg.get('smime','opensslcommand')
@@ -1599,8 +1605,8 @@ class gme:
 		receiver=[]
 		try:
 			cl=sys.argv[1:]
-			_opts,_remainder=getopt.gnu_getopt(cl,'ac:de:f:hk:l:m:n:o:vxy',
-	  		['addheader','config=','daemon','example','help','keyhome=','log=','output=','verbose','version'])
+			_opts,_remainder=getopt.gnu_getopt(cl,'ac:de:f:hk:l:m:n:o:vxyz',
+	  		['addheader','config=','daemon','example','help','keyhome=','log=','output=','verbose','version','zip'])
 		except getopt.GetoptError as e:
 			self._LOGGING=self.l_stderr
 			self.log("unknown commandline parameter '%s'"%e,"e")
@@ -1681,6 +1687,8 @@ class gme:
 			if _opt  =='-x' or  _opt == '--example':
 		   		print_exampleconfig()
 		   		exit(0)
+			if (_opt  =='-z' or  _opt == '--zip'):
+			   	self._ZIPATTACHMENTS=True
 		if not self._RUNMODE==self.m_daemon:
 			if len(_remainder)>0 :
 				receiver=_remainder[0:]
