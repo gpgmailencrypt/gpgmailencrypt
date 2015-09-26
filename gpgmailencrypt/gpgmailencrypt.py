@@ -153,13 +153,16 @@ Fallback encryption is encrypted pdf")
 	print ("extractkey= no					#automatically scan emails and extract smime public keys to 'keyextractdir'")
 	print ("keyextractdir=~/.smime/extract")
 	print ("")
+	print ("[smimeuser]")
+	print ("smime.user@domain.com = user.pem[,cipher]	#public S/MIME key file [,used cipher, see defaultcipher in the smime section]")
+	print ("")
 	print ("[pdf]")
 	print ("email2pdfcommand=/usr/bin/email2pdf		#path where to find email2pdf (needed for creating pdfs,")
 	print ("						#see https://github.com/andrewferrier/email2pdf)")
 	print ("pdftkcommand=/usr/bin/pdftk			#path where to find pdftk (needed for encrypting pdf files")
 	print ("pdfdomains=localhost				#a comma separated list of sender domains, which are allowed to use pdf-encrypt")
 	print ("passwordlength=20				#Length of the automatic created password")
-	print ("passwordlifetime=172800				#lifetime for autocreated passwods in seconds. Default is 48 hours")
+	print ("passwordlifetime=172800				#lifetime for autocreated passwords in seconds. Default is 48 hours")
 	print ("")
 	print ("[zip]")
 	print ("7zipcommand=/usr/bin7za				#path where to find 7za")
@@ -168,9 +171,6 @@ Fallback encryption is encrypted pdf")
 	print ("						# highest compression, but very slow, default is 5")
 	print ("securezipcontainer=False			#attachments will be stored in an encrypted zip file. If this option is true,")
 	print ("						#the directory will be also encrypted")
-	print ("")
-	print ("[smimeuser]")
-	print ("smime.user@domain.com = user.pem[,cipher]	#public S/MIME key file [,used cipher, see defaultcipher]")
 	print ("")
 	print ("[daemon]")
 	print ("host = 127.0.0.1				#smtp host")
@@ -1392,6 +1392,7 @@ class gme:
 		self._7ZIPCMD="/usr/bin/7za"
 		self._ZIPCIPHER="ZipCrypto"
 		self._ZIPCOMPRESSION=5
+		self._ZIPATTACHMENTS=True
 		self._ADMINS=[]
 		self._read_configfile()
 		if self._DEBUG:
@@ -1960,6 +1961,95 @@ class gme:
 		except:
 			self.log("mail %i could not be removed from queue"%m_id)
 			self.log_traceback()
+
+	################
+	#zip_attachments
+	################
+	@_dbg
+	def zip_attachments(self,mailtext):
+		message = email.message_from_string( mailtext )		
+		tempdir = tempfile.mkdtemp()
+		Zip=_ZIP(self)
+		for m in message.walk():
+			contenttype=m.get_content_type()
+			if (m.get_param( 'attachment', None, 'Content-Disposition' ) is not None) and self.is_compressable(contenttype):
+				is_text=m.get_content_maintype()=="text"
+				charset=m.get_param("charset",header="Content-Type")
+				if charset==None or charset.upper()=="ASCII" or len(charset)==0:
+					charset="UTF-8"
+				cte=m["Content-Transfer-Encoding"]
+				if not cte:
+					cte="8bit"
+				filename = m.get_filename()
+				zipFilename = "%s.zip"%filename
+				zipFilenamecD,zipFilenamecT=_encodefilename(zipFilename)
+
+				raw_payload = m.get_payload(decode=not is_text)
+				if is_text:
+					raw_payload=_decodetxt(raw_payload,cte,charset)	
+					m.del_param("charset")	
+					m.set_param("charset",charset)
+					raw_payload=raw_payload.encode(charset,_unicodeerror)
+				fp=open("%s/%s"%(tempdir,filename),"wb")
+				fp.write(raw_payload)
+				fp.close()
+				result,zipfile=Zip.create_zipfile(tempdir,password=None,containerfile=None)
+				try:
+					os.remove(fp.name)
+				except:
+					pass
+				if result==True:
+					if m["Content-Transfer-Encoding"]:
+						del m["Content-Transfer-Encoding"]
+					m["Content-Transfer-Encoding"]="base64"
+					m.set_type( 'application/zip')
+					if m["Content-Disposition"]:
+						del m["Content-Disposition"]
+					m.add_header('Content-Disposition', 'attachment; filename*="%s"' % zipFilenamecD)
+					m.set_param( 'name', zipFilenamecT )
+					m.set_payload(str(base64.encodebytes(zipfile),"ascii"))
+		try:
+			shutil.rmtree(tempdir)
+		except:
+			pass
+		return message.as_string()
+	################
+	#is_compressable
+	################
+	@_dbg
+	def is_compressable(self,filetype):
+		maintype,subtype=filetype.lower().split("/")
+		if maintype=="video":
+			return False
+		if maintype=="image":
+			if subtype in ["bmp","x-windows-bmp"]:
+				return True
+			else:
+				return False
+		if maintype=="audio":
+			if subtype in ["x-aiff","x-wav"]:
+				return True
+			else:
+				return False
+		if maintype=="application":
+			#compressed archives
+			if subtype in ["zip","x-compressed","x-gzip","x-gtar",
+					"x-rar-compressed","x-7z-compressed","x-bzip","x-bzip2","pdf"]:
+				return False
+			#Microsoft Office
+			elif subtype in ["application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+			 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+			 "application/vnd.openxmlformats-officedocument.presentationml.presentation"]:
+				return False
+			#Openoffice/LibreOffice
+			elif subtype in ["vnd.oasis.opendocument.text","vnd.oasis.opendocument.spreadsheet",
+			"vnd.oasis.opendocument.presentation","vnd.oasis.opendocument.graphics",
+			"vnd.oasis.opendocument.chart","vnd.oasis.opendocument.formula",
+			"vnd.oasis.opendocument.image","vnd.oasis.opendocument.text-master",
+			"vnd.oasis.opendocument.text-template","vnd.oasis.opendocument.spreadsheet-template",
+			"vnd.oasis.opendocument.presentation-template","vnd.oasis.opendocument.graphics-template"]:
+				return False
+		return True
 	#############
 	#_send_rawmsg
 	#############
@@ -3192,6 +3282,7 @@ class gme:
 		method=self.get_preferredencryptionmethod(to_addr)
 		self.debug("GPG encrypt possible %i / %s"%(g_r,to_gpg))
 		self.debug("SMIME encrypt possible %i / %s"%(s_r,to_smime))
+		self.debug("Prefer PDF %i "%_prefer_pdf)
 		self._count_totalmails+=1
 		if method=="PGPMIME":
 			_prefer_gpg=True
@@ -3214,6 +3305,8 @@ class gme:
 		if not s_r and not g_r and not _prefer_pdf:
 			m="Email not encrypted, public key for '%s' not found"%to_addr
 			self.log(m)
+			if self._ZIPATTACHMENTS:
+				mailtext=self.zip_attachments(mailtext)
 			self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
 			return
 		if self.is_encrypted(mailtext):
@@ -3231,18 +3324,21 @@ class gme:
 				pdf_to_addr=to_addr
 
 			mresult=self.encrypt_pdf_mail(mailtext,pdf_to_addr,from_addr,to_addr)
-		elif _prefer_gpg:
-			self.debug("PREFER GPG")
-			if g_r:
-				mresult=self.encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
-			else:
-				mresult=self.encrypt_smime_mail(mailtext,to_smime,from_addr,to_addr)
 		else:
-			self.debug("PREFER S/MIME")
-			if s_r:
-				mresult=self.encrypt_smime_mail(mailtext,to_smime,from_addr,to_addr)
-			else:
-				mresult=self.encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
+			if self._ZIPATTACHMENTS:
+				mailtext=self.zip_attachments(mailtext)
+			if _prefer_gpg:
+				self.debug("PREFER GPG")
+				if g_r:
+					mresult=self.encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
+				else:
+					mresult=self.encrypt_smime_mail(mailtext,to_smime,from_addr,to_addr)
+			else :
+				self.debug("PREFER S/MIME")
+				if s_r:
+					mresult=self.encrypt_smime_mail(mailtext,to_smime,from_addr,to_addr)
+				else:
+					mresult=self.encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
 		if mresult:
 			self.debug("send encrypted mail")
 			self._send_msg(queue_id,mresult,from_addr,to_addr )
