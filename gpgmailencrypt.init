@@ -11,15 +11,12 @@
 ### END INIT INFO
 
 # Author: Horst Knorr <gpgmailencrypt@gmx.de>
-#
-# Please remove the "Author" lines above and replace them
-# with your own name if you copy and modify this script.
 
 # Do NOT "set -e"
 
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
-DESC="starts gpgmailencrypt, a gpg and smime encryption mail server"
+DESC="starts gpgmailencrypt, a gpg,smime, and pdf encryption mail server/gateway"
 NAME=gpgmailencrypt
 DIR=/usr/local/bin
 DAEMON_ARGS="--daemon"
