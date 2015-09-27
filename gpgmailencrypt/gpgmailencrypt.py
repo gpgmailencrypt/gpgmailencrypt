@@ -18,8 +18,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.1.0zeta"
-DATE="25.09.2015"
+VERSION="2.1.0eta"
+DATE="27.09.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -1410,6 +1410,7 @@ class gme:
 			_cfg.read(self._CONFIGFILE)
 		except:
 			self.log("Could not read config file '%s'"%self._CONFIGFILE,"e")
+			self.log_traceback()
 			return
 		if _cfg.has_section('default'):
 			if _cfg.has_option('default','add_header'):
@@ -1969,7 +1970,6 @@ class gme:
 		except:
 			self.log("mail %i could not be removed from queue"%m_id)
 			self.log_traceback()
-
 	################
 	#zip_attachments
 	################
@@ -1989,17 +1989,31 @@ class gme:
 				if not cte:
 					cte="8bit"
 				filename = m.get_filename()
+				self.debug("zipping file '%s'"%filename)
 				zipFilename = "%s.zip"%filename
 				zipFilenamecD,zipFilenamecT=_encodefilename(zipFilename)
-
-				raw_payload = m.get_payload(decode=not is_text)
+				self.debug("Content-Type=%s"%contenttype)
+				if  isinstance( m.get_payload() , list ):
+					for part in m.get_payload():
+						if isinstance(part,email.message.Message):
+							raw_payload=part.as_bytes()
+							break
+						else:
+							continue
+				else:
+					raw_payload = m.get_payload(decode=not is_text)
 				if is_text:
 					raw_payload=_decodetxt(raw_payload,cte,charset)	
 					m.del_param("charset")	
 					m.set_param("charset",charset)
 					raw_payload=raw_payload.encode(charset,_unicodeerror)
 				fp=open("%s/%s"%(tempdir,filename),"wb")
-				fp.write(raw_payload)
+
+				try:
+					fp.write(raw_payload)
+				except:
+					self.log("File '%s' could not be written"%filename)
+					self.log_traceback()
 				fp.close()
 				result,zipfile=Zip.create_zipfile(tempdir,password=None,containerfile=None)
 				try:
@@ -2042,8 +2056,10 @@ class gme:
 		if maintype=="application":
 			#compressed archives
 			if subtype in ["zip","x-compressed","x-compress","x-gzip","x-gtar","x-lzip",
-					"x-lzma","x-lzh","x-lzop","x-zoo","x-rar-compressed","x-7z-compressed",
-					"x-bzip","x-bzip2","vnd.android.package-archive","pdf",
+					"x-lzma","x-lzh","x-lzip","x-lzop","x-zoo","x-rar-compressed","x-7z-compressed",
+					"x-bzip","x-bzip2","vnd.android.package-archive","pdf","x-snappy-framed","x-xz",
+					"x-ace-compressed","x-astrotite-afa","x-alz-compressed","x-b1","x-dar","x-dgc-compressed",
+					"x-apple-diskimage","x-apple-diskimage","x-lzx",
 					"x-arj","vnd.ms-cab-compressed","x-cfs-compressed","x-stuffit","x-stuffitx"]:
 				return False
 			#Microsoft Office
@@ -3241,8 +3257,23 @@ class gme:
 			if m.get_param( 'attachment', None, 'Content-Disposition' ) is not None:
 				contenttype=m.get_content_type()
 				filename = m.get_filename()
+				self.debug("Content-Type=%s"%contenttype)
+				if  isinstance( m.get_payload() , list ):
+					for part in m.get_payload():
+						if isinstance(part,email.message.Message):
+							payload=part.as_bytes()
+							break
+						else:
+							continue
+				else:
+					payload=m.get_payload(decode=True)
+				self.debug("Open write: %s/%s"%(tempdir,filename))
 				fp=open("%s/%s"%(tempdir,filename),"wb")
-				fp.write(m.get_payload(decode=True))
+				try:
+					fp.write(payload)
+				except:
+					self.log("File '%s' could not be written"%filename)
+					self.log_traceback()
 				fp.close()
 				attachments+=1
 		if attachments>0:
@@ -3793,9 +3824,9 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 			self.parent.log("hksmtpserver: Bug:Exception!")
 			self.parent.log_traceback()
 		return
-##############
+###############
 #_hksmtpchannel
-##############
+###############
 class _hksmtpchannel(smtpd.SMTPChannel):
 	"helper class for _gpgmailencryptserver"
 	def __init__(self, 
