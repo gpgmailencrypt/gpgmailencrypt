@@ -2044,7 +2044,8 @@ class gme:
 		if maintype=="video":
 			return False
 		if maintype=="image":
-			if subtype in ["bmp","x-windows-bmp"]:
+			if subtype in ["bmp","x-windows-bmp","svg+xml","tiff",
+					"photoshop","x-photoshop","psd"]:
 				return True
 			else:
 				return False
@@ -2057,7 +2058,7 @@ class gme:
 			#compressed archives
 			if subtype in ["zip","x-compressed","x-compress","x-gzip","x-gtar","x-lzip",
 					"x-lzma","x-lzh","x-lzip","x-lzop","x-zoo","x-rar-compressed","x-7z-compressed",
-					"x-bzip","x-bzip2","vnd.android.package-archive","pdf","x-snappy-framed","x-xz",
+					"x-bzip","x-bzip2","vnd.android.package-archive","x-snappy-framed","x-xz",
 					"x-ace-compressed","x-astrotite-afa","x-alz-compressed","x-b1","x-dar","x-dgc-compressed",
 					"x-apple-diskimage","x-apple-diskimage","x-lzx",
 					"x-arj","vnd.ms-cab-compressed","x-cfs-compressed","x-stuffit","x-stuffitx"]:
@@ -2549,7 +2550,7 @@ class gme:
 	#check_encryptpdf
 	#################
 	@_dbg
-	def check_encryptpdf(self,mailtext):
+	def check_encryptsubject(self,mailtext):
 		mail=email.message_from_string(mailtext)
 		subject=self._decode_header(mail["Subject"])
 		self.debug("subject: %s"%mail["Subject"])
@@ -3317,7 +3318,9 @@ class gme:
 	def encrypt_single_mail(self,queue_id,mailtext,from_addr,to_addr):
 		_pgpmime=False
 		_prefer_gpg=True
-		_prefer_pdf=self.check_encryptpdf(mailtext)
+		_prefer_pdf=False
+		mresult=None
+		_encrypt_subject=self.check_encryptsubject(mailtext)
 		g_r,to_gpg=self.check_gpgrecipient(to_addr)
 		s_r,to_smime=self.check_smimerecipient(to_addr)
 		method=self.get_preferredencryptionmethod(to_addr)
@@ -3325,6 +3328,11 @@ class gme:
 		self.debug("SMIME encrypt possible %i / %s"%(s_r,to_smime))
 		self.debug("Prefer PDF %i "%_prefer_pdf)
 		self._count_totalmails+=1
+		domain=''
+		_addr=emailutils.parseaddr(from_addr)[1].split('@')
+		if len(_addr)==2:
+			domain = _addr[1]
+
 		if method=="PGPMIME":
 			_prefer_gpg=True
 			_pgpmime=True
@@ -3334,16 +3342,12 @@ class gme:
 		if method=="SMIME":
 			_prefer_gpg=False
 		if method=="PDF" or self._ALWAYSENCRYPT or _prefer_pdf:
-			domain=''
-			addr=emailutils.parseaddr(from_addr)[1].split('@')
-			if len(addr)==2:
-				domain = addr[1]
 			if domain in self._PDFDOMAINS:
 				_prefer_pdf=True
 		if method=="NONE":
 			g_r=False
 			s_r=False
-		if not s_r and not g_r and not _prefer_pdf:
+		if not s_r and not g_r and not _prefer_pdf and not _encrypt_subject:
 			m="Email not encrypted, public key for '%s' not found"%to_addr
 			self.log(m)
 			if self._ZIPATTACHMENTS:
@@ -3356,30 +3360,30 @@ class gme:
 			self._count_alreadyencryptedmails+=1
 			self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
 			return
-		if _prefer_pdf:
-			self.debug("PREFER PDF")
-			try:
-				pdf_to_addr=self._addressmap[to_addr]
-			except:
-				self.debug("preferpdf _addressmap to_addr not found")
-				pdf_to_addr=to_addr
+		try:
+			pdf_to_addr=self._addressmap[to_addr]
+		except:
+			self.debug("preferpdf _addressmap to_addr not found")
+			pdf_to_addr=to_addr
 
-			mresult=self.encrypt_pdf_mail(mailtext,pdf_to_addr,from_addr,to_addr)
-		else:
+		if (not _prefer_pdf and not _encrypt_subject) or (_encrypt_subject and (g_r or s_r)): 
 			if self._ZIPATTACHMENTS:
 				mailtext=self.zip_attachments(mailtext)
-			if _prefer_gpg:
-				self.debug("PREFER GPG")
-				if g_r:
-					mresult=self.encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
-				else:
-					mresult=self.encrypt_smime_mail(mailtext,to_smime,from_addr,to_addr)
-			else :
-				self.debug("PREFER S/MIME")
-				if s_r:
-					mresult=self.encrypt_smime_mail(mailtext,to_smime,from_addr,to_addr)
-				else:
-					mresult=self.encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
+		if _prefer_gpg:
+			self.debug("PREFER GPG")
+			if g_r:
+				mresult=self.encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
+			elif s_r:
+				mresult=self.encrypt_smime_mail(mailtext,to_smime,from_addr,to_addr)
+		elif _prefer_smime :
+			self.debug("PREFER S/MIME")
+			if s_r:
+				mresult=self.encrypt_smime_mail(mailtext,to_smime,from_addr,to_addr)
+			elif g_r:
+				mresult=self.encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
+		if not mresult and (_encrypt_subject or _prefer_pdf):
+			if domain in self._PDFDOMAINS:
+				mresult=self.encrypt_pdf_mail(mailtext,pdf_to_addr,from_addr,to_addr)			
 		if mresult:
 			self.debug("send encrypted mail")
 			self._send_msg(queue_id,mresult,from_addr,to_addr )
