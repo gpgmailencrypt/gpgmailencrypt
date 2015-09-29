@@ -18,8 +18,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.1.0eta"
-DATE="27.09.2015"
+VERSION="2.1.0theta"
+DATE="28.09.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -818,6 +818,9 @@ class _PDF:
 class _ZIP:
 	def __init__(self, parent):
 		self.parent=parent
+		self.zipcipher=self.parent._ZIPCIPHER
+	def set_zipcipher(self,cipher):
+		self.zipcipher=cipher.upper()
 	@_dbg
 	def create_zipfile(self,directory,password,containerfile=None):
 		f=self.parent._new_tempfile()
@@ -858,9 +861,9 @@ class _ZIP:
 	@_dbg
 	def _createzipcommand_fromdir(self,resultfile,directory,password, compress=True):
 		cipher="ZipCrypto"
-		if self.parent._ZIPCIPHER=="AES128":
+		if self.zipcipher=="AES128":
 			cipher="AES128"
-		elif self.parent._ZIPCIPHER=="AES256":
+		elif self.zipcipher=="AES256":
 			cipher="AES256"
 		cmd=[self.parent._7ZIPCMD, "a",resultfile, "%s/*"%directory,"-tzip","-mem=%s"%cipher,">/dev/null"]
 		if password!=None:
@@ -1271,17 +1274,20 @@ class gme:
 	###################
 	#reset_pdfpasswords
 	###################
+	@_dbg
 	def reset_pdfpasswords(self):
 		self._pdfpasswords=dict()
+		self._read_pdfpasswordfile(self._PDF_PASSWORDFILE)
 	#####################
 	#del_old_pdfpasswords
 	#####################
+	@_dbg
 	def del_old_pdfpasswords(self,age):
 		"age in seconds"
 		deluser=[]
 		for user in self._pdfpasswords:
 			date=self._pdfpasswords[user][1]
-			if age>0 and date + age < time.time():
+			if date>0 and (date + age < time.time()):
 				deluser.append(user)
 		for user in deluser:
 			del self._pdfpasswords[user]
@@ -1390,6 +1396,7 @@ class gme:
 		self._PDFSECUREZIPCONTAINER=False
 		self._PDFPASSWORDLENGTH=10
 		self._PDFPASSWORDLIFETIME=48*60*60
+		self._PDF_PASSWORDFILE="/etc/gpgpdfpasswords.pw"
 		self._7ZIPCMD="/usr/bin/7za"
 		self._ZIPCIPHER="ZipCrypto"
 		self._ZIPCOMPRESSION=5
@@ -1412,6 +1419,7 @@ class gme:
 			self.log("Could not read config file '%s'"%self._CONFIGFILE,"e")
 			self.log_traceback()
 			return
+
 		if _cfg.has_section('default'):
 			if _cfg.has_option('default','add_header'):
 				self._ADDHEADER=_cfg.getboolean('default','add_header')
@@ -1472,6 +1480,7 @@ class gme:
 				e=_cfg.get('logging','debugexcludetext')
 				if len(e)>0:
 					self._DEBUGEXCLUDETEXT=e.split(",")
+
 		if _cfg.has_section('gpg'):
 			if _cfg.has_option('gpg','keyhome'):
 				k=_cfg.get('gpg','keyhome')
@@ -1481,6 +1490,7 @@ class gme:
 				self._GPGCMD=_cfg.get('gpg','gpgcommand')
 			if _cfg.has_option('gpg','allowgpgcomment'):
 				self._ALLOWGPGCOMMENT=_cfg.getboolean('gpg','allowgpgcomment')
+
 		if _cfg.has_section('mailserver'):
 			if _cfg.has_option('mailserver','host'):
 				self._HOST=_cfg.get('mailserver','host')
@@ -1490,12 +1500,15 @@ class gme:
 				self._AUTHENTICATE=_cfg.getboolean('mailserver','authenticate')
 			if _cfg.has_option('mailserver','smtpcredential'):
 				self._SMTP_CREDENTIAL=_cfg.get('mailserver','smtpcredential')
+
 		if _cfg.has_section('usermap'):
 			for (name, value) in _cfg.items('usermap'):
 					self._addressmap[name] = value
+
 		if _cfg.has_section('encryptionmap'):
 			for (name, value) in _cfg.items('encryptionmap'):
-					self._encryptionmap[name] = value
+					self._encryptionmap[name] = value.split(":")
+
 		if _cfg.has_section('daemon'):
 			if _cfg.has_option('daemon','host'):
 				self._SERVERHOST=_cfg.get('daemon','host')
@@ -1519,24 +1532,47 @@ class gme:
 				admins=_cfg.get('daemon','admins').split(",")
 				for a in admins:
 					self._ADMINS.append(a.strip())
+
 		if _cfg.has_section('pdf'):
-			if _cfg.has_option('pdf','useenryptpdf'):
+			try:
 				self._USEPDF=_cfg.getboolean('pdf','useenryptpdf')
+			except:
+				pass
 			if not self._USEPDF and self._PREFERRED_ENCRYPTION=="PDF":
 				self._PREFERRED_ENCRYPTION="PGPINLINE"
-			if _cfg.has_option('pdf','email2pdfcommand'):
+			try:
 				self._PDFCREATECMD=_cfg.get('pdf','email2pdfcommand')
-			if _cfg.has_option('pdf','pdftkcommand'):
+			except:
+				pass
+			try:
 				self._PDFENCRYPTCMD=_cfg.get('pdf','pdftkcommand')
-			if _cfg.has_option('pdf','pdfdomains'):
+			except:
+				pass
+			try:
 				domains=_cfg.get('pdf','pdfdomains').split(",")
 				self._PDFDOMAINS=[]
 				for d in domains:
 					self._PDFDOMAINS.append(d.lower().strip())	
-			if _cfg.has_option('pdf','passwordlength'):
+			except:
+				pass
+			try:
 				self._PDFPASSWORDLENGTH=_cfg.getint('pdf','passwordlength')
-			if _cfg.has_option('pdf','passwordlifetime'):
+			except:
+				pass
+			try:
 				self._PDFPASSWORDLIFETIME=_cfg.getint('pdf','passwordlifetime')
+			except:
+				pass
+			try:
+				self._PDF_PASSWORDFILE=_cfg.get('pdf','pdfpasswords')
+			except:
+				pass
+			try:
+				self._read_pdfpasswordfile(self._PDF_PASSWORDFILE)
+			except:
+				self.log("File '%s' could not be opened."%self._PDF_PASSWORDFILE)
+				pass
+
 		if _cfg.has_section('zip'):
 			try:
 				self._PDFSECUREZIPCONTAINER=_cfg.getboolean('zip','securezipcontainer')
@@ -1599,6 +1635,7 @@ class gme:
 				self.debug("SMimeuser: '%s %s'"%(u,self._smimeuser[u]))
 		if self._AUTHENTICATE:
 			self._read_smtpcredentials(self._SMTP_CREDENTIAL)
+		
 	###################
 	#_parse_commandline
 	###################
@@ -1884,6 +1921,26 @@ class gme:
 		pw= self._create_password(self._PDFPASSWORDLENGTH)
 		self.set_pdfpassword(user,pw)
 		return pw
+	########################
+	#_read_pdfpasswordfile
+	########################
+	@_dbg
+	def _read_pdfpasswordfile( self,pwfile):
+		try:
+			f=open(os.path.expanduser(pwfile))
+		except:
+			self.log("read_pdfpasswordfile: passwords could not be read","e")
+			self.log_traceback()
+			return
+		txt=f.read()
+		f.close()
+		self._pdfpasswords=dict()
+		for l in txt.splitlines():
+			try:
+				name,passwd=l.split("=",1)
+				self._pdfpasswords[name.strip()]=(passwd.strip(),0)
+			except:
+				pass
 	#############
 	#_set_logmode
 	#############
@@ -2056,25 +2113,28 @@ class gme:
 				return False
 		if maintype=="application":
 			#compressed archives
-			if subtype in ["zip","x-compressed","x-compress","x-gzip","x-gtar","x-lzip",
+			if subtype in   ["zip","x-compressed","x-compress","x-gzip","x-gtar","x-lzip",
 					"x-lzma","x-lzh","x-lzip","x-lzop","x-zoo","x-rar-compressed","x-7z-compressed",
 					"x-bzip","x-bzip2","vnd.android.package-archive","x-snappy-framed","x-xz",
 					"x-ace-compressed","x-astrotite-afa","x-alz-compressed","x-b1","x-dar","x-dgc-compressed",
 					"x-apple-diskimage","x-apple-diskimage","x-lzx",
 					"x-arj","vnd.ms-cab-compressed","x-cfs-compressed","x-stuffit","x-stuffitx"]:
 				return False
-			#Microsoft Office
+			#compressed Microsoft Office formats
 			elif subtype in ["application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-			 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
-			 "application/vnd.openxmlformats-officedocument.presentationml.presentation"]:
+					"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+					"application/vnd.openxmlformats-officedocument.presentationml.presentation"]:
 				return False
 			#Openoffice/LibreOffice
 			elif subtype in ["vnd.oasis.opendocument.text","vnd.oasis.opendocument.spreadsheet",
-			"vnd.oasis.opendocument.presentation","vnd.oasis.opendocument.graphics",
-			"vnd.oasis.opendocument.chart","vnd.oasis.opendocument.formula",
-			"vnd.oasis.opendocument.image","vnd.oasis.opendocument.text-master",
-			"vnd.oasis.opendocument.text-template","vnd.oasis.opendocument.spreadsheet-template",
-			"vnd.oasis.opendocument.presentation-template","vnd.oasis.opendocument.graphics-template"]:
+					"vnd.oasis.opendocument.presentation","vnd.oasis.opendocument.graphics",
+					"vnd.oasis.opendocument.chart","vnd.oasis.opendocument.formula",
+					"vnd.oasis.opendocument.image","vnd.oasis.opendocument.text-master",
+					"vnd.oasis.opendocument.text-template","vnd.oasis.opendocument.spreadsheet-template",
+					"vnd.oasis.opendocument.presentation-template","vnd.oasis.opendocument.graphics-template"]:
+				return False
+			#misc.
+			elif subtype in ["epub+zip","vnd.gov.sk.e-form+zip"]:
 				return False
 		return True
 	#############
@@ -2985,7 +3045,7 @@ class gme:
 			pass
 		try:
 			self.debug("get_preferred encryptionmap %s"%_u)
-			_m=self._encryptionmap[_u].upper()
+			_m=self._encryptionmap[_u][0].upper()
 		except:
 			self.debug("get_preferredencryptionmethod User '%s/%s' not found"%(user,_u))
 			return method
@@ -3254,6 +3314,10 @@ class gme:
 		attachments=0
 		tempdir = tempfile.mkdtemp()
 		Zip=_ZIP(self)
+		try:
+			Zip.set_zipcipher(self._encryptionmap[to_addr][1])
+		except:
+			pass
 		for m in oldmsg.walk():
 			if m.get_param( 'attachment', None, 'Content-Disposition' ) is not None:
 				contenttype=m.get_content_type()
@@ -3321,12 +3385,17 @@ class gme:
 		_prefer_pdf=False
 		mresult=None
 		_encrypt_subject=self.check_encryptsubject(mailtext)
+		try:
+			to_pdf=self._addressmap[to_addr]
+		except:
+			self.debug("preferpdf _addressmap to_addr not found")
+			to_pdf=to_addr
 		g_r,to_gpg=self.check_gpgrecipient(to_addr)
 		s_r,to_smime=self.check_smimerecipient(to_addr)
 		method=self.get_preferredencryptionmethod(to_addr)
 		self.debug("GPG encrypt possible %i / %s"%(g_r,to_gpg))
 		self.debug("SMIME encrypt possible %i / %s"%(s_r,to_smime))
-		self.debug("Prefer PDF %i "%_prefer_pdf)
+		self.debug("Prefer PDF %i / %s"%(_prefer_pdf,to_pdf))
 		self._count_totalmails+=1
 		domain=''
 		_addr=emailutils.parseaddr(from_addr)[1].split('@')
@@ -3360,11 +3429,6 @@ class gme:
 			self._count_alreadyencryptedmails+=1
 			self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
 			return
-		try:
-			pdf_to_addr=self._addressmap[to_addr]
-		except:
-			self.debug("preferpdf _addressmap to_addr not found")
-			pdf_to_addr=to_addr
 
 		if (not _prefer_pdf and not _encrypt_subject) or (_encrypt_subject and (g_r or s_r)): 
 			if self._ZIPATTACHMENTS:
@@ -3383,7 +3447,7 @@ class gme:
 				mresult=self.encrypt_gpg_mail(mailtext,_pgpmime,to_gpg,from_addr,to_addr)
 		if not mresult and (_encrypt_subject or _prefer_pdf):
 			if domain in self._PDFDOMAINS:
-				mresult=self.encrypt_pdf_mail(mailtext,pdf_to_addr,from_addr,to_addr)			
+				mresult=self.encrypt_pdf_mail(mailtext,to_pdf,from_addr,to_addr)			
 		if mresult:
 			self.debug("send encrypted mail")
 			self._send_msg(queue_id,mresult,from_addr,to_addr )
