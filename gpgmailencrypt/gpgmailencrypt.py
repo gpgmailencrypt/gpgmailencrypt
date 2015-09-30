@@ -18,8 +18,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.1.0theta"
-DATE="28.09.2015"
+VERSION="2.1.0iota"
+DATE="30.09.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -3284,7 +3284,7 @@ class gme:
 				plainmsg=MIMEText(htmlbody)
 				msg.attach(plainmsg)
 				msg.attach(htmlmsg)
-				msg['Subject'] = 'Password' 
+				msg['Subject'] = 'Password for: %s' %self._decode_header(newmsg["To"])
 				msg['To'] = from_addr
 				msg['From'] = self._SYSTEMMAILFROM
 				self.encrypt_mails(msg.as_string(),from_addr)
@@ -3391,6 +3391,14 @@ class gme:
 		except:
 			self.debug("preferpdf _addressmap to_addr not found")
 			to_pdf=to_addr
+		if _encrypt_subject:
+			m=email.message_from_string(mailtext)
+			self.debug("remove #encrypt from subject")
+			subject=self._decode_header(m["Subject"])[9:]
+			del m["Subject"]
+			m["Subject"]=subject
+			mailtext=m.as_string()
+			
 		g_r,to_gpg=self.check_gpgrecipient(to_addr)
 		s_r,to_smime=self.check_smimerecipient(to_addr)
 		method=self.get_preferredencryptionmethod(to_addr)
