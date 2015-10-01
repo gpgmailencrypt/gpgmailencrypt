@@ -2038,7 +2038,7 @@ class gme:
 		Zip=_ZIP(self)
 		for m in message.walk():
 			contenttype=m.get_content_type()
-			if (m.get_param( 'attachment', None, 'Content-Disposition' ) is not None) and self.is_compressable(contenttype):
+			if (m.get_param( 'attachment', None, 'Content-Disposition' ) is not None) and self.is_compressable(contenttype,m.get_filename()):
 				is_text=m.get_content_maintype()=="text"
 				charset=m.get_param("charset",header="Content-Type")
 				if charset==None or charset.upper()=="ASCII" or len(charset)==0:
@@ -2097,7 +2097,7 @@ class gme:
 	#is_compressable
 	################
 	@_dbg
-	def is_compressable(self,filetype):
+	def is_compressable(self,filetype,filename):
 		maintype,subtype=filetype.lower().split("/")
 		if maintype=="video":
 			return False
@@ -2137,6 +2137,15 @@ class gme:
 			#misc.
 			elif subtype in ["epub+zip","vnd.gov.sk.e-form+zip"]:
 				return False
+			filename, extension = os.path.splitext(filename)
+			extension=extension.lower()[1:]
+			if subtype=="octet-stream":
+				if e in ["jpg","jpeg","png","gif","jif","jfif","jp2","j2k",
+					"zip","tgz","bz2","bz","gz","7z","s7z","rar","ar","cpio",
+					"lz","lzh","lha","lzo","lzma","z","apk","cab","jar","zoo",
+					"docx","xlsx","pptx","ods","odt","odp"
+					]:
+					return False
 		return True
 	#############
 	#_send_rawmsg
