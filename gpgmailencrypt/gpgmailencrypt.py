@@ -429,7 +429,8 @@ class _GPG:
 	@_dbg
 	def _encryptcommand_fromfile(self,sourcefile,binary):
 		cmd=[self.parent._GPGCMD, "--trust-model", "always", "-r",self._recipient,"--homedir", 
-		self._keyhome.replace("%user",self._recipient), "--batch", "--yes", "--pgp7", "-q","--no-secmem-warning", "--output",sourcefile, "-e",self._filename ]
+		self._keyhome.replace("%user",self._recipient), "--batch", "--yes", "--pgp7", "-q","--no-secmem-warning",
+		 "--output",sourcefile, "-e",self._filename ]
 		if self.parent._ALLOWGPGCOMMENT==True:
 			cmd.insert(1,"'%s'"%self.parent._encryptgpgcomment)
 			cmd.insert(1,"--comment")
@@ -679,7 +680,8 @@ class _SMIME:
 		self.parent.debug("extract_publickey_from_mail to '%s'"%targetdir)
 		f=tempfile.NamedTemporaryFile(mode='wb',delete=False,prefix='mail-')
 		fname=f.name
-		cmd=[self.parent._SMIMECMD,"smime","-in", mail,"-pk7out","2>/dev/null","|",self.parent._SMIMECMD,"pkcs7","-print_certs","-out",f.name,"2>/dev/null"]
+		cmd=[self.parent._SMIMECMD,"smime","-in", mail,"-pk7out","2>/dev/null","|",self.parent._SMIMECMD,"pkcs7",
+		"-print_certs","-out",f.name,"2>/dev/null"]
 		self.parent.debug("extractcmd :'%s'"%" ".join(cmd))
 		_result = subprocess.call( " ".join(cmd) ,shell=True) 
 		f.close()
@@ -1152,7 +1154,6 @@ def guess_fileextension(ct):
 	e=mimetypes.guess_extension(ct)
 	if e:
 		e=e.replace(".","")
-		#debug("guess_fileextension '%s'=>'%s'"%(ct,e))
 		return e
 	else:
 		return "bin"
@@ -1525,14 +1526,18 @@ class gme:
 				self._SMTPD_USE_AUTH=_cfg.getboolean('daemon','authenticate')
 			if _cfg.has_option('daemon','smtppasswords'):
 				self._SMTPD_PASSWORDFILE=_cfg.get('daemon','smtppasswords')
-			if _cfg.has_option('daemon','statistics'):
+			try:
 				self._STATISTICS_PER_DAY=_cfg.getint('daemon','statistics')
 				if self._STATISTICS_PER_DAY >24:
 					self._STATISTICS_PER_DAY=24
-			if _cfg.has_option('daemon','admins'):
+			except:
+				pass
+			try:
 				admins=_cfg.get('daemon','admins').split(",")
 				for a in admins:
 					self._ADMINS.append(a.strip())
+			except:
+				pass
 
 		if _cfg.has_section('pdf'):
 			try:
@@ -2140,7 +2145,7 @@ class gme:
 			filename, extension = os.path.splitext(filename)
 			extension=extension.lower()[1:]
 			if subtype=="octet-stream":
-				if e in ["jpg","jpeg","png","gif","jif","jfif","jp2","j2k",
+				if extension in ["jpg","jpeg","png","gif","jif","jfif","jp2","j2k",
 					"zip","tgz","bz2","bz","gz","7z","s7z","rar","ar","cpio",
 					"lz","lzh","lha","lzo","lzma","z","apk","cab","jar","zoo",
 					"docx","xlsx","pptx","ods","odt","odp"
@@ -3969,8 +3974,9 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		elif limit:
 			self.num_bytes += len(data)
 		encodeddata=None
-		for e in ["UTF-8","ISO8859-15","ISO8859-5","ISO8859-6","ISO8859-7","ISO8859-8",
-				"ISO8859-9","ISO8859-10","ISO8859-13","ISO8859-14","ISO8859-16"]:
+		for e in ["UTF-8","ISO8859-15","ISO8859-2","ISO8859-9","ISO8859-3","ISO8859-4","ISO8859-5","ISO8859-6","ISO8859-7",
+				"ISO8859-8","ISO8859-10","ISO8859-13","ISO8859-14","ISO8859-16","KOI8","KOI8-R","KOI8-U","Windows-1251",
+				"BIG5","GB18030","Windows-1256","UTF-16"]:
 			try:
 				encodeddata=data.decode(e)
 				break
