@@ -18,8 +18,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.1.0iota"
-DATE="30.09.2015"
+VERSION="2.1.0kappa"
+DATE="02.10.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -3546,6 +3546,8 @@ class gme:
 					self.log_traceback()
 					exit(2)
 			else:
+				import io
+				sys.stdin = io.TextIOWrapper(sys.stdin.buffer,encoding='UTF-8',errors=_unicodeerror)
 				raw = sys.stdin.read()
 			#do the magic
 			self.encrypt_mails(raw,receiver)
@@ -3902,6 +3904,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 						sslcertfile=self.sslcertfile,
 						sslkeyfile=self.sslkeyfile,
 						sslversion=self.sslversion)
+	@_dbg
 	def process_message(self, peer, mailfrom, receiver, data):
 		self.parent.debug("hksmtpserver: _gpgmailencryptserver from '%s' to '%s'"%(mailfrom,receiver))
 		try:
@@ -3953,6 +3956,30 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		self.fqdn=socket.getfqdn()
 		if self.sslcertfile and self.sslkeyfile and self.sslversion:
 			self.starttls_available=True
+	#the following method is taken from SMTPChannel and is corrected to not throw an encoding error if something else than unciode comes through the line
+	# Implementation of base class abstract method
+	def collect_incoming_data(self, data):
+		limit = None
+		if self.smtp_state == self.COMMAND:
+			limit = self.max_command_size_limit
+		elif self.smtp_state == self.DATA:
+			limit = self.data_size_limit
+		if limit and self.num_bytes > limit:
+			return
+		elif limit:
+			self.num_bytes += len(data)
+		encodeddata=None
+		for e in ["UTF-8","ISO8859-15","ISO8859-5","ISO8859-6","ISO8859-7","ISO8859-8",
+				"ISO8859-9","ISO8859-10","ISO8859-13","ISO8859-14","ISO8859-16"]:
+			try:
+				encodeddata=data.decode(e)
+				break
+			except:
+				pass
+		if encodeddata==None:
+			encodeddata=data.decode("UTF-8",_unicodeerror)
+		self.received_lines.append(encodeddata)
+
 	def smtp_HELO(self,arg):
 		self.parent.debug("hksmtpserver: HELO")
 		if not arg:
