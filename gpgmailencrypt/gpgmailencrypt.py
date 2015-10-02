@@ -2146,6 +2146,9 @@ class gme:
 			extension=extension.lower()[1:]
 			if subtype=="octet-stream":
 				if extension in ["jpg","jpeg","png","gif","jif","jfif","jp2","j2k",
+					"mpeg","mpg","mpe","mpgv","mp4","mpg4","mov","avi","mkv","swf","flv","wmv","ogv","m2t",
+					"mjpeg","3gp","asx","m4v","rv","swz","rm","m2v","mv4","xwmv",
+					"3ga","mp3","ogg",
 					"zip","tgz","bz2","bz","gz","7z","s7z","rar","ar","cpio",
 					"lz","lzh","lha","lzo","lzma","z","apk","cab","jar","zoo",
 					"docx","xlsx","pptx","ods","odt","odp"
