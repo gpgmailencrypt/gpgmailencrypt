@@ -2144,15 +2144,14 @@ class gme:
 				return False
 			filename, extension = os.path.splitext(filename)
 			extension=extension.lower()[1:]
+			#same as above, just over the file extension
 			if subtype=="octet-stream":
 				if extension in ["jpg","jpeg","png","gif","jif","jfif","jp2","j2k",
-					"mpeg","mpg","mpe","mpgv","mp4","mpg4","mov","avi","mkv","swf","flv","wmv","ogv","m2t",
-					"mjpeg","3gp","asx","m4v","rv","swz","rm","m2v","mv4","xwmv",
-					"3ga","mp3","ogg",
-					"zip","tgz","bz2","bz","gz","7z","s7z","rar","ar","cpio",
+					"mpeg","mpg","mpe","mpgv","mp4","mpg4","mov","avi","mkv","swf","flv","wmv",
+					"ogv","m2t","mjpeg","3gp","asx","m4v","rv","swz","rm","m2v","mv4","xwmv",
+					"3ga","mp3","ogg","zip","tgz","bz2","bz","gz","7z","s7z","rar","ar","cpio",
 					"lz","lzh","lha","lzo","lzma","z","apk","cab","jar","zoo",
-					"docx","xlsx","pptx","ods","odt","odp"
-					]:
+					"docx","xlsx","pptx","ods","odt","odp"]:
 					return False
 		return True
 	#############
@@ -2624,9 +2623,9 @@ class gme:
 				self.debug("smime key exists, but '%s' is not in _DOMAINS [%s]"%(domain,self._DOMAINS))
 				found=False
 		return found, smime_to_addr
-	#################
-	#check_encryptpdf
-	#################
+	#####################
+	#check_encryptsubject
+	#####################
 	@_dbg
 	def check_encryptsubject(self,mailtext):
 		mail=email.message_from_string(mailtext)
@@ -2638,8 +2637,6 @@ class gme:
 			return True
 		else:
 			return False
-
-	
 	#############################
 	#is_encrypted function family
 	#############################
@@ -3065,8 +3062,16 @@ class gme:
 			self.debug("get_preferred encryptionmap %s"%_u)
 			_m=self._encryptionmap[_u][0].upper()
 		except:
-			self.debug("get_preferredencryptionmethod User '%s/%s' not found"%(user,_u))
-			return method
+			pass
+		if len(_m)==0:
+			addr=user.split('@')
+			if len(addr)==2:
+				try:
+					_m=self._encryptionmap["*@%s"%addr[1]][0].upper()
+					self.debug("preferencedencryptionmethod for *@%s=%s"%(addr[1],_m))
+				except:
+					self.debug("get_preferredencryptionmethod User '%s/%s' not found"%(user,_u))
+					return method
 		if _m in ("PGPMIME","PGPINLINE","SMIME","PDF","NONE"):
 			self.debug("get_preferredencryptionmethod User %s (=> %s) :'%s'"%(user,_u,_m))
 			return _m
@@ -3277,7 +3282,7 @@ class gme:
 		fp.write(message.encode("UTF-8",_unicodeerror))
 		fp.close()
 		pdf.set_filename(fp.name)
-		pw=self.get_pdfpassword(to_addr)
+		pw=self.get_pdfpassword(pdfuser)
 		self.debug("Password '%s'"%pw)
 		result,pdffile=pdf.create_pdffile(pw)
 		if result==True:
@@ -3333,9 +3338,15 @@ class gme:
 		tempdir = tempfile.mkdtemp()
 		Zip=_ZIP(self)
 		try:
-			Zip.set_zipcipher(self._encryptionmap[to_addr][1])
+			Zip.set_zipcipher(self._encryptionmap[pdfuser][1])
 		except:
-			pass
+			try:
+				_addr=emailutils.parseaddr(pdfuser)[1].split('@')
+				if len(_addr)==2:
+					domain = _addr[1]
+					Zip.set_zipcipher(self._encryptionmap["*@%s"%domain][1])
+			except:
+				pass
 		for m in oldmsg.walk():
 			if m.get_param( 'attachment', None, 'Content-Disposition' ) is not None:
 				contenttype=m.get_content_type()
@@ -3979,7 +3990,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		encodeddata=None
 		for e in ["UTF-8","ISO8859-15","ISO8859-2","ISO8859-9","ISO8859-3","ISO8859-4","ISO8859-5","ISO8859-6","ISO8859-7",
 				"ISO8859-8","ISO8859-10","ISO8859-13","ISO8859-14","ISO8859-16","KOI8","KOI8-R","KOI8-U","Windows-1251",
-				"BIG5","GB18030","Windows-1256","UTF-16"]:
+				"BIG5","GB18030","Windows-1252","Windows-1256","Windows-1250","Windows-1251","Windows-1250","UTF-16"]:
 			try:
 				encodeddata=data.decode(e)
 				break
