@@ -44,10 +44,10 @@ except:
 ################################
 #Definition of general functions
 ################################
+_unicodeerror="replace"
 #####
 #_dbg
 #####
-_unicodeerror="replace"
 def _dbg(func):
 	@wraps(func)
 	def wrapper(*args, **kwargs):
@@ -2104,12 +2104,18 @@ class gme:
 	@_dbg
 	def is_compressable(self,filetype,filename):
 		maintype,subtype=filetype.lower().split("/")
+		filename, extension = os.path.splitext(filename)
 		if maintype=="video":
 			return False
 		if maintype=="image":
 			if subtype in ["bmp","x-windows-bmp","svg+xml","tiff",
 					"photoshop","x-photoshop","psd"]:
 				return True
+			#raw image format
+			elif extension in ["3fr","ari","arw","bay","crw","cr2","cap","dcs","dcr","dng","drf","eip","erf",
+					"fff","iiq","k25","kdc","mdc","mef","mos","mrw","nef","nrw","obm","orf","pef",
+					"ptx","pxn","r3d","raf","raw","rwl","rw2","rwz","sr2","srf","srw","tif","x3f"]:
+				return True 
 			else:
 				return False
 		if maintype=="audio":
@@ -2142,16 +2148,23 @@ class gme:
 			#misc.
 			elif subtype in ["epub+zip","vnd.gov.sk.e-form+zip"]:
 				return False
-			filename, extension = os.path.splitext(filename)
 			extension=extension.lower()[1:]
 			#same as above, just over the file extension
 			if subtype=="octet-stream":
-				if extension in ["jpg","jpeg","png","gif","jif","jfif","jp2","j2k",
-					"mpeg","mpg","mpe","mpgv","mp4","mpg4","mov","avi","mkv","swf","flv","wmv",
-					"ogv","m2t","mjpeg","3gp","asx","m4v","rv","swz","rm","m2v","mv4","xwmv",
-					"3ga","mp3","ogg","zip","tgz","bz2","bz","gz","7z","s7z","rar","ar","cpio",
-					"lz","lzh","lha","lzo","lzma","z","apk","cab","jar","zoo",
-					"docx","xlsx","pptx","ods","odt","odp"]:
+				if extension in ["jpg","jpeg","png","gif","jif","jfif","jp2","j2k","jpx","j2c","psd",
+					#Videos
+					"mpeg","mpg","mpe","mpgv","mp4","mpg4","mov","avi","mkv","swf","flv","f4v","f4p","f4a",
+					"f4b","wmv","ogv","m2t","mjpeg","3gp","asx","m4v","rv","swz","rm","m2v","mv4","xwmv"
+					"3ga","mp3","ogg",
+					#Archives
+					"zip","arj","deb","tgz","bz2","bz","gz","7z","s7z","rar","ar","xar",
+					"cpio","lz","lzh","lha","lzo","lzma","xz","z","apk","cab","rpm","jar","zoo",
+					#Office
+					"docx","xlsx","pptx","ods","odt","odp","ott","odm","oth","ots","odg","otg","odf","odb","oxt",
+					"odg","odc","odi",
+					#Misc
+					"epub"
+					]:
 					return False
 		return True
 	#############
@@ -4043,12 +4056,12 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			self.push("501 Syntax error: DEBUG TRUE|FALSE")
 			return
 		command=arg.upper()
-		if command=="TRUE":
+		if command in ["TRUE","ON","YES"] :
 			res=True
-		elif command=="FALSE":
+		elif command in ["FALSE","OFF","NO"]:
 			res=False
 		else:
-			self.push("501 Syntax error: DEBUG TRUE|FALSE")
+			self.push("501 Syntax error: DEBUG TRUE|FALSE or ON|OFF or YES|NO")
 			return
 		self.parent.set_debug(res)
 		self.push("250 OK")
