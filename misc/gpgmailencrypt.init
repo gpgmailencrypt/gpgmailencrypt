@@ -28,7 +28,7 @@ USER="gpg-mailencrypt"
 # Read configuration variable file if it is present
 [ -r /etc/default/$NAME ] && . /etc/default/$NAME
 
-DAEMON=$DIR/$NAME.py
+DAEMON=$DIR/gme.py
 # Exit if the package is not installed
 [ -x "$DAEMON" ] || exit 0
 

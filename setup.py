@@ -28,6 +28,10 @@ def _post_install(dir):
         shutil.copytree("%s/mailtemplates"%dir,"%s/mailtemplates"%_templatepath)
     except:
         pass
+    try:
+        shutil.copyfile("%s/misc/gpgmailencrypt.init"%dir,"/etc/init.d/gpgmailencrypt")
+    except:
+        pass
 
 class install(_install):
     def run(self):
