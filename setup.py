@@ -12,6 +12,30 @@ from setuptools import setup, find_packages
 from codecs import open
 from os import path
 import re
+
+#For post-install command
+import os, sys, shutil
+from distutils.core import setup
+from distutils.command.install import install as _install
+
+def _post_install(dir):
+    from subprocess import call
+    import pkg_resources
+    _templatepath="/usr/share/gpgmailencrypt"
+    if not os.path.exists(_templatepath):
+        os.makedirs(_templatepath)
+    try:
+        shutil.copytree("%s/mailtemplates"%dir,"%s/mailtemplates"%_templatepath)
+    except:
+        pass
+
+class install(_install):
+    def run(self):
+        _install.run(self)
+        self.execute(_post_install, (self.install_lib,),
+                     msg="Running post install task")
+
+
 here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the relevant file
@@ -34,6 +58,7 @@ setup(
     author='Horst Knorr',
     author_email='gpgmailencrypt@gmx.de',
     license='GPL v3',
+    cmdclass={'install': install},
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
         'Development Status :: 5 - Production/Stable',
@@ -51,9 +76,9 @@ setup(
 	"Topic :: Software Development :: Libraries :: Python Modules",
 	"Operating System :: OS Independent",
    ],
-
+    zip_safe=False,
     keywords='Email encryption daemon gateway',
-    scripts =["scripts/gme_admin.py","scripts/encryptmaildir.py"],
+    scripts =["scripts/gme_admin.py","scripts/encryptmaildir.py","scripts/gme.py"],
     packages=["","mailtemplates","documentation","misc"],
     package_data={'mailtemplates': ['*/*'],"documentation":["*"],"misc":["*"]},
     # https://packaging.python.org/en/latest/requirements.html
