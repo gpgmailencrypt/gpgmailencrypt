@@ -1254,7 +1254,7 @@ class gme:
 		self._queue_id=0
 		self._daemonstarttime=datetime.datetime.now()
 		self._RUNMODE=None
-		self._LOGGING=False
+		self._LOGGING=self.l_none
 		self._level=0
 		self.reset_statistics()
 		self._DEBUG=False
@@ -1704,7 +1704,7 @@ class gme:
 		   		self._GPGKEYHOME=_arg
 		   		self.debug("Set gpgkeyhome to '%s'"%self._GPGKEYHOME)
 			if _opt  =='-l' or  _opt == '--log':
-				self._LOGGING=l_stderr
+				self._LOGGING=self.l_stderr
 				if isinstance(_arg,str):
 					if _arg=="syslog":
 						self._LOGGING=self.l_syslog
