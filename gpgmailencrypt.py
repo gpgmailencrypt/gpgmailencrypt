@@ -18,7 +18,7 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.1.0kapp2"
+VERSION="2.1.0lamda"
 DATE="05.10.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
@@ -89,7 +89,9 @@ def show_usage():
 	print ("Author:  Horst Knorr <gpgmailencrypt@gmx.de>")
 	print ("Version: %s from %s"%(VERSION,DATE))
 	print ("\nUsage:\n")
-	print ("gpgmailencrypt [options] receiver@email.address < Inputfile_from_stdin")
+	print ("gme.py [options] receiver@email.address < Inputfile_from_stdin")
+	print ("or")
+	print ("gme.py -f inputfile.eml [options] receiver@email.address")
 	print ("\nOptions:\n")
 	print ("-a --addheader:  adds %s header to the mail"%gme._encryptheader)
 	print ("-c f --config f: use configfile 'f'. Default is /etc/gpgmailencrypt.conf")
@@ -173,6 +175,7 @@ Fallback encryption is encrypted pdf")
 	print ("						# highest compression, but very slow, default is 5")
 	print ("securezipcontainer=False			#attachments will be stored in an encrypted zip file. If this option is true,")
 	print ("						#the directory will be also encrypted")
+	print ("zipattachments=False				#if True all attachments will be zipped, independent from the encryption method")
 	print ("")
 	print ("[daemon]")
 	print ("host = 127.0.0.1				#smtp host")
