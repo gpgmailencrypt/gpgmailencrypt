@@ -1230,17 +1230,17 @@ class gme:
 	m_daemon=1
 	m_script=2
 	_LOCALEDB={
-	#"CN":("审读","文件"),
+	#"CN":("审读","文件","内容","文件附件"),
 	"DE":("Termin","Datei","Inhalt","Anhang"),
 	"EN":("appointment","file","content","attachment"),
 	"ES":("cita","fichero","contenido","apéndice"),
 	"FR":("rendez-vous","fichier","contenu","attachement"),
 	"IT":("appuntamento","file","capacità","allegato"),
-	"NL":("Termijn","Bestand","content","e-mailbijlage"),
-	"PL":("termin","plik","content","załącznik"),
+	"NL":("Termijn","Bestand","inhoud","e-mailbijlage"),
+	"PL":("termin","plik","zawartość","załącznik"),
 	"PT":("hora","ficheiro","conteúdo","anexo"),
-	"RU":("срок","файл","содержа́ние","attachment"),
-	"SE":("möte","fil","content","attachment"),
+	"RU":("срок","файл","содержа́ние","прикрепление"),
+	"SE":("möte","fil","innehåll","bilaga"),
 	}
 	_encryptheader="X-GPGMailencrypt"
 	_pdfencryptheader="X-PDFEncrypted"
