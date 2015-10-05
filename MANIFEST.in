@@ -1,4 +1,2 @@
-include *documentation.pdf
-include gpgmailencrypt.init
 include README.md
 
