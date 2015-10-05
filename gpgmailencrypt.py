@@ -18,8 +18,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.1.0kappa"
-DATE="02.10.2015"
+VERSION="2.1.0kapp2"
+DATE="05.10.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -119,7 +119,7 @@ that should be encrypted, empty is all")
 	print ("spamsubject =***SPAM				# Spam recognition string, spam will not be encrypted")
 	print ("output=mail 					# valid values are 'mail'or 'stdout'")
 	print ("locale=en 					# DE|EN|ES|FR|IT|NL|PL|PT|RU|SE'")
-	print ("mailtemplatedir=/etc/gpgmailencrypt/mailtemplates #directory where mail templates are stored")
+	print ("mailtemplatedir=/usr/share/gpgmailencrypt/mailtemplates #directory where mail templates are stored")
 	print ("systemmailfrom=gpgmailencrypt@localhost		# e-mail address used when sending system mails")
 	print ("alwaysencrypt=False				#if True e-mails will be sent encrypted, even if there is no key. \
 Fallback encryption is encrypted pdf")
@@ -1368,7 +1368,7 @@ class gme:
 		self._SMTP_PASSWORD=""
 		self._DOMAINS=""
 		self._CONFIGFILE='/etc/gpgmailencrypt.conf'
-		self._MAILTEMPLATEDIR="/etc/gpgmailencrypt/mailtemplates"
+		self._MAILTEMPLATEDIR="/usr/share/gpgmailencrypt/mailtemplates"
 		self._INFILE=""
 		self._OUTFILE=""
 		self._PREFERRED_ENCRYPTION="PGPINLINE"
@@ -2645,7 +2645,6 @@ class gme:
 		subject=self._decode_header(mail["Subject"])
 		self.debug("subject: %s"%mail["Subject"])
 		find=re.search("^#encrypt ",subject,re.I)
-		self.debug("check_encryptpdf %s"%find)
 		if find:
 			return True
 		else:
@@ -3425,6 +3424,7 @@ class gme:
 		_pgpmime=False
 		_prefer_gpg=True
 		_prefer_pdf=False
+		_prefer_smime=False
 		mresult=None
 		_encrypt_subject=self.check_encryptsubject(mailtext)
 		try:
@@ -3454,12 +3454,15 @@ class gme:
 
 		if method=="PGPMIME":
 			_prefer_gpg=True
+			_prefer_smime=False
 			_pgpmime=True
 		elif method=="PGPINLINE":
 			_prefer_gpg=True
+			_prefer_smime=False
 			_pgpmime=False
 		if method=="SMIME":
 			_prefer_gpg=False
+			_prefer_smime=True
 		if method=="PDF" or self._ALWAYSENCRYPT or _prefer_pdf:
 			if domain in self._PDFDOMAINS:
 				_prefer_pdf=True
@@ -4052,8 +4055,9 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		self.password=""
 		self.seen_greeting=False
 	def smtp_DEBUG(self,arg):
+		syntaxerror="501 Syntax error: DEBUG TRUE|FALSE or ON|OFF or YES|NO"
 		if not arg:
-			self.push("501 Syntax error: DEBUG TRUE|FALSE")
+			self.push(syntaxerror)
 			return
 		command=arg.upper()
 		if command in ["TRUE","ON","YES"] :
@@ -4061,7 +4065,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		elif command in ["FALSE","OFF","NO"]:
 			res=False
 		else:
-			self.push("501 Syntax error: DEBUG TRUE|FALSE or ON|OFF or YES|NO")
+			self.push(syntaxerror)
 			return
 		self.parent.set_debug(res)
 		self.push("250 OK")
