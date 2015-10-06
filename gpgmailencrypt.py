@@ -18,8 +18,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.1.0"
-DATE="05.10.2015"
+VERSION="2.2.0dev"
+DATE="06.10.2015"
 from configparser import ConfigParser
 import email,email.message,email.mime,email.mime.base,email.mime.multipart,email.mime.application,email.mime.text,smtplib,mimetypes
 from email.mime.multipart import MIMEMultipart
@@ -1950,6 +1950,20 @@ class gme:
 				self._pdfpasswords[name.strip()]=(passwd.strip(),0)
 			except:
 				pass
+	##############
+	#set_zipcipher
+	##############
+	@_dbg
+	def set_zipcipher(self,cipher):
+		cipher=cipher.strip()
+		if len(cipher)>0:
+			self._ZIPCIPHER=cipher.upper()
+	##############
+	#get_zipcipher
+	##############
+	@_dbg
+	def get_zipcipher(self):
+		return 	self._ZIPCIPHER
 	#############
 	#_set_logmode
 	#############
@@ -2487,7 +2501,7 @@ class gme:
 		if isinstance(l,str):
 			l=l.strip()
 			if len(l)>0:
-				self._LOCALE=l
+				self._LOCALE=l.upper()
 	###############
 	#set_configfile
 	###############
@@ -2520,7 +2534,7 @@ class gme:
 			"still deferred":len(self._deferred_emails),
 			"total already encrypted":self._count_alreadyencryptedmails,
 			"total smime":self._count_smimemails,
-			"total_pdf":self._count_pdfmails,
+			"total pdf":self._count_pdfmails,
 			"total pgpmime":self._count_pgpmimemails,
 			"total pgpinline":self._count_pgpinlinemails,
 			"systemerrors":self._systemerrors,

@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 import unittest,sys,tempfile
-sys.path.append("..")
+sys.path.insert(1,"..")
 import gpgmailencrypt
 
 email_unencrypted="""
@@ -787,5 +787,19 @@ class gmetests(unittest.TestCase):
 			self.assertTrue(gme.is_pdfencrypted(email_pdfencrypted))
 			gme.close()
 
+	#ZIPESTS
+	def test_zipcipher(self):
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			gme.set_zipcipher("AES128")
+			self.assertTrue(gme.get_zipcipher()=="AES128")
+			gme.close()
+	def test_zipcipher2(self):
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			gme.set_zipcipher("ZipCrypto")
+			self.assertFalse(gme.get_zipcipher()=="AES128")
+			gme.close()
+		
 if __name__ == '__main__':
     unittest.main()
