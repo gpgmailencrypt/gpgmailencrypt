@@ -2305,7 +2305,7 @@ class gme:
 	def _is_old_deferred_mail(self,mail):
 		_maxage=3600*48 #48 hrs
 		now=time.time()
-		if (now - mail[3]) > _maxage:
+		if (now - float(mail[3])) > _maxage:
 			self.log("Deferred mail '%s' will be removed because of age"%mail[0])
 			try:
 				os.remove(mail[0])
@@ -2369,7 +2369,8 @@ class gme:
 	@_dbg
 	def _log_statistics(self):
 		self.log("Mail statistics: total: %i, encrypt: %i, were encrypted: %i, total deferred: %i, still deferred: %i" %\
-		(self._count_totalmails,self._count_encryptedmails,self._count_alreadyencryptedmails,self._count_deferredmails,len(self._deferred_emails)))
+		(self._count_totalmails,self._count_encryptedmails,self._count_alreadyencryptedmails,self._count_deferredmails,
+		len(self._deferred_emails)+len(self._email_queue)))
 		self.log("PGPMIME: %i, PGPINLINE: %i, SMIME: %i, PDF: %i"%(self._count_pgpmimemails,
 				self._count_pgpinlinemails, self._count_smimemails ,self._count_pdfmails))
 		self.log("systemerrors: %i, systemwarnings: %i" %(self._systemerrors,self._systemwarnings))
@@ -3563,6 +3564,7 @@ class gme:
 					self._queue_id+=1
 				self.encrypt_single_mail(mailid,mailtext,from_addr,to_addr)
 		except:
+			self._count_deferredmails+=1
 			self.log_traceback()
 	#######################################
 	#END definition of encryption functions
