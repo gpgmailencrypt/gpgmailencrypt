@@ -2647,6 +2647,8 @@ class gme:
 		mail=email.message_from_string(mailtext)
 		subject=self._decode_header(mail["Subject"])
 		self.debug("subject: %s"%mail["Subject"])
+		if subject==None:
+			return False
 		find=re.search("^#encrypt ",subject,re.I)
 		if find:
 			return True
