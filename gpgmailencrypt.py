@@ -3656,7 +3656,11 @@ class gme:
     ##################
  
     @_dbg
-    def encrypt_pdf_mail(self,message,pdfuser,from_addr,to_addr):
+    def encrypt_pdf_mail(   self,
+                            message,
+                            pdfuser,
+                            from_addr,
+                            to_addr):
         splitmsg=re.split("\n\n",message,1)
         if len(splitmsg)!=2:
             splitmsg=re.split("\r\n\r\n",message,1)
@@ -3809,7 +3813,11 @@ class gme:
     ####################    
  
     @_dbg
-    def encrypt_single_mail(self,queue_id,mailtext,from_addr,to_addr):
+    def encrypt_single_mail(    self,
+                                queue_id,
+                                mailtext,
+                                from_addr,
+                                to_addr):
         _pgpmime=False
         _prefer_gpg=True
         _prefer_pdf=False
@@ -3927,7 +3935,9 @@ class gme:
     ###############
  
     @_dbg
-    def encrypt_mails(self,mailtext,receiver):
+    def encrypt_mails(  self,
+                        mailtext,
+                        receiver):
         """
         Main function of this library: 
             mailtext is the mail as a string
@@ -4106,7 +4116,9 @@ class gme:
     #############
  
     @_dbg
-    def adm_set_user(self,user,password):
+    def adm_set_user(   self,
+                        user,
+                        password):
         "adds a user, if the user already exists it changes the password"
         try:
             self._smtpd_passwords[user]=_get_hash(password)
@@ -4284,7 +4296,10 @@ def start_adminconsole(host,port):
                 return self.matches[state]
             except IndexError:
                 return None
-        def display_matches(self, substitution, matches, longest_match_length):
+        def display_matches(    self, 
+                                substitution, 
+                                matches, 
+                                longest_match_length):
             print()
             print(matches)
             print("> %s"%substitution,end="")
@@ -4394,7 +4409,11 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
                         sslversion=self.sslversion)
  
     @_dbg
-    def process_message(self, peer, mailfrom, receiver, data):
+    def process_message(    self, 
+                            peer, 
+                            mailfrom, 
+                            receiver, 
+                            data):
         self.parent.debug("hksmtpserver: _gpgmailencryptserver from '%s' to '%s'"%(mailfrom,receiver))
         try:
             self.parent.encrypt_mails(data,receiver)
@@ -4721,7 +4740,9 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 ##########
 #file_auth
 ##########
-def file_auth(parent,user,password):
+def file_auth(  parent,
+                user,
+                password):
     "checks user authentication against a password file"
     parent.debug("hksmtpserver: file_auth")
     try:
