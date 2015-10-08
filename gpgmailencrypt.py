@@ -22,29 +22,60 @@ and copy this file into the directory /etc
 """
 VERSION="2.2.0dev"
 DATE="06.10.2015"
-from configparser import ConfigParser
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from email import encoders
-from email.generator import Generator
-from functools import wraps
-from io import StringIO as _StringIO
-from io import BytesIO as _BytesIO
-from os.path import expanduser
-import email,email.message,email.mime,email.mime.base,email.mime.multipart
-import email.mime.application,email.mime.text,smtplib,mimetypes
+from configparser           import ConfigParser
+from email                  import encoders
+from email.generator        import Generator
+from email.mime.base        import MIMEBase
+from email.mime.multipart   import MIMEMultipart
+from email.mime.text        import MIMEText
+from functools              import wraps
+from io                     import BytesIO
+from io                     import StringIO
+from io                     import TextIOWrapper 
+from os.path                import expanduser
+import asynchat
+import asyncore
+import atexit
+import base64
+import binascii
+import datetime
+import email
+import email.message
+import email.mime
 import email.utils as emailutils
-import html.parser,base64,quopri,uu,binascii
-import re,sys,tempfile,os,stat,subprocess,atexit,time,datetime,getopt
-import random,syslog,inspect,gzip
-import locale,traceback,hashlib
-import smtpd,asyncore, signal,ssl,asynchat,socket,select,threading
-import string, random, shutil
+import getopt
+import getpass
+import hashlib
+import html.parser
+import inspect
+import locale
+import mimetypes
+import os
+import quopri
+import random
+import re
 try:
     import readline
 except:
     pass
+import select
+import shutil
+import signal
+import smtpd
+import smtplib
+import socket
+import ssl
+import stat
+import string
+import subprocess
+import sys
+import syslog
+import tempfile
+import threading
+import time
+import traceback
+import uu
+
 ################################
 #Definition of general functions
 ################################
@@ -312,7 +343,7 @@ def replace_variables(  text,
                         dictionary,
                         startdelimiter="%",
                         enddelimiter="%"):
-    "replaces variables with the values of the dictionary. A variable is "\
+    "replaces variables with the values of the dictionary. A variable is "
     "embraced of % and consists of capital letters, e.g. %MYVARIABLE%"
     result=""
     begin=0
@@ -436,14 +467,17 @@ class _GPG:
                     email=res[9]
                     mail_id=res[4]
                     try:
-                        found=re.search("[-a-zA-Z0-9_%\+\.]+@[-_0-9a-zA-Z\.]+\.[-_0-9a-zA-Z\.]+",email)
+                        found=re.search(
+                        "[-a-zA-Z0-9_%\+\.]+@[-_0-9a-zA-Z\.]+\.[-_0-9a-zA-Z\.]+",
+                        email)
                     except:
                         self.parent.log_traceback()
                     if found != None:
                         try:
                             email=email[found.start():found.end()]
                         except:
-                            self.parent.log("splitting email address (%s) didn't work"%email,"w")
+                            self.parent.log("splitting email address (%s) "
+                                            "didn't work"%email,"w")
                             email=""
                         email=email.lower()
                         if len(email)>0 and self.parent._GPGkeys.count(email) == 0:
@@ -485,7 +519,8 @@ class _GPG:
                         try:
                             email=email[found.start():found.end()]
                         except:
-                            self.parent.log("splitting email address (%s) didn't work"%email,"w")
+                            self.parent.log("splitting email address (%s) "
+                                            "didn't work"%email,"w")
                             email=""
                         email=email.lower()
                         if (len(email)>0 
@@ -626,7 +661,7 @@ class _GPGEncryptedAttachment(email.message.Message):
         self.set_type("text/plain")
 
     def as_string(self, unixfrom=False):
-        fp = _StringIO()
+        fp = StringIO()
         g = Generator(fp)
         g.flatten(self, unixfrom=unixfrom)
         return fp.getvalue()
@@ -651,7 +686,8 @@ class _GPGEncryptedAttachment(email.message.Message):
         fname=self.get_filename()
         if fname == None:
             fname="encrypted.asc"
-        print ('Content-Type: application/octet-stream; name="%s"'%fname,file=g._fp)
+        print ('Content-Type: application/octet-stream; name="%s"'%fname,
+                                                                file=g._fp)
         print ('Content-Description: OpenPGP encrypted message',file=g._fp)
         print ('Content-Disposition: inline; filename="%s"\n'%fname,file=g._fp)
 #############
@@ -1343,12 +1379,7 @@ class _htmldecode(html.parser.HTMLParser):
                 self.attrtitle=self.get_attrvalue("title",attrs)
         else:
             #Endtag
-            if (tag in (    "h1",
-                            "h2",
-                            "h3",
-                            "h4",
-                            "h5",
-                            "h6",
+            if (tag in (    "h1","h2","h3","h4","h5","h6",
                             "title",
                             "p",
                             "ol",
@@ -1547,8 +1578,8 @@ def _decodetxt( text,
     elif cte=="QUOTED-PRINTABLE":
         result=quopri.decodestring(bytetext)
     elif cte in ('X-UUENCODE', 'UUENCODE', 'UUE', 'X-UUE'):
-        in_file = _BytesIO(bytetext)
-        out_file = _BytesIO()
+        in_file = BytesIO(bytetext)
+        out_file =BytesIO()
         try:
             uu.decode(in_file, out_file, quiet=True)
             result=out_file.getvalue()
@@ -2143,7 +2174,10 @@ class gme:
     #log
     ####
  
-    def log(self,msg,infotype="m",ln=-1):
+    def log(self,
+            msg,
+            infotype="m",
+            ln=-1):
         "prints logging information"
         if self._LOGGING!=self.l_none:
             if infotype=='d':
@@ -2209,7 +2243,9 @@ class gme:
     #debug
     ######
  
-    def debug(self,msg,lineno=0):
+    def debug(  self,
+                msg,
+                lineno=0):
         "prints debugging information"
         if self._DEBUG:
             if lineno==0:
@@ -2257,16 +2293,17 @@ class gme:
         f=None
         self.debug("_load_mailmaster '%s'"% identifier)
         try:
-            f=open("%s/%s/%s.html"%(self._MAILTEMPLATEDIR,self._LOCALE,identifier))
-            self.debug("template found in %s"%("%s/%s/%s.html"%(self._MAILTEMPLATEDIR,
-                                                                self._LOCALE,identifier)))
+            templatefile="%s/%s/%s.html"%(  self._MAILTEMPLATEDIR,
+                                            self._LOCALE,identifier)
+            f=open(templatefile)
+            self.debug("template found in %s"%templatefile)
         except:
             pass
         if f==None:
             try:
-                f=open("%s/EN/%s.html"%(self._MAILTEMPLATEDIR,identifier))
-                self.debug("template found in %s"%("%s/EN/%s.html"%(self._MAILTEMPLATEDIR,
-                                                                    identifier)))
+                templatefile="%s/EN/%s.html"%(self._MAILTEMPLATEDIR,identifier)
+                f=open(templatefile)
+                self.debug("template found in %s"%templatefile)
             except:
                 pass
         if f==None:
@@ -2878,7 +2915,9 @@ class gme:
     @_dbg
     def _new_tempfile(self,delete=False):
         "creates a new tempfile"
-        f=tempfile.NamedTemporaryFile(mode='wb',delete=delete,prefix='mail-')
+        f=tempfile.NamedTemporaryFile(  mode='wb',
+                                        delete=delete,
+                                        prefix='mail-')
         self._tempfiles.append(f.name)
         self.debug("_new_tempfile %s"%f.name)
         return f
@@ -2909,7 +2948,9 @@ class gme:
     def _find_charset(self,msg):
         if not isinstance(msg, str):
             return None
-        find=re.search("^Content-Type:.*charset=[-_\.\'\"0-9A-Za-z]+",msg,re.I|re.MULTILINE)
+        find=re.search("^Content-Type:.*charset=[-_\.\'\"0-9A-Za-z]+",
+                        msg,
+                        re.I|re.MULTILINE)
         if find==None:
             return None
         charset=msg[find.start():find.end()]
@@ -3060,7 +3101,8 @@ class gme:
  
     @_dbg
     def set_default_preferredencryption(self,mode):
-        "set the default preferred encryption. Valid values are SMIME,PGPMIME,PGPINLINE"
+        "set the default preferred encryption. "
+        "Valid values are SMIME,PGPMIME,PGPINLINE"
         if isinstance(mode,str):
             m=mode.upper()
             if m in ["SMIME","PGPMIME","PGPINLINE"]:
@@ -3088,7 +3130,9 @@ class gme:
     ###########
  
     @_dbg
-    def set_daemon(self,host,port,
+    def set_daemon( self,
+                    host,
+                    port,
                     smtps=False,
                     auth=False,
                     sslkeyfile=None,
@@ -3141,7 +3185,8 @@ class gme:
                 found=True
                 self.debug("check_gpgrecipient: after in_key")
             else:
-                self.debug("gpg key exists, but '%s' is not in _DOMAINS [%s]"%(domain,self._DOMAINS))
+                self.debug("gpg key exists, but '%s' is not in "
+                            "_DOMAINS [%s]"%(domain,self._DOMAINS))
         return found,gpg_to_addr
     #####################
     #check_smimerecipient
@@ -3173,7 +3218,8 @@ class gme:
                 or len(self._DOMAINS)==0):
                 self.debug("check_smimerecipient: after in_key")
             else:
-                self.debug("smime key exists, but '%s' is not in _DOMAINS [%s]"%(domain,self._DOMAINS))
+                self.debug("smime key exists, but '%s' is not in "
+                            "_DOMAINS [%s]"%(domain,self._DOMAINS))
                 found=False
         return found, smime_to_addr
     #####################
@@ -3185,6 +3231,8 @@ class gme:
         mail=email.message_from_string(mailtext)
         subject=self._decode_header(mail["Subject"])
         self.debug("subject: %s"%mail["Subject"])
+        if subject==None:
+            return False
         find=re.search("^#encrypt ",subject,re.I)
         if find:
             return True
@@ -3265,7 +3313,9 @@ class gme:
         m=msg
         if isinstance(msg,email.message.Message):
             m=msg.as_string()
-        find=re.search("^%s:"%self._pdfencryptheader,m,re.I|re.MULTILINE)
+        find=re.search("^%s:"%self._pdfencryptheader,
+                        m,
+                        re.I|re.MULTILINE)
         if find:
             return True
         else:
@@ -3351,8 +3401,12 @@ class gme:
     
             fp.write(raw_payload)
         fp.close()
-        isAttachment = payload.get_param( 'attachment', None, 'Content-Disposition' ) is not None
-        isInline=payload.get_param( 'inline', None, 'Content-Disposition' ) is not None
+        isAttachment = payload.get_param(   'attachment', 
+                                            None, 
+                                            'Content-Disposition' ) is not None
+        isInline=payload.get_param( 'inline', 
+                                    None, 
+                                    'Content-Disposition' ) is not None
         gpg.set_filename( fp.name )
         if self.is_encrypted(raw_payload):
             if self._ADDHEADER:
@@ -3409,7 +3463,7 @@ class gme:
                 if payload["Content-Disposition"]:
                     del payload["Content-Disposition"]
                 payload.add_header( 'Content-Disposition', 
-                                    'attachment; filename*="%s"' % pgpFilenamecD)
+                                    'attachment; filename*="%s"'%pgpFilenamecD)
                 payload.set_param( 'name', pgpFilenamecT )
         else:
             if 'Content-Transfer-Encoding' in payload:
@@ -3427,7 +3481,8 @@ class gme:
                 payload["Content-Transfer-Encoding"]=tencoding
                 payload.set_payload(pl)
             else:
-                self.log("Error during encryption: payload will be unencrypted!","m")    
+                self.log("Error during encryption: payload will be "
+                        "unencrypted!","m")    
         self._del_tempfile(fp.name)
         return payload
     ###################
@@ -3480,26 +3535,33 @@ class gme:
                     pl.set_payload(None)
                     pl.set_type("multipart/mixed")
                     pl.attach(CAL)
-                self.debug("encrypt_pgpinline: type( message.get_payload() ) == str END")
+                self.debug("encrypt_pgpinline: type(get_payload())== str END")
                 return pl
         for payload in msg:
             content=payload.get_content_maintype()
             if ((content in ("application","image","audio","video" )) 
-            and payload.get_param( 'inline', None, 'Content-Disposition' ) is None):
+            and payload.get_param( 'inline', 
+                                    None, 
+                                    'Content-Disposition' ) 
+            is None):
                 payload.add_header('Content-Disposition', 'attachment;"')
             if payload.get_content_maintype() == 'multipart':
                 continue
             if  isinstance( payload.get_payload() , list ):
                 continue
             else:
-                self.debug("for in schleife for _encrypt payload %s" %type(payload))
+                self.debug("in schleife for _encrypt payload %s" %type(payload))
                 res=self._encrypt_payload( payload,gpguser,counter )
                 if (res and payload.get_content_type()=="text/calendar" 
-                and payload.get_param( 'attachment', None, 'Content-Disposition' ) is  None):
+                and payload.get_param(  'attachment', 
+                                        None, 
+                                        'Content-Disposition' ) is  None):
                     CAL=MIMEText(   res.get_payload(decode=True),
                                     _subtype="calendar",
                                     _charset="UTF-8")
-                    CAL.add_header('Content-Disposition', 'attachment', filename=cal_fname)
+                    CAL.add_header('Content-Disposition', 
+                                    'attachment', 
+                                    filename=cal_fname)
                     CAL.set_param( 'name', cal_fname)
                     payload.set_payload("")
                     payload.set_type("text/plain")
@@ -3522,7 +3584,8 @@ class gme:
                             from_addr,
                             to_addr):
         """
-        returns the string 'message' as an PGP/MIME encrypted mail as an email.Message object
+        returns the string 'message' as an PGP/MIME encrypted mail as 
+        an email.Message object
         returns None if encryption was not possible
         """
         raw_message=email.message_from_string(message)
@@ -3530,7 +3593,8 @@ class gme:
         if len(splitmsg)!=2:
             splitmsg=re.split("\r\n\r\n",message,1)
         if len(splitmsg)!=2:
-            self.debug("Mail could not be split in header and body part (mailsize=%i)"%len(message))
+            self.debug("Mail could not be split in header and body part "
+                        "(mailsize=%i)"%len(message))
             return None
         header,body=splitmsg 
         header+="\n\n"
@@ -3632,7 +3696,8 @@ class gme:
         if result==True:
             attachment.set_payload(pl)
         else:
-            self.log("Error during encryption pgpmime: payload will be unencrypted!","m")    
+            self.log("Error during encryption pgpmime: payload will be "
+                    "unencrypted!","m")    
         newmsg.set_payload(attachment)
         newmsg.set_boundary(boundary)
         attachment.set_boundary(contentboundary)
@@ -3665,15 +3730,19 @@ class gme:
             if len(addr)==2:
                 try:
                     _m=self._encryptionmap["*@%s"%addr[1]][0].upper()
-                    self.debug("preferencedencryptionmethod for *@%s=%s"%(addr[1],_m))
+                    self.debug("preferencedencryptionmethod for "
+                                "*@%s=%s"%(addr[1],_m))
                 except:
-                    self.debug("get_preferredencryptionmethod User '%s/%s' not found"%(user,_u))
+                    self.debug("get_preferredencryptionmethod User"
+                            " '%s/%s' not found"%(user,_u))
                     return method
         if _m in ("PGPMIME","PGPINLINE","SMIME","PDF","NONE"):
-            self.debug("get_preferredencryptionmethod User %s (=> %s) :'%s'"%(user,_u,_m))
+            self.debug("get_preferredencryptionmethod User "
+                        "%s (=> %s) :'%s'"%(user,_u,_m))
             return _m
         else:
-            self.debug("get_preferredencryptionmethod: Method '%s' for user '%s' unknown" % (_m,_u))
+            self.debug("get_preferredencryptionmethod: Method "
+                        "'%s' for user '%s' unknown" % (_m,_u))
             return method
     ##################
     #encrypt_gpg_mail 
@@ -3729,7 +3798,8 @@ class gme:
                             from_addr,
                             to_addr):
         """
-        returns the string 'message' as an S/MIME encrypted mail as an email.Message object
+        returns the string 'message' as an S/MIME encrypted mail as 
+        an email.Message object
         returns None if encryption was not possible
         """
         raw_message=email.message_from_string(mailtext)
@@ -3744,7 +3814,8 @@ class gme:
         if len(splitmsg)!=2:
             splitmsg=re.split("\r\n\r\n",mailtext,1)
         if len(splitmsg)!=2:
-            self.debug("Mail could not be split in header and body part (mailsize=%i)"%len(mailtext))
+            self.debug("Mail could not be split in header and body part"
+                        "(mailsize=%i)"%len(mailtext))
             return None
         header,body=splitmsg 
         header+="\n\n"
@@ -3886,7 +3957,8 @@ class gme:
         if len(splitmsg)!=2:
             splitmsg=re.split("\r\n\r\n",message,1)
         if len(splitmsg)!=2:
-            self.debug("Mail could not be split in header and body part (mailsize=%i)"%len(message))
+            self.debug("Mail could not be split in header and body part "
+                        "(mailsize=%i)"%len(message))
             return None
         header,body=splitmsg 
         header+="\n\n"
@@ -3918,13 +3990,14 @@ class gme:
                     "<tr><td>From:</td><td>%FROM%</td></tr><tr><td>To:</td>"
                     "<td>%TO%</td></tr><tr><td>Date:</td><td>%DATE%</td></tr>"
                     "<tr><td>Password:</td><td>%PASSWORD%</td></tr></table>")
-                msgtxt=replace_variables(msgtxt,{"FROM":html.escape(from_addr),
-                                "TO":html.escape(self._decode_header(newmsg["To"])),
-                                "DATE":newmsg["Date"],
-                                "PASSWORD":html.escape(pw),
-                                "SUBJECT":html.escape(self._decode_header(
-                                                        newmsg["Subject"]
-                                                        ))})
+                msgtxt=replace_variables(msgtxt,
+                        {"FROM":html.escape(from_addr),
+                         "TO":html.escape(self._decode_header(newmsg["To"])),
+                         "DATE":newmsg["Date"],
+                         "PASSWORD":html.escape(pw),
+                         "SUBJECT":html.escape(self._decode_header(
+                                                            newmsg["Subject"]
+                         ))})
                 msg=MIMEMultipart()
                 msg.set_type("multipart/alternative")
                 res,htmlheader,htmlbody,htmlfooter=self._split_html(msgtxt)
@@ -3977,7 +4050,9 @@ class gme:
             except:
                 pass
         for m in oldmsg.walk():
-            if m.get_param( 'attachment', None, 'Content-Disposition' ) is not None:
+            if m.get_param( 'attachment', 
+                            None, 
+                            'Content-Disposition' ) is not None:
                 contenttype=m.get_content_type()
                 filename = m.get_filename()
                 self.debug("Content-Type=%s"%contenttype)
@@ -4243,10 +4318,9 @@ class gme:
                     self.log_traceback()
                     exit(2)
             else:
-                import io
-                sys.stdin = io.TextIOWrapper(   sys.stdin.buffer,
-                                                encoding='UTF-8',
-                                                errors=_unicodeerror)
+                sys.stdin = TextIOWrapper(sys.stdin.buffer,
+                                          encoding='UTF-8',
+                                          errors=_unicodeerror)
                 raw = sys.stdin.read()
             #do the magic
             self.encrypt_mails(raw,receiver)
@@ -4282,7 +4356,7 @@ class gme:
                 if self._count_alarms>0:
                     self._log_statistics() #log statistics every 24 hours
             self.del_old_pdfpasswords(self._PDFPASSWORDLIFETIME)
-        ##################
+        #####################
         self._RUNMODE=self.m_daemon
         self._daemonstarttime=datetime.datetime.now()
         alarm=_mytimer()
@@ -4423,7 +4497,6 @@ class gme:
 @_dbg
 def start_adminconsole(host,port):
     "starts the admin console"
-    import getpass
     class gmeadmin():
         def __init__(self):
             self.smtp= smtplib.SMTP()
@@ -4497,18 +4570,19 @@ def start_adminconsole(host,port):
         def print_help(self):
             print("\nAllowed commands:")
             print("=================")
-            print("flush            tries to re-send deferred emails")
+            print("flush               tries to re-send deferred emails")
             print("debug true/false    sets the debug mode")
-            print("deluser            deletes a user")
-            print("            example: 'deluser john'")
-            print("help            this help")
-            print("quit            leave the console")
-            print("reload            reloads the configuration file")
-            print("resetstatistics        sets all statistic values to 0")
-            print("setuser            adds a new user or changes the password for an existing user")
-            print("            example: 'setuser john johnspassword'")
-            print("statistics        print statistic information")
-            print("users            print users")
+            print("deluser             deletes a user")
+            print("                    example: 'deluser john'")
+            print("help                this help")
+            print("quit                leave the console")
+            print("reload              reloads the configuration file")
+            print("resetstatistics     sets all statistic values to 0")
+            print("setuser             "
+            "adds a new user or changes the password for an existing user")
+            print("                    example: 'setuser john johnspassword'")
+            print("statistics          print statistic information")
+            print("users               print users")
     class MyCompleter(object):  # Custom completer
         #class taken from http://stackoverflow.com/questions/20625642/autocomplete-with-readline-in-python3
         def __init__(self, options):
@@ -4641,7 +4715,8 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
                             mailfrom, 
                             receiver, 
                             data):
-        self.parent.debug("hksmtpserver: _gpgmailencryptserver from '%s' to '%s'"%(mailfrom,receiver))
+        self.parent.debug("hksmtpserver: _gpgmailencryptserver "
+                        "from '%s' to '%s'"%(mailfrom,receiver))
         try:
             self.parent.encrypt_mails(data,receiver)
         except:
@@ -4653,6 +4728,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 ###############
 class _hksmtpchannel(smtpd.SMTPChannel):
     "helper class for _gpgmailencryptserver"
+ 
     def __init__(self, 
                 smtp_server, 
                 newsocket,     
@@ -4691,6 +4767,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
         self.fqdn=socket.getfqdn()
         if self.sslcertfile and self.sslkeyfile and self.sslversion:
             self.starttls_available=True
+ 
     #the following method is taken from SMTPChannel and is corrected to 
     #not throw an encoding error if something else than unciode comes 
     #through the line 
@@ -4727,6 +4804,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
         else:
             self.seen_greeting = True
             self.push('250 %s' % self.fqdn)
+ 
     def smtp_EHLO(self, arg):
         self.parent.debug("hksmtpserver: EHLO")
         if not arg:
@@ -4748,16 +4826,19 @@ class _hksmtpchannel(smtpd.SMTPChannel):
                  and self.tls_active))):
             self.push('250-AUTH PLAIN')
         self.push('250 %s' % self.fqdn)
+ 
     def smtp_RSET(self, arg):
         self.parent.debug("hksmtpserver: RSET")
         self.reset_values()
         smtpd.SMTPChannel.smtp_RSET(self,arg)
+ 
     def reset_values(self):    
         self.is_authenticated=False
         self.is_admin=False
         self.user=""
         self.password=""
         self.seen_greeting=False
+ 
     def smtp_DEBUG(self,arg):
         syntaxerror="501 Syntax error: DEBUG TRUE|FALSE or ON|OFF or YES|NO"
         if not arg:
@@ -4773,6 +4854,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
             return
         self.parent.set_debug(res)
         self.push("250 OK")
+ 
     def smtp_AUTH(self,arg):
         self.parent.debug("hksmtpserver: AUTH")
         if not arg:
@@ -4819,12 +4901,14 @@ class _hksmtpchannel(smtpd.SMTPChannel):
                 self.parent.log("User '%s' failed to login"%user,"w")
         else:
             self.push("454 Temporary authentication failure.")
+ 
     def smtp_RESETSTATISTICS(self,arg):
         if arg:
             self.push("501 Syntax error: no arguments allowed")
             return
         self.parent.reset_statistics()
         self.push("250 OK")
+ 
     def smtp_STATISTICS(self,arg):
         if arg:
             self.push("501 Syntax error: no arguments allowed")
@@ -4842,11 +4926,13 @@ class _hksmtpchannel(smtpd.SMTPChannel):
                                         s.ljust(25),
                                         str(statistics[s]).rjust(4)) )
             c+=1
+ 
     def smtp_FLUSH(self,arg):
         self.parent.log("FLUSH")
         self.parent.check_deferred_list()
         self.parent.check_mailqueue()
         self.push("250 OK")
+ 
     def smtp_RELOAD(self,arg):
         if arg:
             self.push("501 Syntax error: no arguments allowed")
@@ -4855,6 +4941,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
         self.parent.init()
         self.parent._parse_commandline()
         self.push("250 OK")
+ 
     def smtp_USERS(self,arg):
         if arg:
             self.push("501 Syntax error: no arguments allowed")
@@ -4886,6 +4973,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
             self.push("250 OK")
         else:
             self.push("454 User could not be set")
+ 
     def smtp_DELUSER(self,arg):
         if not arg:
             self.push("501 Syntax error: DELUSER user")
@@ -4904,12 +4992,14 @@ class _hksmtpchannel(smtpd.SMTPChannel):
             self.push("250 OK")
         else:
             self.push("454 User could not be deleted")
+ 
     def smtp_ADMIN(self,arg):
         self.adminmode=True
         if self.read_smtpdpasswordfile:
             self.read_smtpdpasswordfile(self.parent._SMTPD_PASSWORDFILE)
         self.push("250 OK")
         return
+ 
     def found_terminator(self):
         line = "".join(self._SMTPChannel__line)
         i = line.find(' ')
@@ -4937,6 +5027,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
                 self._SMTPChannel__line=[]
                 return
         smtpd.SMTPChannel.found_terminator(self)
+ 
     def smtp_STARTTLS(self,arg):
             self.push('502 Error: command "STARTTLS" not implemented' )
             self._SMTPChannel__line=[]
@@ -4944,6 +5035,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 ##########
 #file_auth
 ##########
+
 def file_auth(  parent,
                 user,
                 password):
@@ -4962,6 +5054,7 @@ def file_auth(  parent,
 ##########
 #_get_hash
 ##########
+
 def _get_hash(txt):
     i=0
     r=txt
@@ -4972,13 +5065,16 @@ def _get_hash(txt):
 ################
 #_sigtermhandler
 ################
+
 def _sigtermhandler(signum, frame):
     exit(0)
 #####
 #main
 #####
+
 def main():
-    "main routine which will be called when gpgmailencrypt is started as a script, not as a module"
+    "main routine which will be called when gpgmailencrypt "
+    "is started as a script, not as a module"
     with gme() as g:
         receiver=g._parse_commandline()
         g._set_logmode()
