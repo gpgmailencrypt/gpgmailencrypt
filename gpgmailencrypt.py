@@ -224,7 +224,8 @@ def print_exampleconfig():
     print ("")
     print ("[smimeuser]")
     print ("smime.user@domain.com = user.pem[,cipher]               "
-"#public S/MIME key file [,used cipher, see defaultcipher in the smime section]")
+"#public S/MIME key file [,used cipher, see defaultcipher "
+"in the smime section]")
     print ("")
     print ("[pdf]")
     print ("email2pdfcommand=/usr/bin/email2pdf                     "
@@ -234,7 +235,8 @@ def print_exampleconfig():
     print ("pdftkcommand=/usr/bin/pdftk                             "
 "#path where to find pdftk (needed for encrypting pdf files")
     print ("pdfdomains=localhost                                    "
-"#a comma separated list of sender domains, which are allowed to use pdf-encrypt")
+"#a comma separated list of sender domains, which are allowed to "
+"use pdf-encrypt")
     print ("passwordlength=20                                       "
 "#Length of the automatic created password")
     print ("passwordlifetime=172800                                 "
@@ -256,7 +258,8 @@ def print_exampleconfig():
     print ("                                                        "
 "#the directory will be also encrypted")
     print ("zipattachments=False                                    "
-"#if True all attachments will be zipped, independent from the encryption method")
+"#if True all attachments will be zipped, independent "
+"from the encryption method")
     print ("")
     print ("[daemon]")
     print ("host = 127.0.0.1                                        "
@@ -467,9 +470,9 @@ class _GPG:
                     email=res[9]
                     mail_id=res[4]
                     try:
-                        found=re.search(
-                        "[-a-zA-Z0-9_%\+\.]+@[-_0-9a-zA-Z\.]+\.[-_0-9a-zA-Z\.]+",
-                        email)
+                       found=re.search(
+                       "[-a-zA-Z0-9_%\+\.]+@[-_0-9a-zA-Z\.]+\.[-_0-9a-zA-Z\.]+",
+                       email)
                     except:
                         self.parent.log_traceback()
                     if found != None:
@@ -560,7 +563,8 @@ class _GPG:
         self.parent.debug("Encryption command: '%s'" %
                     ' '.join(self._encryptcommand_fromfile(f.name,binary)))
         if _result != 0:
-            self.parent.log("Error executing command (Error code %d)"%_result,"e")
+            self.parent.log("Error executing command (Error code %d)"%_result,
+                            "e")
             return result,None
         else:
             result=True
@@ -618,7 +622,8 @@ class _GPG:
         self.parent.debug("Encryption command: '%s'" %
             ' '.join(self._decryptcommand_fromfile(f.name,binary)))
         if _result != 0:
-            self.parent.log("Error executing command (Error code %d)"%_result,"e")
+            self.parent.log("Error executing command (Error code %d)"%_result,
+                            "e")
         else:
             result=True
         if binary:
@@ -680,9 +685,9 @@ class _GPGEncryptedAttachment(email.message.Message):
         self._masterboundary=b
 
     def _write_headers(self,g):
-        print ('Content-Type: application/pgp-encrypted',file=g._fp)
-        print ('Content-Description: PGP/MIME version identification\n\nVersion: 1\n', 
-                file=g._fp)
+        print ("Content-Type: application/pgp-encrypted",file=g._fp)
+        print ("Content-Description: PGP/MIME version identification\n"
+                "\nVersion: 1\n",file=g._fp)
         print ("--%s"%self._masterboundary,file=g._fp)
         fname=self.get_filename()
         if fname == None:
@@ -759,8 +764,8 @@ class _SMIME:
         try:
             _u=self.parent._smimeuser[key]
         except:
-            self.parent.debug("smime has_public_key, key not found for '%s'"%key)
-            return False
+           self.parent.debug("smime has_public_key, key not found for '%s'"%key)
+           return False
         return True
  
     @_dbg
@@ -789,8 +794,8 @@ class _SMIME:
         self.parent.debug("Encryption command: '%s'" %
                         ' '.join(self._command_encrypt_fromfile(f.name,binary)))
         if _result != 0:
-            self.parent.log("Error executing command (Error code %d)"%_result,"e")
-            return result,None
+          self.parent.log("Error executing command (Error code %d)"%_result,"e")
+          return result,None
         else:
             result=True
         res=open(f.name,encoding="UTF-8")
@@ -1052,14 +1057,14 @@ class _PDF:
                         ' '.join(self._createpdfcommand_fromfile(f.name)),
                         shell=True ) 
         if _result !=0:
-            self.parent.log("Error executing command (Error code %d)"%_result,"e")
-            return result,None
+          self.parent.log("Error executing command (Error code %d)"%_result,"e")
+          return result,None
         else:
             result=True
         _res,encryptedfile=self._encrypt_pdffile(f.name,password)
         if _res==False:
-            self.parent.log("Error encrypting pdf file (Error code %d)"%_res,"e")
-            return False,None
+          self.parent.log("Error encrypting pdf file (Error code %d)"%_res,"e")
+          return False,None
         res=open(encryptedfile,mode="br")
         self.parent.debug("PDF.encrypt_file binary open")
         encdata=res.read()
@@ -1171,8 +1176,8 @@ class _ZIP:
         except:
             pass
         if _result !=0:
-            self.parent.log("Error executing command (Error code %d)"%_result,"e")
-            return result,None
+          self.parent.log("Error executing command (Error code %d)"%_result,"e")
+          return result,None
         else:
             result=True
         res=open(f.name+".zip",mode="br")
@@ -1467,7 +1472,7 @@ def guess_fileextension(ct):
             return "swf"
         elif subtype=="mswrite":
             return "wri"
-        elif subtype in ("msexcel","excel","vnd.ms-excel","x-excel","x-msexcel"):
+        elif subtype in("msexcel","excel","vnd.ms-excel","x-excel","x-msexcel"):
             return "xls"
         elif subtype in ("msword","word","vnd.ms-word","x-word","x-msword"):
             return "doc"
@@ -1685,7 +1690,7 @@ class gme:
     #########
  
     def __exit__(self, exc_type, exc_value, traceback):
-        "automatically cleans up tempfiles when created with the 'with' statement"
+        "automatic clean up tempfiles when created with the 'with' statement"
         self.close()
     ##########
     #__enter__
@@ -1971,7 +1976,8 @@ class gme:
             try:
                 self._read_pdfpasswordfile(self._PDF_PASSWORDFILE)
             except:
-                self.log("File '%s' could not be opened."%self._PDF_PASSWORDFILE)
+                self.log("File '%s' could not be opened."
+                        %self._PDF_PASSWORDFILE)
                 pass
 
         if _cfg.has_section('zip'):
@@ -2626,9 +2632,12 @@ class gme:
                 return False
             #compressed Microsoft Office formats
             elif subtype in [
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation"]:
+            "application/vnd.openxmlformats-officedocument."
+                                "wordprocessingml.document",
+            "application/vnd.openxmlformats-officedocument."
+                                "spreadsheetml.sheet", 
+            "application/vnd.openxmlformats-officedocument."
+                                "presentationml.presentation"]:
                 return False
             #Openoffice/LibreOffice
             elif subtype in ["vnd.oasis.opendocument.text",
@@ -2740,8 +2749,10 @@ class gme:
                     try:
                         smtp.login(self._SMTP_USER,self._SMTP_PASSWORD)
                     except smtplib.SMTPAuthenticationError:
-                        self.log("Could not send email, could not authenticate","e")
-                        self.debug("_send_textmsg: store_deferred %s" % store_deferred)
+                        self.log("Could not send email, could not "
+                                 "authenticate","e")
+                        self.debug( "_send_textmsg: store_deferred"
+                                    " %s" % store_deferred)
                         if store_deferred:
                             self._store_temporaryfile(  message,
                                                         add_deferred=True,
@@ -3651,7 +3662,8 @@ class gme:
             self.og_traceback()
         newmsg.set_type("multipart/encrypted")
         newmsg.set_param("protocol","application/pgp-encrypted")
-        newmsg.preamble='This is an OpenPGP/MIME encrypted message (RFC 4880 and 3156)'
+        newmsg.preamble=('This is an OpenPGP/MIME encrypted message'
+                        ' (RFC 4880 and 3156)')
         if 'Content-Transfer-Encoding' in newmsg:
             del newmsg['Content-Transfer-Encoding']
         gpg = _GPG( self,self._GPGKEYHOME, gpguser)
@@ -3662,10 +3674,13 @@ class gme:
         protocol=""
         if contenttype=="multipart/signed":
             protocol=" protocol=\"application/pgp-signature\";\n"
-        msgheader='Content-Type: %(ctyp)s;\n%(protocol)s boundary="%(bdy)s"\n'\
-            %{"bdy":contentboundary,"ctyp":contenttype,"protocol":protocol}
+        msgheader=('Content-Type: %(ctyp)s;\n%(protocol)s boundary="%(bdy)s"\n'
+            %{  "bdy":contentboundary,
+                "ctyp":contenttype,
+                "protocol":protocol})
         if contenttransferencoding !="None":
-            msgheader+=("Content-Transfer-Encoding: %s\n" %contenttransferencoding)
+            msgheader+=(    "Content-Transfer-Encoding: %s\n"%
+                            contenttransferencoding)
         bodymsg=email.message.Message()
         if "multipart" in contenttype:
             bodymsg["Content-Type"]=contenttype
@@ -3691,13 +3706,18 @@ class gme:
                 bdy='boundary="%s"\n'%contentboundary
             if ("text/" in contenttype) and _ch!= None and len(_ch)>0 :
                 charset="charset=\"%s\""%_ch
-                self.debug("content-type: '%s' charset: '%s'"%(contenttype,charset))
-            msgheader='Content-Type: %(ctyp)s; %(charset)s\n%(protocol)s%(bdy)s'\
-            %{"bdy":bdy,"ctyp":contenttype,"protocol":protocol,"charset":charset}
+                self.debug("content-type: '%s' "
+                                "charset: '%s'"%(contenttype,charset))
+            msgheader=('Content-Type: %(ctyp)s; %(charset)s'
+            '\n%(protocol)s%(bdy)s'%{   "bdy":bdy,
+                                        "ctyp":contenttype,
+                                        "protocol":protocol,
+                                        "charset":charset})
             self.debug("msgheader:    '%s'"%str(msgheader))
             self.debug("new boundary: '%s'"%str(boundary))
             if contenttransferencoding !=None:
-                msgheader+=("Content-Transfer-Encoding: %s\n" %contenttransferencoding)
+                msgheader+=(
+                    "Content-Transfer-Encoding: %s\n" %contenttransferencoding)
             body=msgheader+"\n"+body    
         else:
             self.debug("Payload==Msg")
@@ -3793,10 +3813,16 @@ class gme:
             return None
         self.log("Encrypting email to: %s" % to_addr )
         if use_pgpmime:
-            mail = self.encrypt_pgpmime( mailtext,gpguser,from_addr,to_addr )
+            mail = self.encrypt_pgpmime(    mailtext,
+                                            gpguser,
+                                            from_addr,
+                                            to_addr )
         else:
             #PGP Inline
-            mail = self.encrypt_pgpinline( mailtext,gpguser,from_addr,to_addr )
+            mail = self.encrypt_pgpinline(  mailtext,
+                                            gpguser,
+                                            from_addr,
+                                            to_addr )
         if mail==None:
             return None
         self._count_encryptedmails+=1
@@ -3865,7 +3891,8 @@ class gme:
         newmsg.set_type( 'application/pkcs7-mime')
         if newmsg["Content-Disposition"]:
             del newmsg["Content-Disposition"]
-        newmsg.add_header('Content-Disposition', 'attachment; filename="smime.p7m"')
+        newmsg.add_header(  'Content-Disposition', 'attachment; '
+                            'filename="smime.p7m"')
         newmsg.set_param( 'smime-type', 'enveloped-data',requote=False)
         newmsg.set_param( 'name', 'smime.p7m')
         newmsg.del_param("charset")
@@ -3904,17 +3931,22 @@ class gme:
             bdy=""
             if contentboundary!=None:
                 bdy='boundary="%s"\n'%contentboundary
-            if ("text/" in contenttype) and _ch!= None and len(_ch)>0 :
+            if (("text/" in contenttype) 
+            and _ch!= None 
+            and len(_ch)>0):
                 charset="charset=\"%s\""%_ch
-                self.debug("content-type: '%s' charset: '%s'"%(contenttype,charset))
-            msgheader='Content-Type: %(ctyp)s; %(charset)s\n%(protocol)s%(bdy)s'\
-            %{  "bdy":bdy,
-                "ctyp":contenttype,
-                "protocol":protocol,
-                "charset":charset}
+                self.debug("content-type: '%s' charset: '%s'"%(
+                            contenttype,
+                            charset))
+            msgheader="Content-Type: %(ctyp)s; %(charset)s\n%(protocol)s"
+            "%(bdy)s"%{ "bdy":bdy,
+                        "ctyp":contenttype,
+                        "protocol":protocol,
+                        "charset":charset}
             self.debug("msgheader:    '%s'"%str(msgheader))
             if contenttransferencoding !=None:
-                msgheader+=("Content-Transfer-Encoding: %s\n" %contenttransferencoding)
+                msgheader+=("Content-Transfer-Encoding: %s\n" %
+                                contenttransferencoding)
             body=msgheader+"\n"+body    
         else:
             self.debug("Payload==Msg")
@@ -4025,12 +4057,13 @@ class gme:
                 plainmsg=MIMEText(htmlbody)
                 msg.attach(plainmsg)
                 msg.attach(htmlmsg)
-                msg['Subject'] = 'Password for: %s' %self._decode_header(newmsg["To"])
+                msg['Subject'] = ('Password for: %s' %
+                                    self._decode_header(newmsg["To"]))
                 msg['To'] = from_addr
                 msg['From'] = self._SYSTEMMAILFROM
                 self.encrypt_mails(msg.as_string(),from_addr)
             msgtxt=self._load_mailmaster("02-pdfmail",
-                        "Content of this e-mail is stored in an pdf attachment.")
+                       "Content of this e-mail is stored in an pdf attachment.")
             msg=MIMEMultipart()
             msg.set_type("multipart/alternative")
             res,htmlheader,htmlbody,htmlfooter=self._split_html(msgtxt)
@@ -4161,6 +4194,7 @@ class gme:
         g_r,to_gpg=self.check_gpgrecipient(to_addr)
         s_r,to_smime=self.check_smimerecipient(to_addr)
         method=self.get_preferredencryptionmethod(to_addr)
+ 
         self.debug("GPG encrypt possible %i / %s"%(g_r,to_gpg))
         self.debug("SMIME encrypt possible %i / %s"%(s_r,to_smime))
         self.debug("Prefer PDF %i / %s"%(_prefer_pdf,to_pdf))
@@ -4187,7 +4221,10 @@ class gme:
         if method=="NONE":
             g_r=False
             s_r=False
-        if not s_r and not g_r and not _prefer_pdf and not _encrypt_subject:
+        if (not s_r 
+        and not g_r 
+        and not _prefer_pdf 
+        and not _encrypt_subject):
             m="Email not encrypted, public key for '%s' not found"%to_addr
             self.log(m)
             if self._ZIPATTACHMENTS:
@@ -4201,8 +4238,10 @@ class gme:
             self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
             return
 
-        if ((not _prefer_pdf and not _encrypt_subject) 
-        or (_encrypt_subject and (g_r or s_r))): 
+        if ((   not _prefer_pdf 
+                and not _encrypt_subject) 
+        or (    _encrypt_subject 
+                and (g_r or s_r))): 
             if self._ZIPATTACHMENTS:
                 mailtext=self.zip_attachments(mailtext)
         if _prefer_gpg:
@@ -4399,15 +4438,15 @@ class gme:
             self._read_smtpdpasswordfile(self._SMTPD_PASSWORDFILE)
         try:
             server = _gpgmailencryptserver(    
-                            self,
-                            (self._SERVERHOST, self._SERVERPORT),
-                            use_auth=self._SMTPD_USE_AUTH,
-                            authenticate_function=file_auth,
-                            write_smtpdpasswordfile=self.write_smtpdpasswordfile,
-                            read_smtpdpasswordfile=self._read_smtpdpasswordfile,
-                            use_smtps=self._SMTPD_USE_SMTPS,
-                            sslkeyfile=self._SMTPD_SSL_KEYFILE,
-                            sslcertfile=self._SMTPD_SSL_CERTFILE)
+                          self,
+                          (self._SERVERHOST, self._SERVERPORT),
+                          use_auth=self._SMTPD_USE_AUTH,
+                          authenticate_function=file_auth,
+                          write_smtpdpasswordfile=self.write_smtpdpasswordfile,
+                          read_smtpdpasswordfile=self._read_smtpdpasswordfile,
+                          use_smtps=self._SMTPD_USE_SMTPS,
+                          sslkeyfile=self._SMTPD_SSL_KEYFILE,
+                          sslcertfile=self._SMTPD_SSL_CERTFILE)
         except:
             self.log("Couldn't start mail server")
             self.log_traceback()
@@ -4611,21 +4650,25 @@ def start_adminconsole(host,port):
             print("statistics          print statistic information")
             print("users               print users")
 
+#class taken from http://stackoverflow.com/questions/20625642/\
+#                 autocomplete-with-readline-in-python3
     class MyCompleter(object):  # Custom completer
 
-    #class taken from 
-    #http://stackoverflow.com/questions/20625642/autocomplete-with-readline-in-python3
         def __init__(self, options):
             self.options = sorted(options)
 
-        def complete(self, text, state):
+        def complete(   self, 
+                        text, 
+                        state):
             if state == 0:  # on first trigger, build possible matches
                 if not text:
                     self.matches = self.options[:]
                 else:
                     self.matches = [s for s in self.options 
-                                        if (s 
-                                        and s.upper().startswith(text.upper()))]
+                                      if (s 
+                                      and s.upper().startswith(text.upper() )
+                                         )
+                                   ]
             try:
                 return self.matches[state]
             except IndexError:
@@ -4667,15 +4710,16 @@ def start_adminconsole(host,port):
 ######################
 class _gpgmailencryptserver(smtpd.SMTPServer):
     "encryption smtp server based on smtpd"
-    ADMINCOMMANDS=[ "STATISTICS",
-                    "RELOAD",
-                    "FLUSH",
-                    "SETUSER",
+    ADMINCOMMANDS=[ "DEBUG",
                     "DELUSER",
-                    "DEBUG",
-                    "USERS",
-                    "RESETSTATISTICS"]
+                    "FLUSH",
+                    "RELOAD",
+                    "RESETSTATISTICS",
+                    "SETUSER",
+                    "STATISTICS",
+                    "USERS"]
     ADMINALLCOMMANDS=ADMINCOMMANDS+["HELP","QUIT"]
+
     def __init__(self, 
             parent,
             localaddr,
@@ -4705,6 +4749,8 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
         self.write_smtpdpasswordfile=write_smtpdpasswordfile
         self.read_smtpdpasswordfile=read_smtpdpasswordfile
         self.authenticate_function=authenticate_function
+
+    @_dbg
     def handle_accept(self):
         pair = self.accept()
         if pair is not None:
@@ -4831,6 +4877,13 @@ class _hksmtpchannel(smtpd.SMTPChannel):
             encodeddata=data.decode("UTF-8",_unicodeerror)
         self.received_lines.append(encodeddata)
 
+    def reset_values(self):    
+        self.is_authenticated=False
+        self.is_admin=False
+        self.user=""
+        self.password=""
+        self.seen_greeting=False
+ 
     def smtp_HELO(self,arg):
         self.parent.debug("hksmtpserver: HELO")
         if not arg:
@@ -4868,13 +4921,6 @@ class _hksmtpchannel(smtpd.SMTPChannel):
         self.parent.debug("hksmtpserver: RSET")
         self.reset_values()
         smtpd.SMTPChannel.smtp_RSET(self,arg)
- 
-    def reset_values(self):    
-        self.is_authenticated=False
-        self.is_admin=False
-        self.user=""
-        self.password=""
-        self.seen_greeting=False
  
     def smtp_DEBUG(self,arg):
         syntaxerror="501 Syntax error: DEBUG TRUE|FALSE or ON|OFF or YES|NO"
