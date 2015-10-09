@@ -1211,17 +1211,12 @@ class _ZIP:
             cmd.insert(4,"-mx%i"%self.parent._ZIPCOMPRESSION)
         return cmd
 
-
-
-
-
     @_dbg
-    def unzip_zipfile( self,
-                        zipfile,
-                        password,
-                        directory=None,
-                        containerfile=None
-                        ):
+    def unzip_file( self,
+                    zipfile,
+                    password,
+                    directory=None,
+                    containerfile=None):
         if directory==None:
             directory = tempfile.mkdtemp()
         result=False
@@ -1239,9 +1234,10 @@ class _ZIP:
         if containerfile!=None:
             result=False
             directory2 = tempfile.mkdtemp()
-            unzipcmd=' '.join(self._createunzipcommand_indir("%s/%s.zip"%(directory,containerfile),
-                                                            directory2,
-                                                            password))
+            unzipcmd=' '.join(self._createunzipcommand_indir(
+                            "%s/%s.zip"%(directory,containerfile),
+                                         directory2,
+                                         password))
             _result = subprocess.call(unzipcmd, shell=True) 
         if _result !=0:
           self.parent.log("Error executing command (Error code %d)"%_result,"e")
