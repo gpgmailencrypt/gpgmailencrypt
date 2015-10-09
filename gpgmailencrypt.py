@@ -21,7 +21,7 @@ Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
 VERSION="2.2.0dev"
-DATE="06.10.2015"
+DATE="09.10.2015"
 from configparser           import ConfigParser
 from email                  import encoders
 from email.generator        import Generator
