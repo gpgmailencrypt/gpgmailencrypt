@@ -1219,9 +1219,11 @@ class _ZIP:
                     containerfile=None):
         if directory==None:
             directory = tempfile.mkdtemp()
+            self.parent.debug("create end directory %s"%directory)
+        directory1=tempfile.mkdtemp()
         result=False
         unzipcmd=' '.join(self._createunzipcommand_indir(   zipfile,
-                                                            directory,
+                                                            directory1,
                                                             password))
         self.parent.debug("UNZIP command: '%s'" % unzipcmd)
         _result = subprocess.call(unzipcmd, shell=True) 
@@ -1230,21 +1232,40 @@ class _ZIP:
           return result,None
         else:
             result=True
-
+        directory2=""
         if containerfile!=None:
             result=False
             directory2 = tempfile.mkdtemp()
             unzipcmd=' '.join(self._createunzipcommand_indir(
-                            "%s/%s.zip"%(directory,containerfile),
+                            "%s/%s.zip"%(directory1,containerfile),
                                          directory2,
                                          password))
+            self.parent.debug("UNZIP command2: '%s'" % unzipcmd)
             _result = subprocess.call(unzipcmd, shell=True) 
+
+            if _result==0:
+                self.parent.debug("shutil 1 move %s, %s"%(directory2,directory))
+                source = os.listdir(directory2)
+                for s in source:
+                     shutil.move(os.path.join(directory2,s),directory)
+        else:
+            source = os.listdir(directory1)
+            for s in source:
+                     shutil.move(os.path.join(directory1,s),directory)
+            
         if _result !=0:
           self.parent.log("Error executing command (Error code %d)"%_result,"e")
           return result,None
         else:
             result=True
-            directory=directory2
+        try:
+            shutil.rmtree(directory1)
+        except:
+            pass
+        try:
+            shutil.rmtree(directory2)
+        except:
+            pass
         return result,directory
  
     @_dbg
