@@ -1140,6 +1140,7 @@ class _ZIP:
         self.parent.debug("_PDF.create_file _new_tempfile %s"%f.name)
         f.close()
         fname=f.name
+        result=False
         if containerfile!=None:
             tempdir = tempfile.mkdtemp()
             fname="%s/%s"%(tempdir,containerfile)
@@ -1209,6 +1210,60 @@ class _ZIP:
         if compress==True:
             cmd.insert(4,"-mx%i"%self.parent._ZIPCOMPRESSION)
         return cmd
+
+
+
+
+
+    @_dbg
+    def unzip_zipfile( self,
+                        zipfile,
+                        password,
+                        directory=None,
+                        containerfile=None
+                        ):
+        if directory==None:
+            directory = tempfile.mkdtemp()
+        result=False
+        unzipcmd=' '.join(self._createunzipcommand_indir(   zipfile,
+                                                            directory,
+                                                            password))
+        self.parent.debug("UNZIP command: '%s'" % unzipcmd)
+        _result = subprocess.call(unzipcmd, shell=True) 
+        if _result !=0:
+          self.parent.log("Error executing command (Error code %d)"%_result,"e")
+          return result,None
+        else:
+            result=True
+
+        if containerfile!=None:
+            result=False
+            directory2 = tempfile.mkdtemp()
+            unzipcmd=' '.join(self._createunzipcommand_indir("%s/%s.zip"%(directory,containerfile),
+                                                            directory2,
+                                                            password))
+            _result = subprocess.call(unzipcmd, shell=True) 
+        if _result !=0:
+          self.parent.log("Error executing command (Error code %d)"%_result,"e")
+          return result,None
+        else:
+            result=True
+            directory=directory2
+        return result,directory
+ 
+    @_dbg
+    def _createunzipcommand_indir(  self,
+                                    sourcefile,
+                                    directory,
+                                    password):
+        cmd=[   self.parent._7ZIPCMD, 
+                "e",sourcefile,
+                "-o%s"%directory,
+                ">/dev/null"]
+        if password!=None:
+            cmd.insert(4,"-p%s"%password)
+        return cmd
+
 
 #############
 #_decode_html
