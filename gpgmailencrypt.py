@@ -1118,24 +1118,43 @@ class _PDF:
                 "user_pw","\"%s\""%password]
         return cmd
 ###########
-#CLASS _ZIP
+#CLASS ZIP
 ###########
-class _ZIP:
- 
+class ZIP:
+    "Class to create or unzip zipfiles." 
     @_dbg
     def __init__(self, parent):
         self.parent=parent
         self.zipcipher=self.parent._ZIPCIPHER
- 
+
     @_dbg
     def set_zipcipher(self,cipher):
+        "valid ciphers are ZipCrypto,AES128,AES256"
         self.zipcipher=cipher.upper()
  
     @_dbg
     def create_zipfile( self,
                         directory,
-                        password,
+                        password=None,
                         containerfile=None):
+        """to create a zipfile put all files, that should be included in the
+        directory 'directory'.
+        if you want to have the zipfile password secured set the password.
+    
+        A normal zipfile will always display a list of it contents, even when it
+        is secured with a password. If you want to avoid this set containerfile 
+        to a freely selected name. Then this class creates a password secured 
+        zip-file with the name of "containerfile" and puts it in the zipfile 
+        which will be returned by this routine. So one can just see, that the 
+        zipfile contains another zipfile, but without the password no one can 
+        see what it contains.
+
+        This functions returns 2 values:
+    
+        result : True if everything worked correctly, else False
+        encdata: if 'result' is True encdata returns a binary string with the 
+                 zip-file, else None
+        """
         f=self.parent._new_tempfile()
         self.parent.debug("_PDF.create_file _new_tempfile %s"%f.name)
         f.close()
@@ -1214,9 +1233,19 @@ class _ZIP:
     @_dbg
     def unzip_file( self,
                     zipfile,
-                    password,
+                    password=None,
                     directory=None,
                     containerfile=None):
+        """unzips a zip archive to the directory 'directory'. If none is given
+        a temporary directory will be created. For the variables see function
+        ZIP.create_zipfile().
+    
+        This functions returns 2 values:
+        
+        result :    True if everything worked correctly, else False
+        directory:  if 'result' is True it returns the directory with the 
+                    content of the zip-file, else None
+        """
         if directory==None:
             directory = tempfile.mkdtemp()
             self.parent.debug("create end directory %s"%directory)
@@ -2591,7 +2620,7 @@ class gme:
     def zip_attachments(self,mailtext):
         message = email.message_from_string( mailtext )        
         tempdir = tempfile.mkdtemp()
-        Zip=_ZIP(self)
+        Zip=ZIP(self)
         for m in message.walk():
             contenttype=m.get_content_type()
             if (m.get_param('attachment', 
@@ -4163,7 +4192,7 @@ class gme:
         oldmsg=email.message_from_string(message)
         attachments=0
         tempdir = tempfile.mkdtemp()
-        Zip=_ZIP(self)
+        Zip=ZIP(self)
         try:
             Zip.set_zipcipher(self._encryptionmap[pdfuser][1])
         except:
