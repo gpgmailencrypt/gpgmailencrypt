@@ -1230,6 +1230,42 @@ class ZIP:
             cmd.insert(4,"-mx%i"%self.parent._ZIPCOMPRESSION)
         return cmd
 
+    def get_zipcontent( self,
+                        zipfile,
+                        password=None,
+                        containerfile=None):
+        """like ZIP.unzip_file, just the return values are different
+    
+        This functions returns 2 values:
+        
+        result :     True if everything worked correctly, else False
+        encdatalist: if 'result' is True it returns a list of 
+                     'filename'/'binarydata' tuples, else None
+        """
+        res,directory=self.unzip_file(  zipfile,
+                                        password=password,
+                                        containerfile=containerfile)        
+        if res==False:
+            return False, None
+        encdatalist=[]
+        for root, subdirs, files in os.walk(directory):
+            for filename in files:
+                longfilename=os.path.join(root,filename)
+                try:
+                    _f=open(longfilename,"rb")
+                    data=_f.read()
+                    _f.close()
+                    encdatalist.append((filename,data))
+                except:
+                    self.parent.log("Data of file '%s' could not be read"%
+                                    filename)
+        try:
+            shutil.rmtree(directory)
+        except:
+            pass
+                    
+        return True,encdatalist
+
     @_dbg
     def unzip_file( self,
                     zipfile,

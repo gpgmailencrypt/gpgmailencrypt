@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 import unittest,sys,tempfile
 sys.path.insert(1,"..")
 import gpgmailencrypt
@@ -803,7 +803,7 @@ class gmetests(unittest.TestCase):
     def test_zipunzip(self):
         with gpgmailencrypt.gme() as gme:
             gme.set_configfile("./gmetest.conf")
-            ZIP=gpgmailencrypt._ZIP(gme)
+            ZIP=gpgmailencrypt.ZIP(gme)
             teststring="dies ist ein Täst"
             directory = tempfile.mkdtemp()
             f=open("%s/testfile.txt"%directory,mode='w')
@@ -811,16 +811,20 @@ class gmetests(unittest.TestCase):
             f.close()
             success=False
             _result,encdata=ZIP.create_zipfile(directory,password="secret",containerfile="container")
+            data=None
             if _result==True:
                 f=tempfile.NamedTemporaryFile(mode='wb',delete=False,prefix='unittest-')
                 f.write(encdata)
                 f.close()
-                _result,directory=ZIP.unzip_file(zipfile=f.name,password="secret",containerfile="container")
-                if _result==True:
-                    f2=open("%s/testfile.txt"%directory)
-                    data=f2.read()
-                    f2.close()
-                    success=(data==teststring)
+                _result,encdata=ZIP.get_zipcontent(zipfile=f.name,password="secret",containerfile="container")
+                self.assertTrue(_result==True)
+                try:
+                    self.assertTrue(encdata[0][0]=="testfile.txt")
+                    data=encdata[0][1].decode("UTF-8")
+                except:
+                    raise
+                    
+            success=(data==teststring)
             gme.close()
         self.assertTrue(success)
         
