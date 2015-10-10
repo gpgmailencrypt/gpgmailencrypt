@@ -21,7 +21,7 @@ Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
 VERSION="2.2.0dev"
-DATE="09.10.2015"
+DATE="10.10.2015"
 from configparser           import ConfigParser
 from email                  import encoders
 from email.generator        import Generator
@@ -485,10 +485,7 @@ class _GPG:
                         email=email.lower()
                         if (len(email)>0 
                             and self.parent._GPGkeys.count(email) == 0):
-                            #self.parent.debug("add email address '%s'"%email)
                             self.parent._GPGkeys.append(email)
-                        #else:
-                            #self.parent.debug("Email '%s' already added"%email)
         except:
             self.parent.log("Error opening keyring (Perhaps wrong "
                             "directory '%s'?)"%self._keyhome,"e")
@@ -951,7 +948,7 @@ class _SMIME:
             os.remove(fname)
             return None
         fp=self.get_certfingerprint(fname)
-        targetname="%s/%s.pem"%(targetdir,fp)
+        targetname=os.path.join(targetdir,"%s.pem"%fp)
         self._copyfile(fname,targetname)
         os.remove(fname)
         return targetname
@@ -969,7 +966,7 @@ class _SMIME:
         _match="^(.*?).pem"
         for _i in _udir:
               if re.match(_match,_i):
-                  f="%s/%s"%(directory,_i)
+                  f=os.path.join(directory,_i)
                   emailaddress=self.get_certemailaddresses(f)
                   if len(emailaddress)>0:
                       for e in emailaddress:
@@ -1162,7 +1159,7 @@ class ZIP:
         result=False
         if containerfile!=None:
             tempdir = tempfile.mkdtemp()
-            fname="%s/%s"%(tempdir,containerfile)
+            fname=os.path.join(tempdir,containerfile)
             self.parent.debug("ZIP creation command: '%s'" %
                        ' '.join(self._createzipcommand_fromdir(fname,
                                                                directory,
@@ -1302,7 +1299,7 @@ class ZIP:
             result=False
             directory2 = tempfile.mkdtemp()
             unzipcmd=' '.join(self._createunzipcommand_indir(
-                            "%s/%s.zip"%(directory1,containerfile),
+                            os.path.join(directory1,"%s.zip"%containerfile),
                                          directory2,
                                          password))
             self.parent.debug("UNZIP command2: '%s'" % unzipcmd)
@@ -2449,15 +2446,18 @@ class gme:
         f=None
         self.debug("_load_mailmaster '%s'"% identifier)
         try:
-            templatefile="%s/%s/%s.html"%(  self._MAILTEMPLATEDIR,
-                                            self._LOCALE,identifier)
+            templatefile=os.path.join(  self._MAILTEMPLATEDIR,
+                                        self._LOCALE,
+                                        "%s.html"%identifier)
             f=open(templatefile)
             self.debug("template found in %s"%templatefile)
         except:
             pass
         if f==None:
             try:
-                templatefile="%s/EN/%s.html"%(self._MAILTEMPLATEDIR,identifier)
+                templatefile=os.path.join(self._MAILTEMPLATEDIR,
+                                            "EN",
+                                            "%s.html"%identifier)
                 f=open(templatefile)
                 self.debug("template found in %s"%templatefile)
             except:
@@ -2693,7 +2693,7 @@ class gme:
                     m.del_param("charset")    
                     m.set_param("charset",charset)
                     raw_payload=raw_payload.encode(charset,_unicodeerror)
-                fp=open("%s/%s"%(tempdir,filename),"wb")
+                fp=open(os.path.join(tempdir,filename),"wb")
 
                 try:
                     fp.write(raw_payload)
@@ -4256,7 +4256,7 @@ class gme:
                 else:
                     payload=m.get_payload(decode=True)
                 self.debug("Open write: %s/%s"%(tempdir,filename))
-                fp=open("%s/%s"%(tempdir,filename),"wb")
+                fp=open(os.path.join(tempdir,filename),"wb")
                 try:
                     fp.write(payload)
                 except:
