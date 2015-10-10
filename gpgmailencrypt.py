@@ -379,16 +379,13 @@ class _GPG:
     @_dbg
     def __init__(   self, 
                     parent,
-                    keyhome=None, 
-                    recipient = None, 
-                    counter=0):
+                    keyhome=None):
         self._recipient = ''
         self._filename=''    
-        self.count=counter
+        self.count=0
         self.parent=parent
         self.parent.debug("_GPG.__init__")
-        if isinstance(recipient, str):
-            self.set_recipient(recipient)
+        self.set_recipient(None)
         if isinstance(keyhome,str):
             self._keyhome = expanduser(keyhome)
         elif self.parent and self.parent._GPGKEYHOME:
@@ -397,6 +394,9 @@ class _GPG:
             self._keyhome=expanduser('~/.gnupg')
         self.parent.debug("_GPG.__init__ end")
  
+    @_dbg
+    def _set_counter(self,counter):
+        self.count=counter
     @_dbg
     def set_filename(self, fname):
         if isinstance(fname,str):
@@ -701,8 +701,7 @@ class _SMIME:
     @_dbg
     def __init__(   self,
                     parent, 
-                    keyhome=None, 
-                    recipient = None):
+                    keyhome=None):
         self.parent=parent
         self.parent.debug("_SMIME.__init__ %s"%self.parent._SMIMEKEYHOME)
         if type(keyhome)==str:
@@ -711,8 +710,7 @@ class _SMIME:
             self._keyhome=expanduser(self.parent._SMIMEKEYHOME)
         self._recipient = ''
         self._filename=''    
-        if isinstance(recipient, str):
-            self._recipient=recipient
+        self._recipient=None
         self.parent.debug("_SMIME.__init__ end")
  
     @_dbg
@@ -1115,9 +1113,9 @@ class _PDF:
                 "user_pw","\"%s\""%password]
         return cmd
 ###########
-#CLASS ZIP
+#CLASS _ZIP
 ###########
-class ZIP:
+class _ZIP:
     "Class to create or unzip zipfiles." 
     @_dbg
     def __init__(self, parent):
@@ -2156,7 +2154,7 @@ class gme:
                 k=_cfg.get('smime','keyextractdir')
                 if k!=None:
                     self._SMIMEKEYEXTRACTDIR=k.strip()
-        s=_SMIME(self,self._SMIMEKEYHOME)
+        s=self.smime_factory()
         self._smimeuser.update(s.create_keylist(self._SMIMEKEYHOME))
         if _cfg.has_section('smimeuser'):
             self._smimeuser = dict()
@@ -2648,6 +2646,30 @@ class gme:
         except:
             self.log("mail %i could not be removed from queue"%m_id)
             self.log_traceback()
+    ############
+    #zip_factory
+    ############
+    
+    @_dbg
+    def zip_factory(self):
+        "returns a ZIP class"
+        return _ZIP(self)
+    ############## 
+    #smime_factory
+    ##############
+    
+    @_dbg
+    def smime_factory(self):
+        "returns a _SMIME class"
+        return _SMIME(self,self._SMIMEKEYHOME)
+    ############
+    #gpg_factory
+    ############
+    
+    @_dbg
+    def gpg_factory(self):
+        "returns a _GPG class"
+        return _GPG(self,self._GPGKEYHOME)
     ################
     #zip_attachments
     ################
@@ -2656,7 +2678,7 @@ class gme:
     def zip_attachments(self,mailtext):
         message = email.message_from_string( mailtext )        
         tempdir = tempfile.mkdtemp()
-        Zip=ZIP(self)
+        Zip=self.zip_factory()
         for m in message.walk():
             contenttype=m.get_content_type()
             if (m.get_param('attachment', 
@@ -2797,6 +2819,7 @@ class gme:
             #same as above, just over the file extension
             if subtype=="octet-stream":
                 if extension in [   
+                    #Images
                     "jpg","jpeg","png","gif","jif","jfif","jp2","j2k","jpx",
                     "j2c","psd",
                     #Videos
@@ -2811,7 +2834,7 @@ class gme:
                     #Office
                     "docx","xlsx","pptx","ods","odt","odp","ott","odm","oth",
                     "ots","odg","otg","odf","odb","oxt","odg","odc","odi",
-                    #Misc
+                    #Miscellaneous
                     "epub"
                     ]:
                     return False
@@ -3333,7 +3356,7 @@ class gme:
         if len(addr)==2:
             domain = addr[1]
         found =False
-        gpg = _GPG( self,self._GPGKEYHOME)
+        gpg = self.gpg_factory()
         try:
             gpg_to_addr=self._addressmap[gaddr]
         except:
@@ -3366,7 +3389,7 @@ class gme:
         if len(addr)==2:
             domain = addr[1]
         found =False
-        smime = _SMIME(self,self._SMIMEKEYHOME)
+        smime = self.smime_factory()
         try:
             smime_to_addr=self._addressmap[saddr]
         except:
@@ -3542,7 +3565,9 @@ class gme:
         self.debug("_encrypt_payload: charset %s"%charset)
         if charset==None or charset.upper()=="ASCII" or len(charset)==0:
             charset="UTF-8"
-        gpg = _GPG(self, self._GPGKEYHOME, gpguser,counter)
+        gpg =self.gpg_factory()
+        gpg._set_counter(counter)
+        gpg.set_recipient(gpguser)
         raw_payload = payload.get_payload(decode=not is_text)
         if is_text:
             raw_payload=_decodetxt(raw_payload,cte,charset)    
@@ -3803,7 +3828,8 @@ class gme:
                         ' (RFC 4880 and 3156)')
         if 'Content-Transfer-Encoding' in newmsg:
             del newmsg['Content-Transfer-Encoding']
-        gpg = _GPG( self,self._GPGKEYHOME, gpguser)
+        gpg =self.gpg_factory()
+        gpg.set_recipient(gpguser)
         fp=self._new_tempfile()
         self.debug("encrypt_mime new tempfile %s"%fp.name)
         if contenttype ==None:
@@ -4039,7 +4065,7 @@ class gme:
         if newmsg["Content-Transfer-Encoding"]:
             del newmsg["Content-Transfer-Encoding"]
         newmsg.add_header('Content-Transfer-Encoding', 'base64')
-        smime = _SMIME( self,self._SMIMEKEYHOME)
+        smime = self.smime_factory()
         smime.set_recipient(smimeuser)
         fp=self._new_tempfile()
         self.debug("encrypt_smime_mail _new_tempfile %s"%fp.name)
@@ -4228,7 +4254,7 @@ class gme:
         oldmsg=email.message_from_string(message)
         attachments=0
         tempdir = tempfile.mkdtemp()
-        Zip=ZIP(self)
+        Zip=self.zip_factory()
         try:
             Zip.set_zipcipher(self._encryptionmap[pdfuser][1])
         except:
@@ -4458,7 +4484,7 @@ class gme:
                 f=self._new_tempfile()
                 f.write(mailtext.encode("UTF-8",_unicodeerror))
                 f.close()
-                s=_SMIME(self,self._SMIMEKEYHOME)
+                s=self.smime_factory()
                 s.extract_publickey_from_mail(  f.name,
                                                 self._SMIMEKEYEXTRACTDIR)
                 self._del_tempfile(f.name)
