@@ -21,7 +21,7 @@ Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
 VERSION="2.2.0dev"
-DATE="10.10.2015"
+DATE="11.10.2015"
 from configparser           import ConfigParser
 from email                  import encoders
 from email.generator        import Generator
@@ -375,7 +375,9 @@ def replace_variables(  text,
 #CLASS _GPG
 ###########
 class _GPG:
- 
+    """class to encrypt and decrypt files via gpg
+    Don't call this class directly, use gme.gpg_factory() instead!
+    """
     @_dbg
     def __init__(   self, 
                     parent,
@@ -399,6 +401,7 @@ class _GPG:
         self.count=counter
     @_dbg
     def set_filename(self, fname):
+        "sets the filename of the file, which content has to be encrypted"
         if isinstance(fname,str):
             self._filename=fname.strip()
         else:
@@ -406,6 +409,7 @@ class _GPG:
  
     @_dbg
     def set_keyhome(self,keyhome):
+        "sets the directory where the gpg keyring is stored"
         if isinstance(keyhome,str):
             self._keyhome=expanduser(keyhome.strip())
         else:
@@ -413,28 +417,35 @@ class _GPG:
  
     @_dbg
     def set_recipient(self, recipient):
+        "set the recipient e-mail address, for which the data will be encrypted"
         if isinstance(recipient, str):
             self._recipient=recipient
             self.parent._GPGkeys = list()
  
     @_dbg
     def recipient(self):
+        "returns the recipient address"
         return self._recipient    
  
     @_dbg
     def public_keys(self):
+        "returns a list of all available public keys"
         if len(self.parent._GPGkeys)==0:
             self._get_public_keys()
         return self.parent._GPGkeys
  
     @_dbg
     def private_keys(self):
+        "returns a list of all available private keys"
         if len(self.parent._GPGprivatekeys)==0:
             self._get_private_keys()
         return self.parent._GPGprivatekeys
  
     @_dbg
     def has_public_key(self,key):
+        """returns True if a public key for e-mail address 'key' exists,
+            else False
+        """
         self.parent.debug("gpg.has_public_key '%s'"%key)
         if len(self.parent._GPGkeys)==0:
             self._get_public_keys()
@@ -540,6 +551,14 @@ class _GPG:
                         filename=None,
                         binary=False, 
                         recipient=None):
+        """
+        encrypts the content of a file.
+        
+        return values:
+        result: True if success, else False
+        encdata: If 'result' is True, a (binary) string with the encrypted data
+                 else None
+        """
         result=False
         if filename:
             self.set_filename(filename)
@@ -603,6 +622,14 @@ class _GPG:
                         filename=None,
                         binary=False,
                         recipient=None):
+        """
+        decrypts the content of a file.
+        
+        return values:
+        result: True if success, else False
+        encdata: If 'result' is True, a (binary) string with the decrypted data
+                 else None
+        """
         result=False
         if recipient:
             self.set_recipient(recipient)
@@ -693,11 +720,15 @@ class _GPGEncryptedAttachment(email.message.Message):
                                                                 file=g._fp)
         print ('Content-Description: OpenPGP encrypted message',file=g._fp)
         print ('Content-Disposition: inline; filename="%s"\n'%fname,file=g._fp)
+
 #############
 #CLASS _SMIME
 #############
 class _SMIME:
- 
+    """class to encrypt and decrypt files for SMIME via openssl
+    Don't call this class directly, use gme.smime_factory() instead!
+    """
+
     @_dbg
     def __init__(   self,
                     parent, 
@@ -715,6 +746,7 @@ class _SMIME:
  
     @_dbg
     def public_keys(self):
+        "returns a list of all available public keys"
         result=list()
         for user in self.parent._smimeuser:
             result.append(user)
@@ -722,6 +754,7 @@ class _SMIME:
  
     @_dbg
     def private_keys(self):
+        "returns a list of all available private keys"
         result=list()
         for user in self.parent._smimeuser:
             if self.parent._smimeuser[user][2]!=None:
@@ -730,6 +763,7 @@ class _SMIME:
  
     @_dbg
     def set_filename(self, fname):
+        "sets the filename of the file, which content has to be encrypted"
         if isinstance(fname,str):
             self._filename=fname.strip()
         else:
@@ -737,6 +771,7 @@ class _SMIME:
  
     @_dbg
     def set_keyhome(self,keyhome):
+        "sets the directory where the smime keys are stored"
         if isinstance(keyhome,str):
             self._keyhome=expanduser(keyhome.strip())
         else:
@@ -744,15 +779,20 @@ class _SMIME:
  
     @_dbg
     def set_recipient(self, recipient):
+        "set the recipient e-mail address, for which the data will be encrypted"
         if isinstance(recipient, str):
             self._recipient=recipient
  
     @_dbg
     def recipient(self):
+        "returns the recipient address"
         return self._recipient    
  
     @_dbg
     def has_public_key(self,key):
+        """returns True if a public key for e-mail address 'key' exists,
+            else False
+        """
         if not isinstance(key,str):
             self.parent.debug("smime has_public_key, key not of type str")
             return False
@@ -768,6 +808,14 @@ class _SMIME:
                         filename=None,
                         binary=False, 
                         recipient=None):
+        """
+        encrypts the content of a file.
+        
+        return values:
+        result: True if success, else False
+        encdata: If 'result' is True, a (binary) string with the encrypted data
+                 else None
+        """
         result=False
         if filename:
             self.set_filename(filename)
@@ -825,6 +873,14 @@ class _SMIME:
                         filename=None,
                         binary=False,
                         recipient=None):
+        """
+        decrypts the content of a file.
+        
+        return values:
+        result: True if success, else False
+        encdata: If 'result' is True, a (binary) string with the decrypted data
+                 else None
+        """
         result=False
         if filename:
             self.set_filename(filename)
@@ -868,7 +924,7 @@ class _SMIME:
         return cmd
  
     @_dbg
-    def opensslcmd(self,cmd):
+    def _opensslcmd(self,cmd):
         result=""
         p = subprocess.Popen(   cmd.split(" "), 
                                 stdin=None, 
@@ -879,12 +935,14 @@ class _SMIME:
  
     @_dbg
     def get_certemailaddresses(self,certfile):
+        """returns a list of all e-mail addresses the 'certfile' for which 
+        is valid."""
         cmd=[   self.parent._SMIMECMD,
                 "x509",
                 "-in",certfile,
                 "-text",
                 "-noout"]
-        cert,returncode=self.opensslcmd(" ".join(cmd))
+        cert,returncode=self._opensslcmd(" ".join(cmd))
         cert=cert.decode("utf-8",_unicodeerror)
         email=[]
         found=re.search("(?<=emailAddress=)(.*)",cert)
@@ -905,12 +963,15 @@ class _SMIME:
  
     @_dbg
     def get_certfingerprint(self,cert):
+        """
+        returns the fingerprint of a cert file
+        """
         cmd=[self.parent._SMIMECMD,
                 "x509",
                 "-fingerprint",
                 "-in",cert,
                 "-noout"]
-        fingerprint,returncode=self.opensslcmd(" ".join(cmd))
+        fingerprint,returncode=self._opensslcmd(" ".join(cmd))
         found= re.search(   "(?<=SHA1 Fingerprint=)(.*)",
                             fingerprint.decode("UTF-8",_unicodeerror))
         if found != None:
@@ -924,9 +985,16 @@ class _SMIME:
     def extract_publickey_from_mail(self,
                                     mail,
                                     targetdir):
+        """
+        smime messages usually contain the public key of the sender address.
+        This function extracts the key and stores it in the directory 
+        'targetdir'.
+        """
         self.parent.debug("extract_publickey_from_mail to '%s'"%targetdir)
         f=tempfile.NamedTemporaryFile(mode='wb',delete=False,prefix='mail-')
         fname=f.name
+        if isinstance(mail,email.message.Message):
+            mail=mail.as_string()
         cmd=[   self.parent._SMIMECMD,
                 "smime",
                 "-in", mail,
@@ -953,6 +1021,10 @@ class _SMIME:
  
     @_dbg
     def create_keylist(self,directory):
+        """
+        returns a dictonary of e-mail addresses with its key, automatically
+        created from the files in 'directory' 
+        """
         result={}
         directory=expanduser(directory)
         try:
@@ -973,6 +1045,10 @@ class _SMIME:
  
     @_dbg
     def verify_certificate(self,cert):
+        """
+        returns True if the certificate  in the file 'cert' is valid,
+        else False
+        """
         cmd=[   self._SMIMECMD,
                 "verify",cert,"&>/dev/null"]
         _result = subprocess.call( " ".join(cmd) ,shell=True) 
@@ -2654,6 +2730,14 @@ class gme:
     def zip_factory(self):
         "returns a ZIP class"
         return _ZIP(self)
+    ############
+    #pdf_factory
+    ############
+    
+    @_dbg
+    def pdf_factory(self):
+        "returns a PDF class"
+        return _PDF(self)
     ############## 
     #smime_factory
     ##############
@@ -4186,7 +4270,7 @@ class gme:
             self.log("creating new message failed","w")
             self.log_traceback()
             return None
-        pdf=_PDF(self)
+        pdf=self.pdf_factory()
         fp=self._new_tempfile()
         fp.write(message.encode("UTF-8",_unicodeerror))
         fp.close()
