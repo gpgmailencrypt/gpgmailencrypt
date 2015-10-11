@@ -5372,7 +5372,12 @@ class _hksmtpchannel(smtpd.SMTPChannel):
             for command in res:
                 if "LOGIN" in command.upper():
                      self.in_loginauth=1
-                     self.push('334 %s'%binascii.b2a_base64(
+                     if len(res)>1:
+                        self.username=binascii.a2b_base64(
+                                        res[1]).decode("UTF-8",_unicodeerror)
+                        self.in_loginauth=2
+                     else:   
+                         self.push('334 %s'%binascii.b2a_base64(
                             "Username:".encode("UTF8")).decode("UTF8")[:-1])
                      return
         if len(res)<2:
