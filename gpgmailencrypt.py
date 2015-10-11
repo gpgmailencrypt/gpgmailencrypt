@@ -22,35 +22,34 @@ and copy this file into the directory /etc
 """
 VERSION="2.2.0dev"
 DATE="11.10.2015"
-from configparser           import ConfigParser
-from email                  import encoders
-from email.generator        import Generator
-from email.mime.base        import MIMEBase
-from email.mime.multipart   import MIMEMultipart
-from email.mime.text        import MIMEText
-from functools              import wraps
-from io                     import BytesIO
-from io                     import StringIO
-from io                     import TextIOWrapper 
-from os.path                import expanduser
 import asynchat
 import asyncore
 import atexit
 import base64
 import binascii
+import configparser
 import datetime
 import email
 import email.message
 import email.mime
-import email.utils as emailutils
+import email.utils 
+from   email.generator      import Generator
+from   email.mime.base      import MIMEBase
+from   email.mime.multipart import MIMEMultipart
+from   email.mime.text      import MIMEText
+from   functools            import wraps
 import getopt
 import getpass
 import hashlib
 import html.parser
 import inspect
+from io                     import BytesIO
+from io                     import StringIO
+from io                     import TextIOWrapper 
 import locale
 import mimetypes
 import os
+from   os.path              import expanduser
 import quopri
 import random
 import re
@@ -80,9 +79,11 @@ import uu
 #Definition of general functions
 ################################
 _unicodeerror="replace"
+
 #####
 #_dbg
 #####
+
 def _dbg(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -112,9 +113,11 @@ def _dbg(func):
             parent._level=0
         return result
     return wrapper
+
 ###########
 #show_usage
 ###########
+
 def show_usage():
     "shows the command line options to stdout"
     print ("gpgmailencrypt")
@@ -150,9 +153,11 @@ def show_usage():
     print ("-v --verbose:       print debugging information into _logfile")
     print ("-z --zip:           zip attachments")
     print ("")
+
 ####################
 #print_exampleconfig
 ####################
+
 def print_exampleconfig():
     "prints an example config file to stdout"
     print ("[default]")
@@ -288,6 +293,7 @@ def _splitstring(txt,length=80):
     def chunkstring(string, length):
         return (string[0+i:length+i] for i in range(0, len(string), length))
     return list(chunkstring(txt,length))
+
 #########
 #_mytimer
 #########
@@ -339,9 +345,11 @@ class _mytimer:
     def stop(self):
         self.alarm.cancel()
         self.running=False
+
 ###################
 #replace_variables
 ###################
+
 def replace_variables(  text,
                         dictionary,
                         startdelimiter="%",
@@ -368,9 +376,11 @@ def replace_variables(  text,
             result+=startdelimiter+key+enddelimiter
             raise
         begin+=found.end()
+
 ###################################
 #Definition of encryption functions
 ###################################
+
 ###########
 #CLASS _GPG
 ###########
@@ -537,10 +547,7 @@ class _GPG:
                         email=email.lower()
                         if (len(email)>0 
                         and self.parent._GPGprivatekeys.count(email) == 0):
-                            #self.parent.debug("add email address '%s'"%email)
                             self.parent._GPGprivatekeys.append(email)
-                        #else:
-                            #self.parent.debug("Email '%s' already added"%email)
         except:
             self.parent.log("Error opening keyring (Perhaps wrong "
                             "directory '%s'?)"%self._keyhome,"e")
@@ -679,9 +686,11 @@ class _GPG:
         if not binary:
             cmd.insert(1,"-a")
         return cmd
+
 #############################
 #CLASS GPGENCRYPTEDATTACHMENT
 #############################
+
 class _GPGEncryptedAttachment(email.message.Message):
 
     def  __init__(self):
@@ -724,6 +733,7 @@ class _GPGEncryptedAttachment(email.message.Message):
 #############
 #CLASS _SMIME
 #############
+
 class _SMIME:
     """class to encrypt and decrypt files for SMIME via openssl
     Don't call this class directly, use gme.smime_factory() instead!
@@ -1615,6 +1625,7 @@ class _htmldecode(html.parser.HTMLParser):
 
     def mydata(self):
         return self.data
+
 ####################
 #guess_fileextension
 #################### 
@@ -1746,17 +1757,19 @@ def guess_fileextension(ct):
         return e
     else:
         return "bin"
+
 ################
 #_encodefilename
 ################ 
 
 @_dbg
 def _encodefilename(name):
-    n1=(emailutils.encode_rfc2231(name,"UTF-8"))
+    n1=(email.utils.encode_rfc2231(name,"UTF-8"))
     n2="?UTF-8?B?%s"%base64.encodebytes(
                         name.encode("UTF-8",_unicodeerror)
                         ).decode("UTF-8",_unicodeerror)[0:-1]
     return n1,n2
+
 ###########
 #_decodetxt
 ########### 
@@ -1836,6 +1849,7 @@ class gme:
     }
     _encryptheader="X-GPGMailencrypt"
     _pdfencryptheader="X-PDFEncrypted"
+
     #########
     #__init__
     #########
@@ -1854,6 +1868,7 @@ class gme:
         self._GPGkeys=list()
         self._GPGprivatekeys=list()
         self.init()
+
     #################
     #reset_statistics
     #################
@@ -1870,6 +1885,7 @@ class gme:
         self._count_pgpmimemails=0
         self._count_pgpinlinemails=0
         self._count_pdfmails=0
+
     ###################
     #reset_pdfpasswords
     ###################
@@ -1878,6 +1894,7 @@ class gme:
     def reset_pdfpasswords(self):
         self._pdfpasswords=dict()
         self._read_pdfpasswordfile(self._PDF_PASSWORDFILE)
+
     #####################
     #del_old_pdfpasswords
     #####################
@@ -1893,6 +1910,7 @@ class gme:
         for user in deluser:
             del self._pdfpasswords[user]
             self.debug("Password for user '%s' deleted"%user)
+
     #########
     #__exit__
     #########
@@ -1900,6 +1918,7 @@ class gme:
     def __exit__(self, exc_type, exc_value, traceback):
         "automatic clean up tempfiles when created with the 'with' statement"
         self.close()
+
     ##########
     #__enter__
     ##########
@@ -1907,6 +1926,7 @@ class gme:
     def __enter__(self):
         "necessary for the 'with'-creation"
         return self
+
     ######
     #close
     ######
@@ -1930,6 +1950,7 @@ class gme:
             self.store_deferred_list()
         if self._LOGGING and self._logfile!=None:
             self._logfile.close()
+
     #####
     #init
     #####
@@ -1937,6 +1958,7 @@ class gme:
     @_dbg
     def init(self):
         "initiales the module and reads the config file"
+
         #Internal variables
         self._logfile=None
         self._addressmap = dict()
@@ -1954,6 +1976,7 @@ class gme:
         self._deferdir=expanduser("~/gpgmaildirtmp")
         if not os.path.exists(self._deferdir):
             os.makedirs(self._deferdir)
+
         #GLOBAL CONFIG VARIABLES
         self._STATISTICS_PER_DAY=1
         self._SYSTEMMAILFROM="gpgmailencrypt@localhost"
@@ -2012,13 +2035,14 @@ class gme:
         if self._DEBUG:
             for a in self._addressmap:
                 self.debug("_addressmap: '%s'='%s'"%(a,self._addressmap[a]))
+
     #################
     #_read_configfile
     #################    
  
     @_dbg
     def _read_configfile(self):
-        _cfg = ConfigParser(    inline_comment_prefixes=("#",),
+        _cfg = configparser.ConfigParser(    inline_comment_prefixes=("#",),
                                 comment_prefixes=("#",))
         self._GPGkeys=list()
         try:
@@ -2029,9 +2053,11 @@ class gme:
             return
 
         if _cfg.has_section('default'):
-            if _cfg.has_option('default','add_header'):
+            try:
                 self._ADDHEADER=_cfg.getboolean('default','add_header')
-            if _cfg.has_option('default','output'):
+            except:
+                pass
+            try:
                 o=_cfg.get('default','output').lower().strip()
                 if o=="mail":
                     self._OUTPUT=self.o_mail
@@ -2041,19 +2067,31 @@ class gme:
                     self._OUTPUT=self.o_file
                 else:
                     self._OUTPUT=self.o_stdout
-            if _cfg.has_option('default','locale'):
+            except:
+                pass
+            try:
                 self._LOCALE=_cfg.get('default','locale').upper().strip()
-            if _cfg.has_option('default','systemmailfrom'):
+            except:
+                pass
+            try:
                 self._SYSTEMMAILFROM=_cfg.get('default',
                                                 'systemmailfrom').strip
-            if _cfg.has_option('default','mailtemplatedir'):
+            except:
+                pass
+            try:
                 self._MAILTEMPLATEDIR=_cfg.get('default',
                                                 'mailtemplatedir').strip()
-            if _cfg.has_option('default','domains'):
+            except:
+                pass
+            try:
                 self._DOMAINS=_cfg.get('default','domains')
-            if _cfg.has_option('default','spamsubject'):
+            except:
+                pass
+            try:
                 self._SPAMSUBJECT=_cfg.get('default','spamsubject')
-            if _cfg.has_option('default','preferred_encryption'):
+            except:
+                pass
+            try:
                 p=_cfg.get('default','preferred_encryption').lower()
                 if p=="smime":
                     self._PREFERRED_ENCRYPTION="SMIME"
@@ -2063,11 +2101,15 @@ class gme:
                     self._PREFERRED_ENCRYPTION="PDF"
                 else:
                     self._PREFERRED_ENCRYPTION="PGPINLINE"
-            if _cfg.has_option('default','alwaysencrypt'):
+            except:
+                pass
+            try:
                 self._ALWAYSENCRYPT=_cfg.getboolean('default','alwaysencrypt')
+            except:
+                pass
         
         if _cfg.has_section('logging'):
-            if _cfg.has_option('logging','log'):
+            try:
                 l=_cfg.get('logging','log').lower()
                 if l=="syslog":
                     self._LOGGING=self.l_syslog
@@ -2078,38 +2120,62 @@ class gme:
                     self._LOGGING=self.l_stderr
                 else:
                     self._LOGGING=self.l_none
-            if _cfg.has_option('logging','file'):
+            except:
+                pass
+            try:
                 self._LOGFILE=_cfg.get('logging','file')
-            if _cfg.has_option('logging','debug') and  __name__ == "__main__":
+            except:
+                pass
+            try:
                 self._DEBUG=_cfg.getboolean('logging','debug')
-            if _cfg.has_option('logging','debugsearchtext'):
+            except:
+                pass
+            try:
                 s=_cfg.get('logging','debugsearchtext')
                 if len(s)>0:
                     self._DEBUGSEARCHTEXT=s.split(",")
-            if _cfg.has_option('logging','debugexcludetext'):
+            except:
+                pass
+            try:
                 e=_cfg.get('logging','debugexcludetext')
                 if len(e)>0:
                     self._DEBUGEXCLUDETEXT=e.split(",")
+            except:
+                pass
 
         if _cfg.has_section('gpg'):
-            if _cfg.has_option('gpg','keyhome'):
+            try:
                 k=_cfg.get('gpg','keyhome')
                 if k!=None:
                     self._GPGKEYHOME=k.strip()
-            if _cfg.has_option('gpg','gpgcommand'):
+            except:
+                pass
+            try:
                 self._GPGCMD=_cfg.get('gpg','gpgcommand')
-            if _cfg.has_option('gpg','allowgpgcomment'):
+            except:
+                pass
+            try:
                 self._ALLOWGPGCOMMENT=_cfg.getboolean('gpg','allowgpgcomment')
+            except:
+                pass
 
         if _cfg.has_section('mailserver'):
-            if _cfg.has_option('mailserver','host'):
+            try:
                 self._HOST=_cfg.get('mailserver','host')
-            if _cfg.has_option('mailserver','port'):
+            except:
+                pass
+            try:
                 self._PORT=_cfg.getint('mailserver','port')
-            if _cfg.has_option('mailserver','authenticate'):
+            except:
+                pass
+            try:
                 self._AUTHENTICATE=_cfg.getboolean('mailserver','authenticate')
-            if _cfg.has_option('mailserver','smtpcredential'):
+            except:
+                pass
+            try:
                 self._SMTP_CREDENTIAL=_cfg.get('mailserver','smtpcredential')
+            except:
+                pass
 
         if _cfg.has_section('usermap'):
             for (name, value) in _cfg.items('usermap'):
@@ -2120,20 +2186,34 @@ class gme:
                     self._encryptionmap[name] = value.split(":")
 
         if _cfg.has_section('daemon'):
-            if _cfg.has_option('daemon','host'):
+            try:
                 self._SERVERHOST=_cfg.get('daemon','host')
-            if _cfg.has_option('daemon','port'):
+            except:
+                pass
+            try:
                 self._SERVERPORT=_cfg.getint('daemon','port')
-            if _cfg.has_option('daemon','smtps'):
+            except:
+                pass
+            try:
                 self._SMTPD_USE_SMTPS=_cfg.getboolean('daemon','smtps')
-            if _cfg.has_option('daemon','sslkeyfile'):
+            except:
+                pass
+            try:
                 self._SMTPD_SSL_KEYFILE=_cfg.get('daemon','sslkeyfile')
-            if _cfg.has_option('daemon','sslcertfile'):
+            except:
+                pass
+            try:
                 self._SMTPD_SSL_CERTFILE=_cfg.get('daemon','sslcertfile')
-            if _cfg.has_option('daemon','authenticate'):
+            except:
+                pass
+            try:
                 self._SMTPD_USE_AUTH=_cfg.getboolean('daemon','authenticate')
-            if _cfg.has_option('daemon','smtppasswords'):
+            except:
+                pass
+            try:
                 self._SMTPD_PASSWORDFILE=_cfg.get('daemon','smtppasswords')
+            except:
+                pass
             try:
                 self._STATISTICS_PER_DAY=_cfg.getint('daemon','statistics')
                 if self._STATISTICS_PER_DAY >24:
@@ -2214,24 +2294,35 @@ class gme:
                 pass
     
         if _cfg.has_section('smime'):
-            if _cfg.has_option('smime','opensslcommand'):
+            try:
                 self._SMIMECMD=_cfg.get('smime','opensslcommand')
-            if _cfg.has_option('smime','defaultcipher'):
+            except:
+                pass
+            try:
                 self._SMIMECIPHER=_cfg.get('smime',
                                         'defaultcipher').upper().strip()
-            if _cfg.has_option('smime','keyhome'):
+            except:
+                pass
+            try:
                 k=_cfg.get('smime','keyhome')
                 if k!=None:
                     self._SMIMEKEYHOME=k.strip()
-            if _cfg.has_option('smime','extractkey'):
+            except:
+                pass
+            try:
                 self._SMIMEAUTOMATICEXTRACTKEYS=_cfg.getboolean('smime',
                                                             'extractkey')
-            if _cfg.has_option('smime','keyextractdir'):
+            except:
+                pass
+            try:
                 k=_cfg.get('smime','keyextractdir')
                 if k!=None:
                     self._SMIMEKEYEXTRACTDIR=k.strip()
+            except:
+                pass
         s=self.smime_factory()
         self._smimeuser.update(s.create_keylist(self._SMIMEKEYHOME))
+
         if _cfg.has_section('smimeuser'):
             self._smimeuser = dict()
             privatepath=None
@@ -2250,12 +2341,15 @@ class gme:
                 if os.path.isfile(publicpath):
                     self._smimeuser[name] = [publicpath,cipher,privatepath]
         self._set_logmode()
+
         if self._DEBUG:
             for u in self._smimeuser:
                 self.debug("SMimeuser: '%s %s'"%(u,self._smimeuser[u]))
+
         if self._AUTHENTICATE:
             self._read_smtpcredentials(self._SMTP_CREDENTIAL)
         
+
     ###################
     #_parse_commandline
     ###################
@@ -2369,6 +2463,7 @@ class gme:
                 "at the commandline, %i given"%len(_remainder),"e")
                 exit(1)
         return receiver
+
     ######################
     #_read_smtpcredentials
     ######################    
@@ -2395,6 +2490,7 @@ class gme:
             except:
                 pass
         self.debug("_read_smtpcredentials END read lines: %i"%c)
+
     ####
     #log
     ####
@@ -2454,6 +2550,7 @@ class gme:
                 else:
                     # print to stdout if nothing else works
                     sys.stdout.write("%s %s: %s\n"%(tm,prefix,t ))
+
     ##############
     #log_traceback
     ##############
@@ -2464,6 +2561,7 @@ class gme:
         error=traceback.format_exception(exc_type, exc_value, exc_tb)
         for e in error:
             self.log(" ***%s"%e.replace("\n",""),"e")
+
     ######
     #debug
     ######
@@ -2478,6 +2576,7 @@ class gme:
             else:
                 ln=lineno
             self.log(msg,"d",ln)
+
     ################
     #_debug_keepmail
     ################
@@ -2493,6 +2592,7 @@ class gme:
                         return False
                 return True
         return False
+
     #################
     #_create_password
     #################
@@ -2511,6 +2611,7 @@ class gme:
         pwkeys="ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstvwxyz"+nonletters
         return ''.join(random.SystemRandom().choice(pwkeys) 
                     for _ in range(pwlength))
+
     ####################
     #_load_rawmailmaster
     ####################
@@ -2544,6 +2645,7 @@ class gme:
         f.close()
         txt=re.sub(r'(?:\r\n|\n|\r(?!\n))', "\r\n", txt)
         return txt
+
     #################
     #_load_mailmaster
     #################
@@ -2554,6 +2656,7 @@ class gme:
         txt=self._load_rawmailmaster(   identifier,
                                         defaulttext)
         return replace_variables(mail,{"EMAILTEXT":txt})
+
     ################
     #set_pdfpassword
     ################
@@ -2566,6 +2669,7 @@ class gme:
             starttime=0
         
         self._pdfpasswords[user]=(password,starttime)
+
     ################
     #get_pdfpassword
     ################
@@ -2582,6 +2686,7 @@ class gme:
         pw= self._create_password(self._PDFPASSWORDLENGTH)
         self.set_pdfpassword(user,pw)
         return pw
+
     ########################
     #_read_pdfpasswordfile
     ########################
@@ -2603,6 +2708,7 @@ class gme:
                 self._pdfpasswords[name.strip()]=(passwd.strip(),0)
             except:
                 pass
+
     ##############
     #set_zipcipher
     ##############
@@ -2612,6 +2718,7 @@ class gme:
         cipher=cipher.strip()
         if len(cipher)>0:
             self._ZIPCIPHER=cipher.upper()
+
     ##############
     #get_zipcipher
     ##############
@@ -2619,6 +2726,7 @@ class gme:
     @_dbg
     def get_zipcipher(self):
         return     self._ZIPCIPHER
+
     #############
     #_set_logmode
     #############
@@ -2633,6 +2741,7 @@ class gme:
             self._logfile=None
             self._LOGGING=self.l_stderr
             self.log_traceback()
+
     #####################
     #_store_temporaryfile
     #####################
@@ -2670,6 +2779,7 @@ class gme:
             self.log("Couldn't save email in temporary file, write error")
             self.log_traceback()
         return None
+
     ################
     #_prepare_syslog
     ################
@@ -2678,6 +2788,7 @@ class gme:
     def _prepare_syslog(self):
             self._LOGGING=self.l_syslog
             syslog.openlog("gpgmailencrypt",syslog.LOG_PID,syslog.LOG_MAIL)
+
     ######################
     #_read_smtpcredentials
     ######################    
@@ -2704,6 +2815,7 @@ class gme:
             except:
                 pass
         self.debug("_read_smtpcredentials END read lines: %i"%c)
+
     ########################
     #_remove_mail_from_queue
     ########################
@@ -2722,6 +2834,7 @@ class gme:
         except:
             self.log("mail %i could not be removed from queue"%m_id)
             self.log_traceback()
+
     ############
     #zip_factory
     ############
@@ -2730,6 +2843,7 @@ class gme:
     def zip_factory(self):
         "returns a ZIP class"
         return _ZIP(self)
+
     ############
     #pdf_factory
     ############
@@ -2738,6 +2852,7 @@ class gme:
     def pdf_factory(self):
         "returns a PDF class"
         return _PDF(self)
+
     ############## 
     #smime_factory
     ##############
@@ -2746,6 +2861,7 @@ class gme:
     def smime_factory(self):
         "returns a _SMIME class"
         return _SMIME(self,self._SMIMEKEYHOME)
+
     ############
     #gpg_factory
     ############
@@ -2754,6 +2870,7 @@ class gme:
     def gpg_factory(self):
         "returns a _GPG class"
         return _GPG(self,self._GPGKEYHOME)
+
     ################
     #zip_attachments
     ################
@@ -2830,6 +2947,7 @@ class gme:
         except:
             pass
         return message.as_string()
+
     ################
     #is_compressable
     ################
@@ -2896,7 +3014,7 @@ class gme:
                              "vnd.oasis.opendocument.presentation-template",
                              "vnd.oasis.opendocument.graphics-template"]:
                 return False
-            #misc.
+            #Miscellaneous
             elif subtype in ["epub+zip","vnd.gov.sk.e-form+zip"]:
                 return False
             extension=extension.lower()[1:]
@@ -2923,6 +3041,7 @@ class gme:
                     ]:
                     return False
         return True
+
     #############
     #_send_rawmsg
     #############
@@ -2943,6 +3062,7 @@ class gme:
             self.log("_send_rawmsg: exception _send_textmsg")
             self.log_traceback()
             self._send_textmsg(m_id,mailtext,from_addr,to_addr)
+
     ##########
     #_send_msg
     ##########
@@ -2960,6 +3080,7 @@ class gme:
             if self._ADDHEADER and not self._encryptheader in message:
                 message.add_header(self._encryptheader,self._encryptgpgcomment)
             self._send_textmsg(m_id,message.as_string(),from_addr,to_addr)
+
     ##############
     #_send_textmsg
     ##############
@@ -3040,6 +3161,7 @@ class gme:
             print (message)
             self._remove_mail_from_queue(m_id)
             return True
+
     ###################
     #load_deferred_list
     ###################
@@ -3058,6 +3180,7 @@ class gme:
             self._count_deferredmails=len(self._deferred_emails)
         except:
             self.log("Couldn't load defer list '%s'"%self._deferlist)
+
     ####################
     #store_deferred_list
     ####################
@@ -3081,6 +3204,7 @@ class gme:
         except:
             self.log("Couldn't store defer list '%s'"%self._deferlist)
             self.log_traceback()
+
     ######################
     #_is_old_deferred_mail
     ######################
@@ -3098,6 +3222,7 @@ class gme:
                 pass    
             return True
         return False
+
     ####################
     #check_deferred_list
     ####################
@@ -3132,6 +3257,7 @@ class gme:
                     new_list.append(mail)    
         self._deferred_emails=new_list
         self.debug("End check_deferred_list")        
+
     ################
     #check_mailqueue
     ################
@@ -3150,6 +3276,7 @@ class gme:
             except:
                 self.log("mail couldn't be removed from email queue")
                 self.log_traceback()
+
     #########
     #is_admin
     #########
@@ -3157,6 +3284,7 @@ class gme:
     @_dbg
     def is_admin(self,user):
         return user in self._ADMINS
+
     ################
     #_log_statistics
     ################
@@ -3178,6 +3306,7 @@ class gme:
         self.log("systemerrors: %i, systemwarnings: %i" %(
                 self._systemerrors,
                 self._systemwarnings))
+
     ##############
     #_new_tempfile
     ##############
@@ -3191,6 +3320,7 @@ class gme:
         self._tempfiles.append(f.name)
         self.debug("_new_tempfile %s"%f.name)
         return f
+
     ##############
     #_del_tempfile
     ##############
@@ -3210,6 +3340,7 @@ class gme:
             os.remove(f)
         except:
             pass
+
     ##############
     #_find_charset
     ##############
@@ -3229,6 +3360,7 @@ class gme:
             return None
         charset=str(res[1]).replace('"','').replace("'","")
         return charset
+
     ###############
     #_make_boundary
     ###############
@@ -3250,6 +3382,7 @@ class gme:
             b = boundary + '.' + str(counter)
             counter += 1
         return b
+
     ################
     #set_output2mail
     ################
@@ -3258,6 +3391,7 @@ class gme:
     def set_output2mail(self):
         "outgoing email will be sent to email server"
         self._OUTPUT=self.o_mail
+
     ################
     #set_output2file
     ################
@@ -3269,6 +3403,8 @@ class gme:
             return
         self._OUTFILE=expanduser(mailfile)
         self._OUTPUT=self.o_file
+
+    
     ##################
     #set_output2stdout
     ##################
@@ -3277,6 +3413,7 @@ class gme:
     def set_output2stdout(self):
         "outgoing email will be written to stdout"
         self._OUTPUT=self.o_stdout
+
     ###########
     #get_output
     ###########
@@ -3285,6 +3422,7 @@ class gme:
     def get_output(self):
         "returns the output way"
         return self._OUTPUT
+
     ##########
     #set_debug
     ##########
@@ -3296,6 +3434,7 @@ class gme:
             self._DEBUG=True
         else:
             self._DEBUG=False
+
     ###########
     #set_locale
     ###########
@@ -3307,6 +3446,7 @@ class gme:
             l=l.strip()
             if len(l)>0:
                 self._LOCALE=l.upper()
+
     ###############
     #set_configfile
     ###############
@@ -3321,6 +3461,7 @@ class gme:
             self._CONFIGFILE=cf
             self.debug("read new config file '%s'"%self._CONFIGFILE)
             self._read_configfile()
+
     ###########
     #get_locale
     ###########
@@ -3329,6 +3470,7 @@ class gme:
     def get_locale(self):
         "returns the Locale"
         return self._LOCALE
+
     ###############
     #get_statistics
     ###############
@@ -3348,6 +3490,7 @@ class gme:
             "systemerrors":self._systemerrors,
             "systemwarnings":self._systemwarnings,
             }
+
     ###########
     #get_uptime
     ###########
@@ -3357,6 +3500,7 @@ class gme:
         "returns the time since the server has started"
         _now=datetime.datetime.now()
         return _now-self._daemonstarttime
+
     #############
     #is_debugging
     #############
@@ -3365,6 +3509,7 @@ class gme:
     def is_debugging(self):
         "returns True if gpgmailencrypt is in debuggin mode"
         return self._DEBUG
+
     ################################
     #set_default_preferredencryption
     ################################
@@ -3377,6 +3522,7 @@ class gme:
             m=mode.upper()
             if m in ["SMIME","PGPMIME","PGPINLINE"]:
                 self._PREFERRED_ENCRYPTION=mode.upper()
+    
     #########
     #set_smtp
     #########
@@ -3395,6 +3541,7 @@ class gme:
         self._AUTHENTICATE=auth
         self._SMTP_USER=user
         self._SMTP_PASSWORD=password
+
     ###########
     #set_daemon
     ###########
@@ -3419,12 +3566,15 @@ class gme:
             self._SMTPD_SSL_CERTFILE=sslcertfile
         if passwordfile:
             self._SMTPD_PASSWORDFILE=passwordfile
+
     ################################
     #get_default_preferredencryption
     ################################
+
     def get_default_preferredencryption(self):
         "returns the default preferred encryption method"
         return self._PREFERRED_ENCRYPTION
+
     ###################
     #check_gpgrecipient
     ###################
@@ -3434,7 +3584,7 @@ class gme:
         """returns True and the effective key-emailaddress if emails 
         to address 'gaddr' can be GPG encrcrypted"""
         self.debug("check_gpgrecipient: start '%s'"%gaddr)
-        gaddr=emailutils.parseaddr(gaddr)[1]
+        gaddr=email.utils.parseaddr(gaddr)[1]
         addr=gaddr.split('@')
         domain=''
         if len(addr)==2:
@@ -3458,6 +3608,7 @@ class gme:
                 self.debug("gpg key exists, but '%s' is not in "
                             "_DOMAINS [%s]"%(domain,self._DOMAINS))
         return found,gpg_to_addr
+
     #####################
     #check_smimerecipient
     #####################
@@ -3467,7 +3618,7 @@ class gme:
         """returns True and the effective key-emailaddress if emails 
         to address 'saddr' can be SMIME encrcrypted"""
         self.debug("check_smimerecipient: start '%s'"%saddr)
-        saddr=emailutils.parseaddr(saddr)[1]
+        saddr=email.utils.parseaddr(saddr)[1]
         addr=saddr.split('@')
         domain=''
         if len(addr)==2:
@@ -3492,6 +3643,7 @@ class gme:
                             "_DOMAINS [%s]"%(domain,self._DOMAINS))
                 found=False
         return found, smime_to_addr
+
     #####################
     #check_encryptsubject
     #####################
@@ -3508,6 +3660,7 @@ class gme:
             return True
         else:
             return False
+
     #############################
     #is_encrypted function family
     #############################
@@ -3605,6 +3758,7 @@ class gme:
             return True
         else:
             return False
+
     ############
     #_split_html
     ############
@@ -3629,6 +3783,7 @@ class gme:
         else:        
             body=_decode_html(self,_r)
         return result,header,body,footer
+
     #################
     #_encrypt_payload
     #################
@@ -3761,6 +3916,7 @@ class gme:
                         "unencrypted!","m")    
         self._del_tempfile(fp.name)
         return payload
+
     ###################
     #encrypt_pgpinline
     ###################
@@ -3849,6 +4005,7 @@ class gme:
         for a in attach_list:
             message.attach(a)
         return message
+
     #################
     #encrypt_pgpmime
     #################
@@ -3990,6 +4147,7 @@ class gme:
         attachment.set_masterboundary(boundary)
         self._del_tempfile(fp.name)
         return newmsg
+
     ##############################
     #get_preferredencryptionmethod
     ##############################    
@@ -4000,7 +4158,7 @@ class gme:
         self.debug("get_preferredencryptionmethod :'%s'"%user)
         method=self._PREFERRED_ENCRYPTION
         _m=""
-        user=emailutils.parseaddr(user)[1]
+        user=email.utils.parseaddr(user)[1]
         _u=user
         try:
             _u=self._addressmap[user]
@@ -4030,9 +4188,10 @@ class gme:
             self.debug("get_preferredencryptionmethod: Method "
                         "'%s' for user '%s' unknown" % (_m,_u))
             return method
-    ##################
+
+    #################
     #encrypt_gpg_mail 
-    ##################
+    #################
  
     @_dbg
     def encrypt_gpg_mail(   self,
@@ -4079,6 +4238,7 @@ class gme:
             self._count_pgpinlinemails+=1
 
         return mail
+
     #####################
     # encrypt_smime_mail 
     #####################
@@ -4220,6 +4380,7 @@ class gme:
             newmsg=None
         self._del_tempfile(fp.name)
         return newmsg
+
     ###############
     #_decode_header
     ###############
@@ -4242,6 +4403,8 @@ class gme:
             except:
                 pass
         return result
+
+    
     ##################
     # encrypt_pdf_mail 
     ##################
@@ -4280,7 +4443,7 @@ class gme:
         result,pdffile=pdf.create_pdffile(pw)
         if result==True:
             domain=''
-            addr= emailutils.parseaddr(from_addr)[1].split('@')
+            addr= email.utils.parseaddr(from_addr)[1].split('@')
             if len(addr)==2:
                 domain = addr[1]
             if domain in self._PDFDOMAINS:
@@ -4329,7 +4492,7 @@ class gme:
             msg.add_header( 'Content-Disposition', 
                             'attachment', 
                             filename="%s.pdf"%f)
-            encoders.encode_base64(msg)
+            email.encoders.encode_base64(msg)
             newmsg.attach(msg)
             self._count_pdfmails+=1
             self._count_encryptedmails+=1
@@ -4343,7 +4506,7 @@ class gme:
             Zip.set_zipcipher(self._encryptionmap[pdfuser][1])
         except:
             try:
-                _addr=emailutils.parseaddr(pdfuser)[1].split('@')
+                _addr=email.utils.parseaddr(pdfuser)[1].split('@')
                 if len(_addr)==2:
                     domain = _addr[1]
                     Zip.set_zipcipher(self._encryptionmap["*@%s"%domain][1])
@@ -4397,7 +4560,7 @@ class gme:
                 msg.add_header( 'Content-Disposition', 
                                 'attachment; filename*="%s"' % filenamecD)
                 msg.set_param( 'name', filenamecT )
-                encoders.encode_base64(msg)
+                email.encoders.encode_base64(msg)
                 newmsg.attach(msg)
         self._del_tempfile(fp.name)
         try:
@@ -4409,6 +4572,7 @@ class gme:
         if not self._pdfencryptheader in newmsg:
             newmsg.add_header(self._pdfencryptheader,self._encryptgpgcomment)
         return newmsg
+
     ####################
     #encrypt_single_mail
     ####################    
@@ -4447,7 +4611,7 @@ class gme:
         self.debug("Prefer PDF %i / %s"%(_prefer_pdf,to_pdf))
         self._count_totalmails+=1
         domain=''
-        _addr=emailutils.parseaddr(from_addr)[1].split('@')
+        _addr=email.utils.parseaddr(from_addr)[1].split('@')
         if len(_addr)==2:
             domain = _addr[1]
 
@@ -4537,6 +4701,7 @@ class gme:
                                 m,
                                 from_addr,
                                 to_addr)
+
     ###############
     # encrypt_mails 
     ###############
@@ -4603,9 +4768,11 @@ class gme:
                                             to_addr)
         except:
             self.log_traceback()
+
     #######################################
     #END definition of encryption functions
     #######################################
+
     ###########
     #scriptmode
     ###########
@@ -4641,6 +4808,7 @@ class gme:
             exit(4)    
         else:
             self.debug("Program exits without errors")
+
     ###########
     #daemonmode
     ###########
@@ -4708,6 +4876,7 @@ class gme:
             self.log("Bug:Exception occured!","e")
             self.log_traceback()
         alarm.stop()
+
     ##############
     #adm_get_users
     ##############
@@ -4720,6 +4889,7 @@ class gme:
             users.append({  "user":user,
                             "admin":self.is_admin(user)})
         return users
+
     #############
     #adm_set_user
     #############
@@ -4737,6 +4907,7 @@ class gme:
             self.log_traceback()
             return False
         return True
+
     #############
     #adm_del_user
     #############
@@ -4751,6 +4922,7 @@ class gme:
             self.log("User could not be deleted","w")
             return False
         return True
+
     ########################
     #_read_smtpdpasswordfile
     ########################
@@ -4772,6 +4944,7 @@ class gme:
                 self._smtpd_passwords[name.strip()]=passwd.strip()
             except:
                 pass
+
     ########################
     #write_smtpdpasswordfile
     ########################
@@ -4798,6 +4971,7 @@ class gme:
             except:
                 self.log_traceback()
         f.close()
+
 ###################
 #start_adminconsole
 ################### 
@@ -4952,6 +5126,7 @@ def start_adminconsole(host,port):
     readline.set_completion_display_matches_hook(completer.display_matches)
     g=gmeadmin()
     g.start(host,port)
+
 ######################
 #_gpgmailencryptserver
 ######################
@@ -5053,9 +5228,11 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
             self.parent.log("hksmtpserver: Bug:Exception!")
             self.parent.log_traceback()
         return
+
 ###############
 #_hksmtpchannel
 ###############
+
 class _hksmtpchannel(smtpd.SMTPChannel):
     "helper class for _gpgmailencryptserver"
  
@@ -5363,6 +5540,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
             self.push('502 Error: command "STARTTLS" not implemented' )
             self._SMTPChannel__line=[]
             return
+
 ##########
 #file_auth
 ##########
@@ -5382,6 +5560,7 @@ def file_auth(  parent,
     except:
         parent.debug("hksmtpserver: No such user '%s'"%user)
     return False
+
 ##########
 #_get_hash
 ##########
@@ -5393,12 +5572,14 @@ def _get_hash(txt):
         r=hashlib.sha512(r.encode("UTF-8",_unicodeerror)).hexdigest()
         i+=1
     return r
+
 ################
 #_sigtermhandler
 ################
 
 def _sigtermhandler(signum, frame):
     exit(0)
+
 #####
 #main
 #####
@@ -5413,6 +5594,7 @@ def main():
             g.daemonmode()
         else:
             g.scriptmode(receiver)
+
 #############################
 # gpgmailencrypt main program
 #############################
