@@ -2808,7 +2808,7 @@ class gme:
         try:
             f=open(pwfile)
         except:
-            self.log("hksmtpserver: Config file could not be read","e")
+            self.log("_gpgmailencryptserver: Config file could not be read","e")
             self.log_traceback()
             exit(5)
 
@@ -3186,7 +3186,7 @@ class gme:
         try:
             f=open(pwfile)
         except:
-            self.log("hksmtpserver: Config file could not be read","e")
+            self.log("_gpgmailencryptserver: Config file could not be read","e")
             self.log_traceback()
             exit(5)
 
@@ -5711,7 +5711,7 @@ class gme:
         try:
             f=open(os.path.expanduser(pwfile))
         except:
-            self.log("hksmtpserver: Config file could not be read","e")
+            self.log("_gpgmailencryptserver: Config file could not be read","e")
             self.log_traceback()
             exit(5)
         txt=f.read()
@@ -5745,7 +5745,7 @@ class gme:
                 f=open(pwfile,"w")
 
         except:
-            self.log("hksmtpserver: Config file could not be written","e")
+            self.log("_gpgmailencryptserver: Config file could not be written","e")
             self.log_traceback()
             return False
 
@@ -5978,7 +5978,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
                                         None,
                                         data_size_limit=data_size_limit)
         except socket.error as e:
-            self.parent.log("hksmtpserver: error",e)
+            self.parent.log("_gpgmailencryptserver: error",e)
             exit(5)
 
         self.sslcertfile=sslcertfile
@@ -6020,12 +6020,12 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
                             select.select([], [conn], [])
 
                 except:
-                    self.parent.log("hksmtpserver: Exception: Could not"
+                    self.parent.log("_gpgmailencryptserver: Exception: Could not"
                                     " start SSL connection")
                     self.parent.log_traceback()
                     return
 
-            self.parent.debug("hksmtpserver: Incoming connection "
+            self.parent.debug("_gpgmailencryptserver: Incoming connection "
                                 "from %s" % repr(addr))
             channel = _hksmtpchannel(self, 
                         conn, 
@@ -6045,13 +6045,13 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
                             mailfrom, 
                             receiver, 
                             data):
-        self.parent.debug("hksmtpserver: _gpgmailencryptserver "
+        self.parent.debug("_gpgmailencryptserver: _gpgmailencryptserver "
                         "from '%s' to '%s'"%(mailfrom,receiver))
         try:
 
             self.parent.encrypt_mails(data,receiver)
         except:
-            self.parent.log("hksmtpserver: Bug:Exception!")
+            self.parent.log("_gpgmailencryptserver: Bug:Exception!")
             self.parent.log_traceback()
 
         return
@@ -6137,7 +6137,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
         self.received_lines.append(encodeddata)
 
     def smtp_HELO(self,arg):
-        self.parent.debug("hksmtpserver: HELO")
+        self.parent.debug("_gpgmailencryptserver: HELO")
 
         if not arg:
                    self.push('501 Syntax: HELO hostname')
@@ -6150,7 +6150,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
             self.push('250 %s' % self.fqdn)
 
     def smtp_EHLO(self, arg):
-        self.parent.debug("hksmtpserver: EHLO")
+        self.parent.debug("_gpgmailencryptserver: EHLO")
 
         if not arg:
             self.push('501 Syntax: EHLO hostname')
@@ -6176,7 +6176,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
         self.push('250 %s' % self.fqdn)
 
     def smtp_RSET(self, arg):
-        self.parent.debug("hksmtpserver: RSET")
+        self.parent.debug("_gpgmailencryptserver: RSET")
         self.reset_values()
         smtpd.SMTPChannel.smtp_RSET(self,arg)
 
@@ -6208,7 +6208,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
         self.push("250 OK")
 
     def smtp_AUTH(self,arg):
-        self.parent.debug("hksmtpserver: AUTH")
+        self.parent.debug("_gpgmailencryptserver: AUTH")
         print(arg)
 
         if not arg:
@@ -6241,14 +6241,14 @@ class _hksmtpchannel(smtpd.SMTPChannel):
         command,encoded=res    
 
         if "PLAIN" in command.upper():
-            self.parent.debug("hksmtpserver: PLAIN decoding")
+            self.parent.debug("_gpgmailencryptserver: PLAIN decoding")
 
             try:
                 d=binascii.a2b_base64(encoded).decode(
                                 "UTF-8",
                                 _unicodeerror).split('\x00')
             except:
-                self.parent.debug(  "hksmtpserver: error decode base64 '%s'"%
+                self.parent.debug(  "_gpgmailencryptserver: error decode base64 '%s'"%
                                     sys.exc_info()[1])
                 d=[]
 
@@ -6263,7 +6263,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
             password=d[1]
 
             if not self.authenticate_function:
-                self.parent.debug("hksmtpserver: self.authenticate_function=None")
+              self.parent.debug("_gpgmailencryptserver: self.authenticate_function=None")
 
             if (self.authenticate_function 
             and self.authenticate_function(self.parent,user,password)):
@@ -6502,7 +6502,9 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 
         if self.use_tls and self.force_tls and not self.tls_active:
 
-            if not command in SIMPLECOMMANDS+_gpgmailencryptserver.ADMINCOMMANDS:
+            if not command in (SIMPLECOMMANDS+
+                _gpgmailencryptserver.ADMINCOMMANDS):
+                
                 self.push("530 STARTTLS before authentication required.")
                 self._SMTPChannel__line=[]
                 return
@@ -6522,19 +6524,19 @@ def file_auth(  parent,
                 user,
                 password):
     "checks user authentication against a password file"
-    parent.debug("hksmtpserver: file_auth")
+    parent.debug("_gpgmailencryptserver: file_auth")
 
     try:
         pw=parent._smtpd_passwords[user]
 
         if pw==_get_hash(password):
-            parent.debug("hksmtpserver: User '%s' authenticated"%user)
+            parent.debug("_gpgmailencryptserver: User '%s' authenticated"%user)
             return True
         else:
-            parent.debug("hksmtpserver: User '%s' incorrect password"%user)
+            parent.debug("_gpgmailencryptserver: User '%s' incorrect password"%user)
 
     except:
-        parent.debug("hksmtpserver: No such user '%s'"%user)
+        parent.debug("_gpgmailencryptserver: No such user '%s'"%user)
 
     return False
 
