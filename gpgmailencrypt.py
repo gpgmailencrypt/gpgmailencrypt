@@ -289,6 +289,7 @@ def print_exampleconfig():
 #############
 #_splitstring
 #############
+
 def _splitstring(txt,length=80):
     def chunkstring(string, length):
         return (string[0+i:length+i] for i in range(0, len(string), length))
@@ -297,6 +298,7 @@ def _splitstring(txt,length=80):
 #########
 #_mytimer
 #########
+
 class _mytimer:
     def __init__(self):
         self.counter=0
@@ -384,6 +386,7 @@ def replace_variables(  text,
 ###########
 #CLASS _GPG
 ###########
+
 class _GPG:
     """class to encrypt and decrypt files via gpg
     Don't call this class directly, use gme.gpg_factory() instead!
@@ -879,6 +882,7 @@ class _SMIME:
                 _recipient[0] ]
         return cmd
 
+    @_dbg
     def decrypt_file(   self,
                         filename=None,
                         binary=False,
@@ -1078,47 +1082,44 @@ class _SMIME:
         except:
             self.parent.log("Class smime._copyfile: Couldn't copy file!","e")
             self.parent.log_traceback()
+
 ###########
 #CLASS _PDF
 ###########
+
 class _PDF:
- 
+    """
+    class to create encrypted PDF files out of E-mail files.
+    """
     @_dbg
     def __init__(   self, 
                     parent,
-                    keyhome=None,  
                     counter=0):
         self._recipient = ''
         self._filename=''    
         self.count=counter
         self.parent=parent
-        self.parent.debug("_PDF.__init__")
-        if isinstance(keyhome,str):
-            self._keyhome = expanduser(keyhome)
-        elif self.parent and self.parent._GPGKEYHOME:
-            self._keyhome=expanduser(self.parent._GPGKEYHOME)
-        else:
-            self._keyhome=expanduser('~/.gnupg')
-        self.parent.debug("_PDF.__init__ end")
  
     @_dbg
     def set_filename(self, fname):
+        "sets the filename of the file, which content has to be encrypted"
         if isinstance(fname,str):
             self._filename=fname.strip()
         else:
             self._filename=''
  
     @_dbg
-    def set_keyhome(self,keyhome):
-        if isinstance(keyhome,str):
-            self._keyhome=expanduser(keyhome.strip())
-        else:
-            self._keyhome=''
- 
-    @_dbg
     def create_pdffile( self,
                         password,
                         filename=None):
+        """
+        encrypts the content of a file.
+        
+        return values:
+        result: True if success, else False
+        encdata: If 'result' is True, a (binary) string with the encrypted data
+                 else None
+        """
         result=False
         if filename:
             self.set_filename(filename)
@@ -1198,9 +1199,11 @@ class _PDF:
                 "output",tofile,
                 "user_pw","\"%s\""%password]
         return cmd
+
 ###########
 #CLASS _ZIP
 ###########
+
 class _ZIP:
     "Class to create or unzip zipfiles." 
     @_dbg
@@ -1482,7 +1485,11 @@ _htmlname={
 "uuml":"ü","weierp":"℘","Xi":"Ξ","xi":"ξ","Yacute":"Ý","yacute":"ý","yen":"¥",
 "Yuml":"Ÿ","yuml":"ÿ","Zeta":"Ζ","zeta":"ζ","zwj":"‍","zwnj":"‌"
 }
+
+##################
 #class _htmldecode
+##################
+
 class _htmldecode(html.parser.HTMLParser):
 
     def __init__(self,parent):
@@ -5130,6 +5137,7 @@ def start_adminconsole(host,port):
 ######################
 #_gpgmailencryptserver
 ######################
+
 class _gpgmailencryptserver(smtpd.SMTPServer):
     "encryption smtp server based on smtpd"
     ADMINCOMMANDS=[ "DEBUG",
@@ -5636,6 +5644,7 @@ def main():
 #############################
 # gpgmailencrypt main program
 #############################
+
 if __name__ == "__main__":
     main()
 
