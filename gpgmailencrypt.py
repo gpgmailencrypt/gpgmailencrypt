@@ -1113,7 +1113,7 @@ class _PDF:
                         password,
                         filename=None):
         """
-        encrypts the content of a file.
+        creates a PDF file out of the content of a file and encrypts it.
         
         return values:
         result: True if success, else False
@@ -1883,6 +1883,7 @@ class gme:
     def reset_statistics(self):
         self._systemerrors=0
         self._systemwarnings=0
+        self._systemmessages=[]
         self._count_totalmails=0
         self._count_encryptedmails=0
         self._count_deferredmails=0
@@ -2528,6 +2529,9 @@ class gme:
             _lntxt="Line %i:%s"%(ln,space)
             tm=("%02d.%02d.%04d %02d:%02d:%02d:" % (t[2],t[1],t[0],t[3],
                                                     t[4],t[5])).ljust(_lftmsg)
+            
+            if infotype in["w","e"]:
+                self._systemmessages.append([tm[:-1],infotype,msg])
             txt=_splitstring(msg,320)
             c=0
             for t in txt:
@@ -5069,6 +5073,7 @@ def start_adminconsole(host,port):
             print("deluser             deletes a user")
             print("                    example: 'deluser john'")
             print("help                this help")
+            print("messages            shows all systemwarnings and -errors")
             print("quit                leave the console")
             print("reload              reloads the configuration file")
             print("resetstatistics     sets all statistic values to 0")
@@ -5143,6 +5148,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
     ADMINCOMMANDS=[ "DEBUG",
                     "DELUSER",
                     "FLUSH",
+                    "MESSAGES",
                     "RELOAD",
                     "RESETSTATISTICS",
                     "SETUSER",
@@ -5451,6 +5457,26 @@ class _hksmtpchannel(smtpd.SMTPChannel):
             self.push("250%s%s %s"%(dash,
                                     s.ljust(25),
                                     str(statistics[s]).rjust(4)) )
+            c+=1
+
+    def smtp_MESSAGES(self,arg):
+        if arg:
+            self.push("501 Syntax error: no arguments allowed")
+            return
+        _messages=self.parent._systemmessages
+        c=0
+        self.push("250-gpgmailencrypt version %s (%s)"%(VERSION,DATE))
+        _now=datetime.datetime.now()
+        self.push("250-Server runs %s"%(_now-self.parent._daemonstarttime))
+        if len(_messages)==0:
+            self.push("250 No messages.")
+            return
+
+        for s in _messages:
+            dash="-"
+            if c==len(_messages)-1:
+                dash=" "
+            self.push("250%s%s"%(dash,str(s)) )
             c+=1
 
     def smtp_FLUSH(self,arg):
