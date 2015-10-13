@@ -826,7 +826,7 @@ class gmetests(unittest.TestCase):
     def test_zipunzip(self):
         with gpgmailencrypt.gme() as gme:
             gme.set_configfile("./gmetest.conf")
-            ZIP=gpgmailencrypt.ZIP(gme)
+            ZIP=gme.zip_factory()
             teststring="dies ist ein Täst"
             directory = tempfile.mkdtemp()
             f=open("%s/testfile.txt"%directory,mode='w')
