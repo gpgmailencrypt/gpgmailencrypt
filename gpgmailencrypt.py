@@ -281,6 +281,8 @@ def print_exampleconfig():
 "#smtp port")
     print ("smtps = False                                           "
     "#use smtps encryption")
+    print ("starttls = False                                        "
+    "#use starttls encryption")
     print ("sslkeyfile = /etc/gpgsmtp.key                           "
     "#the x509 certificate key file")
     print ("sslcertfile = /etc/gpgsmtp.crt                          "
@@ -2241,6 +2243,7 @@ class gme:
         self._LOCALE="EN"
         self._RUNMODE=self.m_script
         self._SMTPD_USE_SMTPS=False
+        self._SMTPD_USE_STARTTLS=False
         self._SMTPD_USE_AUTH=False
         self._SMTPD_PASSWORDFILE="/etc/gpgmailencrypt.pw"
         self._SMTPD_SSL_KEYFILE="/etc/gpgsmtpd.key"
@@ -2457,6 +2460,11 @@ class gme:
 
             try:
                 self._SMTPD_USE_SMTPS=_cfg.getboolean('daemon','smtps')
+            except:
+                pass
+
+            try:
+                self._SMTPD_USE_STARTTLS=_cfg.getboolean('daemon','starttls')
             except:
                 pass
 
@@ -5629,6 +5637,7 @@ class gme:
                           write_smtpdpasswordfile=self.write_smtpdpasswordfile,
                           read_smtpdpasswordfile=self._read_smtpdpasswordfile,
                           use_smtps=self._SMTPD_USE_SMTPS,
+                          use_tls=self._SMTPD_USE_STARTTLS,
                           sslkeyfile=self._SMTPD_SSL_KEYFILE,
                           sslcertfile=self._SMTPD_SSL_CERTFILE)
         except:
@@ -5965,6 +5974,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
             sslkeyfile=None,
             sslversion=ssl.PROTOCOL_SSLv23,
             use_smtps=False,
+            use_tls=False,
             use_auth=False,
             authenticate_function=None,
             write_smtpdpasswordfile=None,
@@ -5985,12 +5995,42 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
         self.sslkeyfile=sslkeyfile
         self.sslversion=sslversion
         self.use_smtps=use_smtps
+        if not use_smtps:
+            self.use_tls=use_tls
         self.use_authentication=use_auth
         self.write_smtpdpasswordfile=write_smtpdpasswordfile
         self.read_smtpdpasswordfile=read_smtpdpasswordfile
         self.authenticate_function=authenticate_function
 
-    @_dbg
+    def create_sslconnection(self,conn):
+        newconn=None
+        try:
+            newconn=ssl.wrap_socket(conn,
+                server_side=True,
+                certfile=self.sslcertfile,
+                keyfile=self.sslkeyfile,
+                ssl_version=self.sslversion,
+                do_handshake_on_connect=False
+                )
+
+            while True:
+
+                try:
+                    newconn.do_handshake()
+                    break
+                except ssl.SSLWantReadError:
+                    select.select([newconn], [], [])
+                except ssl.SSLWantWriteError:
+                    select.select([], [newconn], [])
+
+        except:
+            self.parent.log("_gpgmailencryptserver: Exception: Could not"
+                            " start SSL connection")
+            self.parent.log_traceback()
+        return newconn
+
+
+
     def handle_accept(self):
         pair = self.accept()
 
@@ -5999,31 +6039,9 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
             self.socket.setblocking(0)
 
             if self.use_smtps:
-
-                try:
-                    conn=ssl.wrap_socket(conn,
-                        server_side=True,
-                        certfile=self.sslcertfile,
-                        keyfile=self.sslkeyfile,
-                        ssl_version=self.sslversion,
-                        do_handshake_on_connect=False
-                        )
-
-                    while True:
-
-                        try:
-                            conn.do_handshake()
-                            break
-                        except ssl.SSLWantReadError:
-                            select.select([conn], [], [])
-                        except ssl.SSLWantWriteError:
-                            select.select([], [conn], [])
-
-                except:
-                    self.parent.log("_gpgmailencryptserver: Exception: Could not"
-                                    " start SSL connection")
-                    self.parent.log_traceback()
-                    return
+                    conn=self.create_sslconnection(conn)
+                    if conn==None:
+                        return
 
             self.parent.debug("_gpgmailencryptserver: Incoming connection "
                                 "from %s" % repr(addr))
@@ -6032,12 +6050,15 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
                         addr,
                         parent=self.parent,
                         use_auth=self.use_authentication, 
+                        use_tls=self.use_tls,
                         authenticate_function=self.authenticate_function,
                         write_smtpdpasswordfile=self.write_smtpdpasswordfile,    
                         read_smtpdpasswordfile=self.read_smtpdpasswordfile,
                         sslcertfile=self.sslcertfile,
                         sslkeyfile=self.sslkeyfile,
                         sslversion=self.sslversion)
+ 
+    
  
     @_dbg
     def process_message(    self, 
@@ -6512,9 +6533,12 @@ class _hksmtpchannel(smtpd.SMTPChannel):
         smtpd.SMTPChannel.found_terminator(self)
 
     def smtp_STARTTLS(self,arg):
-            self.push('502 Error: command "STARTTLS" not implemented' )
-            self._SMTPChannel__line=[]
-            return
+        self.parent.debug("_gpgmailencryptserver: STARTTLS")
+        self.push("220 Go ahead")
+        conn=self.smtp_server.create_sslconnection(self.conn)
+        self.conn=conn
+        self.set_socket(conn)
+        self.reset_values()
 
 ##########
 #file_auth
