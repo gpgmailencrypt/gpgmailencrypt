@@ -20,7 +20,7 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.2.0dev"
+VERSION="2.2.0alpha"
 DATE="13.10.2015"
 import asynchat
 import asyncore
@@ -250,7 +250,7 @@ def print_exampleconfig():
     print ("pdfdomains=localhost                                    "
 "#a comma separated list of sender domains, which are allowed to "
 "use pdf-encrypt")
-    print ("passwordlength=20                                       "
+    print ("passwordlength=10                                       "
 "#Length of the automatic created password")
     print ("passwordlifetime=172800                                 "
 "#lifetime for autocreated passwords in seconds. Default is 48 hours")
@@ -283,6 +283,8 @@ def print_exampleconfig():
     "#use smtps encryption")
     print ("starttls = False                                        "
     "#use starttls encryption")
+    print ("forcetls = False                                        "
+    "#communication (e.g. authentication) will be only possible after STARTTLS")
     print ("sslkeyfile = /etc/gpgsmtp.key                           "
     "#the x509 certificate key file")
     print ("sslcertfile = /etc/gpgsmtp.crt                          "
@@ -1438,7 +1440,7 @@ class _ZIP:
 
         cmd=[   self.parent._7ZIPCMD, 
                 "a",resultfile, 
-                "%s/*"%directory,
+                os.path.join(directory,"*"),
                 "-tzip",
                 "-mem=%s"%cipher,">/dev/null"]
 
@@ -2232,7 +2234,7 @@ class gme:
         self._ALLOWGPGCOMMENT=False
         self._GPGCMD='/usr/bin/gpg2'
         self._SMIMEKEYHOME="~/.smime"
-        self._SMIMEKEYEXTRACTDIR="%s/extract"%self._SMIMEKEYHOME
+        self._SMIMEKEYEXTRACTDIR=os.path.join(self._SMIMEKEYHOME,"extract")
         self._SMIMECMD="/usr/bin/openssl"
         self._SMIMECIPHER="DES3"
         self._SMIMEAUTOMATICEXTRACTKEYS=False
@@ -2245,6 +2247,7 @@ class gme:
         self._SMTPD_USE_SMTPS=False
         self._SMTPD_USE_STARTTLS=False
         self._SMTPD_USE_AUTH=False
+        self._SMTPD_FORCETLS=False
         self._SMTPD_PASSWORDFILE="/etc/gpgmailencrypt.pw"
         self._SMTPD_SSL_KEYFILE="/etc/gpgsmtpd.key"
         self._SMTPD_SSL_CERTFILE="/etc/gpgsmtpd.cert"
@@ -2465,6 +2468,11 @@ class gme:
 
             try:
                 self._SMTPD_USE_STARTTLS=_cfg.getboolean('daemon','starttls')
+            except:
+                pass
+
+            try:
+                self._SMTPD_FORCETLS=_cfg.getboolean('daemon','forcetls')
             except:
                 pass
 
@@ -5638,6 +5646,7 @@ class gme:
                           read_smtpdpasswordfile=self._read_smtpdpasswordfile,
                           use_smtps=self._SMTPD_USE_SMTPS,
                           use_tls=self._SMTPD_USE_STARTTLS,
+                          force_tls=self._SMTPD_FORCETLS,
                           sslkeyfile=self._SMTPD_SSL_KEYFILE,
                           sslcertfile=self._SMTPD_SSL_CERTFILE)
         except:
@@ -5976,6 +5985,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
             use_smtps=False,
             use_tls=False,
             use_auth=False,
+            force_tls=False,
             authenticate_function=None,
             write_smtpdpasswordfile=None,
             read_smtpdpasswordfile=None,
@@ -5995,8 +6005,14 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
         self.sslkeyfile=sslkeyfile
         self.sslversion=sslversion
         self.use_smtps=use_smtps
+        self.force_tls=False
+
         if not use_smtps:
             self.use_tls=use_tls
+
+            if use_tls:
+                self.force_tls=force_tls
+
         self.use_authentication=use_auth
         self.write_smtpdpasswordfile=write_smtpdpasswordfile
         self.read_smtpdpasswordfile=read_smtpdpasswordfile
@@ -6032,8 +6048,6 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
             self.parent.log_traceback()
         return newconn
 
-
-
     def handle_accept(self):
         pair = self.accept()
 
@@ -6054,6 +6068,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
                         parent=self.parent,
                         use_auth=self.use_authentication, 
                         use_tls=self.use_tls,
+                        force_tls=self.force_tls,
                         authenticate_function=self.authenticate_function,
                         write_smtpdpasswordfile=self.write_smtpdpasswordfile,    
                         read_smtpdpasswordfile=self.read_smtpdpasswordfile,
@@ -6195,6 +6210,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
         and (not self.force_tls 
              or (self.force_tls and self.tls_active))):
             self.push('250-AUTH LOGIN PLAIN')
+
         self.push('250 %s' % self.fqdn)
 
     def smtp_RSET(self, arg):
@@ -6237,8 +6253,10 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 
     def smtp_AUTH(self,arg):
         self.parent.debug("_gpgmailencryptserver: AUTH")
-        print(arg)
-
+        if not self.use_authentication:
+            self.push("503 Error: authentication not enabled")
+            return
+            
         if not arg:
             self.push("501 Syntax error: AUTH PLAIN")
             return
