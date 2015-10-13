@@ -21,7 +21,7 @@ Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
 VERSION="2.2.0dev"
-DATE="12.10.2015"
+DATE="13.10.2015"
 import asynchat
 import asyncore
 import atexit
@@ -6022,7 +6022,10 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
                     select.select([newconn], [], [])
                 except ssl.SSLWantWriteError:
                     select.select([], [newconn], [])
-
+                except :
+                    self.parent.log("Client did break off STARTTLS","w")
+                    self.parent.log_traceback()
+                    break
         except:
             self.parent.log("_gpgmailencryptserver: Exception: Could not"
                             " start SSL connection")
@@ -6227,6 +6230,11 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 
         self.parent.set_debug(res)
         self.push("250 OK")
+
+    def handle_error(self):
+        self.parent.debug("handle_error")
+        self.parent.log_traceback()
+        self.handle_close()
 
     def smtp_AUTH(self,arg):
         self.parent.debug("_gpgmailencryptserver: AUTH")
@@ -6536,6 +6544,8 @@ class _hksmtpchannel(smtpd.SMTPChannel):
         self.parent.debug("_gpgmailencryptserver: STARTTLS")
         self.push("220 Go ahead")
         conn=self.smtp_server.create_sslconnection(self.conn)
+        if conn==None:
+                return
         self.conn=conn
         self.set_socket(conn)
         self.reset_values()
