@@ -6060,9 +6060,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
                         sslcertfile=self.sslcertfile,
                         sslkeyfile=self.sslkeyfile,
                         sslversion=self.sslversion)
- 
-    
- 
+
     @_dbg
     def process_message(    self, 
                             peer, 
@@ -6205,6 +6203,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
         smtpd.SMTPChannel.smtp_RSET(self,arg)
 
     def reset_values(self):    
+        self.parent.debug("_gpgmailencryptserver: reset_values")
         self.is_authenticated=False
         self.is_admin=False
         self.user=""
@@ -6277,8 +6276,9 @@ class _hksmtpchannel(smtpd.SMTPChannel):
                                 "UTF-8",
                                 _unicodeerror).split('\x00')
             except:
-                self.parent.debug(  "_gpgmailencryptserver: error decode base64 '%s'"%
-                                    sys.exc_info()[1])
+                self.parent.debug(
+                            "_gpgmailencryptserver: error decode base64 '%s'"%
+                            sys.exc_info()[1])
                 d=[]
 
             if len(d)<2:
@@ -6292,7 +6292,8 @@ class _hksmtpchannel(smtpd.SMTPChannel):
             password=d[1]
 
             if not self.authenticate_function:
-              self.parent.debug("_gpgmailencryptserver: self.authenticate_function=None")
+              self.parent.debug("_gpgmailencryptserver: "
+                            "self.authenticate_function=None")
 
             if (self.authenticate_function 
             and self.authenticate_function(self.parent,user,password)):
@@ -6567,7 +6568,8 @@ def file_auth(  parent,
             parent.debug("_gpgmailencryptserver: User '%s' authenticated"%user)
             return True
         else:
-            parent.debug("_gpgmailencryptserver: User '%s' incorrect password"%user)
+            parent.debug("_gpgmailencryptserver: User '%s' "
+                        "incorrect password"%user)
 
     except:
         parent.debug("_gpgmailencryptserver: No such user '%s'"%user)
