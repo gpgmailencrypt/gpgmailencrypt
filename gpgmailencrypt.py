@@ -6185,7 +6185,11 @@ class _hksmtpchannel(smtpd.SMTPChannel):
         else:
             self.seen_greeting = True
             self.push('250 %s' % self.fqdn)
-
+    def _dash(self,count):
+        if count>0:
+            return "-"
+        else:
+            return " "
     def smtp_EHLO(self, arg):
         self.parent.debug("_gpgmailencryptserver: EHLO")
 
@@ -6199,20 +6203,32 @@ class _hksmtpchannel(smtpd.SMTPChannel):
         else:
             self.seen_greeting = arg
             self.extended_smtp = True
+        _starttls=self.use_tls and not self.tls_active
+        _size=self.data_size_limit>0
+        _auth=(self.use_authentication 
+                   and (not self.force_tls 
+                   or (self.force_tls and self.tls_active))
+              )
+        countentries=  (_starttls+
+                        _size+
+                        _auth
+                       )
+        self.push('250%s%s' % (self._dash(countentries),self.fqdn) )
+        countentries-=1
 
-        if self.use_tls and not self.tls_active:
-            self.push('250-STARTTLS')
+        if _starttls:
+            self.push('250%sSTARTTLS'%self._dash(countentries))
+            countentries-=1
 
-        if self.data_size_limit:
-            self.push('250-SIZE %s' % self.data_size_limit)
+        if _size:
+            self.push('250%sSIZE %s' % (self._dash(countentries),self.data_size_limit))
+            countentries-=1
 
-        if (self.use_authentication 
-        and (not self.force_tls 
-             or (self.force_tls and self.tls_active))):
-            self.push('250-AUTH LOGIN PLAIN')
+        if _auth:
+            self.push('250%sAUTH LOGIN PLAIN'%self._dash(countentries))
+            countentries-=1
 
-        self.push('250 %s' % self.fqdn)
-
+ 
     def smtp_RSET(self, arg):
         self.parent.debug("_gpgmailencryptserver: RSET")
         self.reset_values()
@@ -6552,6 +6568,8 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 
             if not command in (SIMPLECOMMANDS+
                 _gpgmailencryptserver.ADMINCOMMANDS):
+                self.parent.log("STARTTLS before authentication required."
+                                " Command was '%s'"%command)
                 
                 self.push("530 STARTTLS before authentication required.")
                 self._SMTPChannel__line=[]
@@ -6560,7 +6578,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
         smtpd.SMTPChannel.found_terminator(self)
 
     def smtp_STARTTLS(self,arg):
-        self.parent.debug("_gpgmailencryptserver: STARTTLS")
+        self.parent.log("_gpgmailencryptserver: STARTTLS")
         self.push("220 Go ahead")
         conn=self.smtp_server.create_sslconnection(self.conn)
         if conn==None:
