@@ -20,8 +20,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.2.0alpha"
-DATE="13.10.2015"
+VERSION="2.2.0beta"
+DATE="14.10.2015"
 import asynchat
 import asyncore
 import atexit
@@ -6578,7 +6578,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
         smtpd.SMTPChannel.found_terminator(self)
 
     def smtp_STARTTLS(self,arg):
-        self.parent.log("_gpgmailencryptserver: STARTTLS")
+        self.parent.debug("_gpgmailencryptserver: STARTTLS")
         self.push("220 Go ahead")
         conn=self.smtp_server.create_sslconnection(self.conn)
         if conn==None:
@@ -6586,6 +6586,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
         self.conn=conn
         self.set_socket(conn)
         self.reset_values()
+        self.tls_active=True
 
 ##########
 #file_auth
