@@ -6226,6 +6226,103 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 
 		self.received_lines.append(encodeddata)
 
+	def found_terminator(self):
+		line = "".join(self._SMTPChannel__line)
+		i = line.find(' ')
+
+		if i < 0:
+			command = line.upper()
+		else:
+			command = line[:i].upper()
+
+		SIMPLECOMMANDS=["EHLO","HELO","RSET","NOOP","QUIT","STARTTLS"]
+
+		if not self.use_authentication and not self.adminmode :
+			SIMPLECOMMANDS+=["ADMIN"]
+
+		if ((self.use_authentication or self.adminmode)
+		and not self.is_authenticated):
+
+			if self.in_loginauth:
+
+				if self.in_loginauth==1:
+					self.user=binascii.a2b_base64(
+										line).decode("UTF-8",_unicodeerror)
+					self.in_loginauth=2
+					self.push('334 %s'%binascii.b2a_base64(
+								"Password:".encode("UTF8")).decode("UTF8")[:-1])
+					self._SMTPChannel__line=[]
+					return
+				elif self.in_loginauth==2:
+					self.password=binascii.a2b_base64(
+										line).decode("UTF-8",_unicodeerror)
+
+					if (self.authenticate_function
+					and self.authenticate_function( self.parent,
+													self.user,
+													self.password)):
+						self.push("235 Authentication successful.")
+						self.is_authenticated=True
+						self.is_admin=self.parent.is_admin(self.user)
+					else:
+						self.push("454 Temporary authentication failure.")
+						self.parent.log(
+							"User '%s' failed to AUTH LOGIN login"%self.user
+							,"w")
+
+					self.in_loginauth=0
+					self._SMTPChannel__line=[]
+					return
+
+			if not command in SIMPLECOMMANDS+["AUTH"]:
+				self.push("530 Authentication required.")
+				self._SMTPChannel__line=[]
+				return
+
+		if not self.is_admin:
+
+			if command in _gpgmailencryptserver.ADMINCOMMANDS:
+				self.push("530 Admin authentication required.")
+				self._SMTPChannel__line=[]
+				return
+
+		if self.use_tls and self.force_tls and not self.tls_active:
+
+			if not command in (SIMPLECOMMANDS+
+				_gpgmailencryptserver.ADMINCOMMANDS):
+				self.parent.log("STARTTLS before authentication required."
+								" Command was '%s'"%command)
+
+				self.push("530 STARTTLS before authentication required.")
+				self._SMTPChannel__line=[]
+				return
+
+		smtpd.SMTPChannel.found_terminator(self)
+
+	def _dash(self,count):
+		if count>0:
+			return "-"
+		else:
+			return " "
+
+	def reset_values(self):
+		self.parent.debug("_gpgmailencryptserver: reset_values")
+		self.is_authenticated=False
+		self.is_admin=False
+		self.user=""
+		self.password=""
+		self.seen_greeting=False
+
+	def handle_error(self):
+		self.parent.debug("handle_error")
+		self.parent.log_traceback()
+		self.handle_close()
+
+	#SMTP Commands
+
+	##########
+	#smtp_HELO
+	##########
 	def smtp_HELO(self,arg):
 		self.parent.debug("_gpgmailencryptserver: HELO")
 
@@ -6238,11 +6335,10 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		else:
 			self.seen_greeting = True
 			self.push('250 %s' % self.fqdn)
-	def _dash(self,count):
-		if count>0:
-			return "-"
-		else:
-			return " "
+
+	##########
+	#smtp_EHLO
+	##########
 	def smtp_EHLO(self, arg):
 		self.parent.debug("_gpgmailencryptserver: EHLO")
 
@@ -6282,45 +6378,17 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			self.push('250%sAUTH LOGIN PLAIN'%self._dash(countentries))
 			countentries-=1
 
- 
+	##########
+	#smtp_RSET
+	##########
 	def smtp_RSET(self, arg):
 		self.parent.debug("_gpgmailencryptserver: RSET")
 		self.reset_values()
 		smtpd.SMTPChannel.smtp_RSET(self,arg)
 
-	def reset_values(self):	
-		self.parent.debug("_gpgmailencryptserver: reset_values")
-		self.is_authenticated=False
-		self.is_admin=False
-		self.user=""
-		self.password=""
-		self.seen_greeting=False
-
-	def smtp_DEBUG(self,arg):
-		syntaxerror="501 Syntax error: DEBUG TRUE|FALSE or ON|OFF or YES|NO"
-
-		if not arg:
-			self.push(syntaxerror)
-			return
-
-		command=arg.upper()
-
-		if command in ["TRUE","ON","YES"] :
-			res=True
-		elif command in ["FALSE","OFF","NO"]:
-			res=False
-		else:
-			self.push(syntaxerror)
-			return
-
-		self.parent.set_debug(res)
-		self.push("250 OK")
-
-	def handle_error(self):
-		self.parent.debug("handle_error")
-		self.parent.log_traceback()
-		self.handle_close()
-
+	##########
+	#smtp_AUTH
+	##########
 	def smtp_AUTH(self,arg):
 		self.parent.debug("_gpgmailencryptserver: AUTH")
 		if not self.use_authentication and not self.adminmode:
@@ -6402,6 +6470,53 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		else:
 			self.push("454 Temporary authentication failure.")
 
+	##############
+	#smtp_STARTTLS
+	##############
+	def smtp_STARTTLS(self,arg):
+		self.parent.debug("_gpgmailencryptserver: STARTTLS")
+
+		if arg:
+			self.push("501 Syntax error: no arguments allowed")
+			return
+
+		self.push("220 Go ahead")
+		#this part should be before 220 Go ahead, but it will break the
+		#connection
+		conn=self.smtp_server.create_sslconnection(self.conn)
+
+		if conn==None:
+				self.push("454 TLS not available due to temporary reason")
+				return
+
+		self.conn=conn
+		self.set_socket(conn)
+		self.reset_values()
+		self.tls_active=True
+
+	#ADMIN functions
+	#smtp_DEBUG
+	def smtp_DEBUG(self,arg):
+		syntaxerror="501 Syntax error: DEBUG TRUE|FALSE or ON|OFF or YES|NO"
+
+		if not arg:
+			self.push(syntaxerror)
+			return
+
+		command=arg.upper()
+
+		if command in ["TRUE","ON","YES"] :
+			res=True
+		elif command in ["FALSE","OFF","NO"]:
+			res=False
+		else:
+			self.push(syntaxerror)
+			return
+
+		self.parent.set_debug(res)
+		self.push("250 OK")
+
+	#smtp_RESETSTATISTICS
 	def smtp_RESETSTATISTICS(self,arg):
 
 		if arg:
@@ -6411,6 +6526,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		self.parent.reset_statistics()
 		self.push("250 OK")
 
+	#smtp_STATISTICS
 	def smtp_STATISTICS(self,arg):
 
 		if arg:
@@ -6434,6 +6550,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 									str(statistics[s]).rjust(4)) )
 			c+=1
 
+	#smtp_MESSAGES
 	def smtp_MESSAGES(self,arg):
 
 		if arg:
@@ -6459,12 +6576,14 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			self.push("250%s%s"%(dash,str(s)) )
 			c+=1
 
+	#smtp_FLUSH
 	def smtp_FLUSH(self,arg):
 		self.parent.log("FLUSH")
 		self.parent.check_deferred_list()
 		self.parent.check_mailqueue()
 		self.push("250 OK")
 
+	#smtp_RELOAD
 	def smtp_RELOAD(self,arg):
 
 		if arg:
@@ -6476,6 +6595,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		self.parent._parse_commandline()
 		self.push("250 OK")
 
+	#smtp_USERS
 	def smtp_USERS(self,arg):
 
 		if arg:
@@ -6499,6 +6619,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			self.push("250%s%s %s"%(dash,user["user"],adm))
 			c+=1
 
+	#smtp_SETUSER
 	def smtp_SETUSER(self,arg):
 
 		if not arg:
@@ -6522,6 +6643,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		else:
 			self.push("454 User could not be set")
 
+	#smtp_DELUSER
 	def smtp_DELUSER(self,arg):
 
 		if not arg:
@@ -6549,6 +6671,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		else:
 			self.push("454 User could not be deleted")
 
+	#smtp_ADMIN
 	def smtp_ADMIN(self,arg):
 		self.adminmode=True
 
@@ -6557,98 +6680,6 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 
 		self.push("250 OK")
 		return
-
-	def found_terminator(self):
-		line = "".join(self._SMTPChannel__line)
-		i = line.find(' ')
-
-		if i < 0:
-			command = line.upper()
-		else:
-			command = line[:i].upper()
-
-		SIMPLECOMMANDS=["EHLO","HELO","RSET","NOOP","QUIT","STARTTLS"]
-
-		if not self.use_authentication and not self.adminmode :
-			SIMPLECOMMANDS+=["ADMIN"]
-
-		if ((self.use_authentication or self.adminmode) 
-		and not self.is_authenticated):
-
-			if self.in_loginauth:
-
-				if self.in_loginauth==1:
-					self.user=binascii.a2b_base64(
-										line).decode("UTF-8",_unicodeerror)
-					self.in_loginauth=2
-					self.push('334 %s'%binascii.b2a_base64(
-								"Password:".encode("UTF8")).decode("UTF8")[:-1])
-					self._SMTPChannel__line=[]
-					return
-				elif self.in_loginauth==2:
-					self.password=binascii.a2b_base64(
-										line).decode("UTF-8",_unicodeerror)
-
-					if (self.authenticate_function 
-					and self.authenticate_function( self.parent,
-													self.user,
-													self.password)):
-						self.push("235 Authentication successful.")
-						self.is_authenticated=True
-						self.is_admin=self.parent.is_admin(self.user)
-					else:
-						self.push("454 Temporary authentication failure.")
-						self.parent.log(
-							"User '%s' failed to AUTH LOGIN login"%self.user
-							,"w")
-
-					self.in_loginauth=0
-					self._SMTPChannel__line=[]
-					return
-					  
-			if not command in SIMPLECOMMANDS+["AUTH"]:
-				self.push("530 Authentication required.")
-				self._SMTPChannel__line=[]
-				return
-
-		if not self.is_admin:
-
-			if command in _gpgmailencryptserver.ADMINCOMMANDS:
-				self.push("530 Admin authentication required.")
-				self._SMTPChannel__line=[]
-				return
-
-		if self.use_tls and self.force_tls and not self.tls_active:
-
-			if not command in (SIMPLECOMMANDS+
-				_gpgmailencryptserver.ADMINCOMMANDS):
-				self.parent.log("STARTTLS before authentication required."
-								" Command was '%s'"%command)
-				
-				self.push("530 STARTTLS before authentication required.")
-				self._SMTPChannel__line=[]
-				return
-
-		smtpd.SMTPChannel.found_terminator(self)
-
-	def smtp_STARTTLS(self,arg):
-		self.parent.debug("_gpgmailencryptserver: STARTTLS")
-
-		if arg:
-			self.push("501 Syntax error: no arguments allowed")
-			return
-
-		self.push("220 Go ahead")
-		conn=self.smtp_server.create_sslconnection(self.conn)
-
-		if conn==None:
-				self.push("454 TLS not available due to temporary reason")
-				return
-
-		self.conn=conn
-		self.set_socket(conn)
-		self.reset_values()
-		self.tls_active=True
 
 ##########
 #file_auth
