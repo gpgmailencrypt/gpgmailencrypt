@@ -5799,12 +5799,16 @@ def start_adminconsole(host,port):
 			self.timer=_mytimer()
 
 		def _sendcmd(self, cmd,arg=""):
-				self.smtp.putcmd(cmd,arg)
-				(code, msg) = self.getreply()
-				print(msg.decode("UTF-8"))
-				return (code, msg)
+			if self.smtp==None:
+				return (None,None)
+			self.smtp.putcmd(cmd,arg)
+			(code, msg) = self.getreply()
+			print(msg.decode("UTF-8"))
+			return (code, msg)
 
 		def getreply(self):
+			if self.smtp==None:
+					return None
 			return self.smtp.getreply()	
 
 		def start(self,host="localhost",port=0):
@@ -5822,6 +5826,8 @@ def start_adminconsole(host,port):
 			try:
 				self.smtp.starttls()
 			except:
+				print("WARNING. Connection is not encrypted. "
+					"STARTTLS was not possible")
 				pass
 			
 			user=input("User: ")
@@ -5889,22 +5895,25 @@ def start_adminconsole(host,port):
 			self.timer.stop()
 
 		def print_help(self):
+			space=20
 			print("\nAllowed commands:")
 			print("=================")
-			print("flush			   tries to re-send deferred emails")
-			print("debug true/false	sets the debug mode")
-			print("deluser			 deletes a user")
-			print("					example: 'deluser john'")
-			print("help				this help")
-			print("messages			shows all systemwarnings and -errors")
-			print("quit				leave the console")
-			print("reload			  reloads the configuration file")
-			print("resetstatistics	 sets all statistic values to 0")
-			print("setuser			 "
+			print("flush".ljust(space)+"tries to re-send deferred emails")
+			print("debug true/false".ljust(space)+"sets the debug mode")
+			print("deluser".ljust(space)+"deletes a user")
+			print("".ljust(space)+"example: 'deluser john'")
+			print("help".ljust(space)+"this help")
+			print("messages".ljust(space)+
+					"shows all systemwarnings and -errors")
+			print("quit".ljust(space)+"leave the console")
+			print("reload".ljust(space)+"reloads the configuration file")
+			print("resetstatistics".ljust(space)+
+					"sets all statistic values to 0")
+			print("setuser".ljust(space)+
 			"adds a new user or changes the password for an existing user")
-			print("					example: 'setuser john johnspassword'")
-			print("statistics		  print statistic information")
-			print("users			   print users")
+			print("".ljust(space)+"example: 'setuser john johnspassword'")
+			print("statistics".ljust(space)+"print statistic information")
+			print("users".ljust(space)+"print users")
 
 #class taken from http://stackoverflow.com/questions/20625642/\
 #				 autocomplete-with-readline-in-python3
@@ -6314,7 +6323,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 
 	def smtp_AUTH(self,arg):
 		self.parent.debug("_gpgmailencryptserver: AUTH")
-		if not self.use_authentication:
+		if not self.use_authentication and not self.adminmode:
 			self.push("503 Error: authentication not enabled")
 			return
 			
