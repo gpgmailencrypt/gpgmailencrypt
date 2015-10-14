@@ -580,7 +580,8 @@ class _GPG:
 
 					try:
 						found=re.search(
-						"[-a-zA-Z0-9_%\+\.]+@[-_0-9a-zA-Z\.]+\.[-_0-9a-zA-Z\.]+",
+						"[-a-zA-Z0-9_%\+\.]+@[-_0-9a-zA-Z\.]+"
+						"\.[-_0-9a-zA-Z\.]+",
 						email)
 					except:
 						self.parent.log_traceback()
@@ -5763,7 +5764,8 @@ class gme:
 				f=open(pwfile,"w")
 
 		except:
-			self.log("_gpgmailencryptserver: Config file could not be written","e")
+			self.log("_gpgmailencryptserver: Config file could not be written",
+					"e")
 			self.log_traceback()
 			return False
 
@@ -6221,7 +6223,8 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			countentries-=1
 
 		if _size:
-			self.push('250%sSIZE %s' % (self._dash(countentries),self.data_size_limit))
+			self.push('250%sSIZE %s' % (self._dash(countentries),
+										self.data_size_limit))
 			countentries-=1
 
 		if _auth:
