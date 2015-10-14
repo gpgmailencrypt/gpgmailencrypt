@@ -6633,9 +6633,13 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 
 	def smtp_STARTTLS(self,arg):
 		self.parent.debug("_gpgmailencryptserver: STARTTLS")
+		if arg:
+			self.push("501 Syntax error: no arguments allowed")
+			return
 		self.push("220 Go ahead")
 		conn=self.smtp_server.create_sslconnection(self.conn)
 		if conn==None:
+				self.push("454 TLS not available due to temporary reason")
 				return
 		self.conn=conn
 		self.set_socket(conn)
