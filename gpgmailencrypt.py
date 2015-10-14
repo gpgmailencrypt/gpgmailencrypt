@@ -263,7 +263,7 @@ def print_exampleconfig():
 	print ("7zipcommand=/usr/bin7za".ljust(space)+
 "#path where to find 7za")
 	print ("defaultcipher=ZipCrypto".ljust(space)+
-"#ZipCrypto|AES128|AES256")
+"#ZipCrypto|AES128||AES192|AES256")
 	print ("compressionlevel=5".ljust(space)+
 "#1,3,5,7,9  with 1:lowest compression, but very fast, 9 is ")
 	print ("".ljust(space)+
@@ -1385,7 +1385,7 @@ class _ZIP:
 															   directory,
 															   None,
 															   compress=False)),
-									 shell=True ) 
+								shell=True ) 
 			directory=tempdir
 
 			if _result !=0:
@@ -1407,7 +1407,7 @@ class _ZIP:
 						' '.join(self._createzipcommand_fromdir( f.name,
 																 directory,
 																 password)),
-								  shell=True ) 
+								 shell=True ) 
 
 		try:
 			shutil.rmtree(tempdir)
@@ -1438,6 +1438,8 @@ class _ZIP:
 
 		if self.zipcipher=="AES128":
 			cipher="AES128"
+		elif self.zipcipher=="AES192":
+			cipher="AE192"
 		elif self.zipcipher=="AES256":
 			cipher="AES256"
 
@@ -5791,7 +5793,7 @@ def start_adminconsole(host,port):
 	class gmeadmin():
 
 		def __init__(self):
-			self.smtp= smtplib.SMTP()
+			self.smtp= None
 			self.host="localhost"
 			self.port=0
 			self.timer=_mytimer()
@@ -5810,13 +5812,18 @@ def start_adminconsole(host,port):
 			self.port=port
 
 			try:
-				self.smtp.connect(host,port)
+				self.smtp=smtplib.SMTP(host=host,port=port)
 			except:
 				print("Connection not possible")
 				exit(1)
 
 			print("gpgmailencrypt admin console")
 			print("============================")
+			try:
+				self.smtp.starttls()
+			except:
+				pass
+			
 			user=input("User: ")
 			password=getpass.getpass("Password: ")
 			auth=binascii.b2a_base64(
@@ -6022,6 +6029,25 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 		self.read_smtpdpasswordfile=read_smtpdpasswordfile
 		self.authenticate_function=authenticate_function
 
+		_sslpossible=True
+
+		try:
+			f=open(self.sslcertfile)
+			f.close()
+		except:
+			_sslpossible=False
+			
+		try:
+			f=open(self.sslkeyfile)
+			f.close()
+		except:
+			_sslpossible=False
+		if _sslpossible==False:
+			self.use_tls=False
+			self.use_smtps=False
+			self.force_tls=False
+			self.parent.log("SSL connection not possible. Cert- and/or key "
+							"file couldn't be opened","e")
 	def create_sslconnection(self,conn):
 		newconn=None
 		try:
@@ -6140,9 +6166,23 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		self.seen_greeting=False
 		self.data_size_limit=0
 		self.fqdn=socket.getfqdn()
+		_sslpossible=True
 
-		if self.sslcertfile and self.sslkeyfile and self.sslversion:
+		try:
+			f=open(self.sslcertfile)
+			f.close()
+		except:
+			_sslpossible=False
+			
+		try:
+			f=open(self.sslkeyfile)
+			f.close()
+		except:
+			_sslpossible=False
+			
+		if _sslpossible and self.sslversion:
 			self.starttls_available=True
+
 
 	#the following method is taken from SMTPChannel and is corrected to not 
 	#throw an encoding error if something else than unciode comes 
