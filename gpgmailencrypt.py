@@ -14,7 +14,7 @@ It can be used normally as a script doing everything on command line, in daemon
 mode, where gpgmailencrypt acts as an encrypting smtp server or as a module 
 for programmers. 
 It takes e-mails and  returns the e-mail encrypted to another e-mail server
-if a encryption key exists for the receiver. Otherwise it returns the e-mail 
+if a encryption key exists for the recipient. Otherwise it returns the e-mail 
 unencrypted.The encryption method can be selected per user.
 Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
@@ -135,9 +135,9 @@ def show_usage():
     print ("Author:  Horst Knorr <gpgmailencrypt@gmx.de>")
     print ("Version: %s from %s"%(VERSION,DATE))
     print ("\nUsage:\n")
-    print ("gme.py [options] receiver@email.address < Inputfile_from_stdin")
+    print ("gme.py [options] recipient@email.address < Inputfile_from_stdin")
     print ("or")
-    print ("gme.py -f inputfile.eml [options] receiver@email.address")
+    print ("gme.py -f inputfile.eml [options] recipient@email.address")
     print ("\nOptions:\n")
     print ("-a --addheader:     adds %s header to the mail"%gme._encryptheader)
     print ("-c f --config f:    use configfile 'f'. Default is")
@@ -2040,7 +2040,7 @@ class gme:
     create an instance of gme via 'with gme() as g'
     example:
     with gme() as g:
-      g.encrypt_mails(mailtext,["receiver@mail.com","receiver2@mail.com"])
+      g.encrypt_mails(mailtext,["recipient@mail.com","receiver2@mail.com"])
     
     this will be all to encrypt and send the mails
     """
@@ -2671,7 +2671,7 @@ class gme:
     ###################
  
     def _parse_commandline(self):
-        receiver=[]
+        recipient=[]
 
         try:
             cl=sys.argv[1:]
@@ -2801,15 +2801,15 @@ class gme:
         if not self._RUNMODE==self.m_daemon:
 
             if len(_remainder)>0 :
-                receiver=_remainder[0:]
-                self.debug("set addresses from commandline to '%s'"%receiver)
+                recipient=_remainder[0:]
+                self.debug("set addresses from commandline to '%s'"%recipient)
             else:
                 self._LOGGING=self.l_stderr
                 self.log("gpgmailencrypt needs at least one recipient "
                 "at the commandline, %i given"%len(_remainder),"e")
                 exit(1)
 
-        return receiver
+        return recipient
 
     ######################
     #_read_smtpcredentials
@@ -5468,19 +5468,19 @@ class gme:
     @_dbg
     def encrypt_mails(  self,
                         mailtext,
-                        receiver):
+                        recipient):
         """
         Main function of this library: 
             mailtext is the mail as a string
-            receiver is a list of receivers
+            recipient is a list of receivers
         The emails will be encrypted if possible and sent as defined  
         in /etc/gpgmailencrypt.conf
         example:
         encrypt_mails(myemailtext,['agentj@mib','agentk@mib'])
         """
 
-        if isinstance(receiver,str):
-            receiver=[receiver]
+        if isinstance(recipient,str):
+            recipient=[recipient]
 
         try:
 
@@ -5502,7 +5502,7 @@ class gme:
                                                 self._SMIMEKEYEXTRACTDIR)
                 self._del_tempfile(f.name)
 
-            for to_addr in receiver:
+            for to_addr in recipient:
                 self.debug("encrypt_mail for user '%s'"%to_addr)
 
                 if self._RUNMODE==self.m_daemon:
@@ -5550,7 +5550,7 @@ class gme:
     ###########
  
     @_dbg
-    def scriptmode(self,receiver):
+    def scriptmode(self,recipient):
         "run gpgmailencrypt a script"
 
         try:
@@ -5575,7 +5575,7 @@ class gme:
                 raw = sys.stdin.read()
 
             #do the magic
-            self.encrypt_mails(raw,receiver)
+            self.encrypt_mails(raw,recipient)
         except SystemExit as m:
             self.debug("Exitcode:'%s'"%m)
             exit(int(m.code))
@@ -6080,13 +6080,13 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
     def process_message(    self, 
                             peer, 
                             mailfrom, 
-                            receiver, 
+                            recipient, 
                             data):
         self.parent.debug("_gpgmailencryptserver: _gpgmailencryptserver "
-                        "from '%s' to '%s'"%(mailfrom,receiver))
+                        "from '%s' to '%s'"%(mailfrom,recipient))
         try:
 
-            self.parent.encrypt_mails(data,receiver)
+            self.parent.encrypt_mails(data,recipient)
         except:
             self.parent.log("_gpgmailencryptserver: Bug:Exception!")
             self.parent.log_traceback()
@@ -6642,12 +6642,12 @@ def main():
     "main routine which will be called when gpgmailencrypt "
     "is started as a script, not as a module"
     with gme() as g:
-        receiver=g._parse_commandline()
+        recipient=g._parse_commandline()
         g._set_logmode()
         if g._RUNMODE==g.m_daemon:
             g.daemonmode()
         else:
-            g.scriptmode(receiver)
+            g.scriptmode(recipient)
 
 #############################
 # gpgmailencrypt main program
