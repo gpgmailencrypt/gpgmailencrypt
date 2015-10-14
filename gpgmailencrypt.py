@@ -168,57 +168,59 @@ def show_usage():
 
 def print_exampleconfig():
 	"prints an example config file to stdout"
+	space=56
 	print ("[default]")
-	print ("prefered_encryption = pgpinline                         "
-"# valid values are 'pgpinline','pgpmime' or 'smime'")
-	print ("add_header = no                                         "
-"# adds a %s header to the mail"%gme._encryptheader)
-	print ("domains =                                               "
-"# comma separated list of domain names,") 
-	print ("                                                        "
+	print ("prefered_encryption = pgpinline".ljust(space)+
+"#valid values are 'pgpinline','pgpmime' or 'smime'")
+	print ("add_header = no".ljust(space)+
+"#adds a %s header to the mail"%gme._encryptheader)
+	print ("domains =".ljust(space)+
+"#comma separated list of domain names,") 
+	print ("".ljust(space)+
 "#that should be encrypted, empty is all")
-	print ("spamsubject =***SPAM                                    "
-"# Spam recognition string, spam will not be encrypted")
-	print ("output=mail                                             "
-"# valid values are 'mail'or 'stdout'")
-	print ("locale=en                                               "
-"# DE|EN|ES|FR|IT|NL|PL|PT|RU|SE'")
-	print ("mailtemplatedir=/usr/share/gpgmailencrypt/mailtemplates "
+	print ("spamsubject =***SPAM".ljust(space)+
+"#Spam recognition string, spam will not be encrypted")
+	print ("output=mail".ljust(space)+
+"#valid values are 'mail'or 'stdout'")
+	print ("locale=en".ljust(space)+
+"#DE|EN|ES|FR|IT|NL|PL|PT|RU|SE")
+	print ("mailtemplatedir=/usr/share/gpgmailencrypt"
+			"/mailtemplates".ljust(space)+
 "#directory where mail templates are stored")
-	print ("systemmailfrom=gpgmailencrypt@localhost                 "
-"# e-mail address used when sending system mails")
-	print ("alwaysencrypt=False                                     "
+	print ("systemmailfrom=gpgmailencrypt@localhost".ljust(space)+
+"#e-mail address used when sending system mails")
+	print ("alwaysencrypt=False".ljust(space)+
 "#if True e-mails will be sent encrypted, even if there is no key.")
-	print ("                                                        "
+	print ("".ljust(space)+
 "#Fallback encryption is encrypted pdf")
 	print ("")
 	print ("[gpg]")
-	print ("keyhome = /var/lib/gpgmailencrypt/.gnupg                "
-"# home directory of public  gpgkeyring")
+	print ("keyhome = /var/lib/gpgmailencrypt/.gnupg".ljust(space)+
+"#home directory of public  gpgkeyring")
 	print ("gpgcommand = /usr/bin/gpg2")
-	print ("allowgpgcomment = yes                                   "
-"# allow a comment string in the GPG file")
+	print ("allowgpgcomment = yes".ljust(space)+
+"#allow a comment string in the GPG file")
 	print ("")
 	print ("[logging]")
-	print ("log=none                                                "
-"# valid values are 'none', 'syslog', 'file' or 'stderr'")
+	print ("log=none".ljust(space)+
+"#valid values are 'none', 'syslog', 'file' or 'stderr'")
 	print ("file = /tmp/gpgmailencrypt.log")
 	print ("debug = no")
 	print ("")
 	print ("[mailserver]")
-	print ("host = 127.0.0.1                                        "
+	print ("host = 127.0.0.1".ljust(space)+
 "#smtp host")
-	print ("port = 25                                               "
+	print ("port = 25".ljust(space)+
 "#smtp port")
-	print ("authenticate = False                                    "
+	print ("authenticate = False".ljust(space)+
 "#user must authenticate")
-	print ("smtpcredential =/etc/gpgmailencrypt.cfg                 "
+	print ("smtpcredential =/etc/gpgmailencrypt.cfg".ljust(space)+
 "#file that keeps user and password information")    
-	print("                                                         "
+	print("".ljust(space)+
 "#file format 'user=password'")
 	print ("")
-	print ("[encryptionmap]    ")
-	print ("user@domain.com = PGPMIME                               "
+	print ("[encryptionmap]")
+	print ("user@domain.com = PGPMIME".ljust(space)+
 "#PGPMIME|PGPINLINE|SMIME|PDF[:zipencryptionmethod]|NONE")
 	print ("")
 	print ("[usermap]")
@@ -226,76 +228,76 @@ def print_exampleconfig():
 "#user_nokey@domain.com = user_key@otherdomain.com")
 	print ("")
 	print ("[smime]")
-	print ("keyhome = ~/.smime                                      "
+	print ("keyhome = ~/.smime".ljust(space)+
 "#home directory of S/MIME public key files")
 	print ("opensslcommand = /usr/bin/openssl")
-	print ("defaultcipher = DES3                                    "
+	print ("defaultcipher = DES3".ljust(space)+
 "#DES3|AES128|AES192|AES256")
-	print ("extractkey= no                                          "
+	print ("extractkey= no".ljust(space)+
 "#automatically scan emails and extract smime public keys to 'keyextractdir'")
 	print ("keyextractdir=~/.smime/extract")
 	print ("")
 	print ("[smimeuser]")
-	print ("smime.user@domain.com = user.pem[,cipher]               "
+	print ("smime.user@domain.com = user.pem[,cipher]".ljust(space)+
 "#public S/MIME key file [,used cipher, see defaultcipher "
 "in the smime section]")
 	print ("")
 	print ("[pdf]")
-	print ("email2pdfcommand=/usr/bin/email2pdf                     "
+	print ("email2pdfcommand=/usr/bin/email2pdf".ljust(space)+
 "#path where to find email2pdf (needed for creating pdfs,")
-	print ("                                                        "
+	print ("".ljust(space)+
 "#see https://github.com/andrewferrier/email2pdf)")
-	print ("pdftkcommand=/usr/bin/pdftk                             "
+	print ("pdftkcommand=/usr/bin/pdftk".ljust(space)+
 "#path where to find pdftk (needed for encrypting pdf files")
-	print ("pdfdomains=localhost                                    "
+	print ("pdfdomains=localhost".ljust(space)+
 "#a comma separated list of sender domains, which are allowed to "
 "use pdf-encrypt")
-	print ("passwordlength=10                                       "
+	print ("passwordlength=10".ljust(space)+
 "#Length of the automatic created password")
-	print ("passwordlifetime=172800                                 "
+	print ("passwordlifetime=172800".ljust(space)+
 "#lifetime for autocreated passwords in seconds. Default is 48 hours")
-	print ("pdfpasswords=/etc/gpgpdfpasswords.pw                    "
+	print ("pdfpasswords=/etc/gpgpdfpasswords.pw".ljust(space)+
 "#file that includes users and passwords for permanent pdf passwords")
 	print ("")
 	print ("[zip]")
-	print ("7zipcommand=/usr/bin7za                                 "
+	print ("7zipcommand=/usr/bin7za".ljust(space)+
 "#path where to find 7za")
-	print ("defaultcipher=ZipCrypto                                 "
+	print ("defaultcipher=ZipCrypto".ljust(space)+
 "#ZipCrypto|AES128|AES256")
-	print ("compressionlevel=5                                      "
+	print ("compressionlevel=5".ljust(space)+
 "#1,3,5,7,9  with 1:lowest compression, but very fast, 9 is ")
-	print ("                                                        "
-"# highest compression, but very slow, default is 5")
-	print ("securezipcontainer=False                                "
+	print ("".ljust(space)+
+"#highest compression, but very slow, default is 5")
+	print ("securezipcontainer=False".ljust(space)+
 "#attachments will be stored in an encrypted zip file. If this option is true,")
-	print ("                                                        "
+	print ("".ljust(space)+
 "#the directory will be also encrypted")
-	print ("zipattachments=False                                    "
+	print ("zipattachments=False".ljust(space)+
 "#if True all attachments will be zipped, independent "
 "from the encryption method")
 	print ("")
 	print ("[daemon]")
-	print ("host = 127.0.0.1                                        "
+	print ("host = 127.0.0.1".ljust(space)+
 "#smtp host")
-	print ("port = 10025                                            "
+	print ("port = 10025".ljust(space)+
 "#smtp port")
-	print ("smtps = False                                           "
+	print ("smtps = False".ljust(space)+
 	"#use smtps encryption")
-	print ("starttls = False                                        "
+	print ("starttls = False".ljust(space)+
 	"#use starttls encryption")
-	print ("forcetls = False                                        "
+	print ("forcetls = False".ljust(space)+
 	"#communication (e.g. authentication) will be only possible after STARTTLS")
-	print ("sslkeyfile = /etc/gpgsmtp.key                           "
+	print ("sslkeyfile = /etc/gpgsmtp.key".ljust(space)+
 	"#the x509 certificate key file")
-	print ("sslcertfile = /etc/gpgsmtp.crt                          "
+	print ("sslcertfile = /etc/gpgsmtp.crt".ljust(space)+
 	"#the x509 certificate cert file")
-	print ("authenticate = False                                    "
+	print ("authenticate = False".ljust(space)+
 	"#users must authenticate")
-	print ("smtppasswords = /etc/gpgmailencrypt.pw                  "
+	print ("smtppasswords = /etc/gpgmailencrypt.pw".ljust(space)+
 	"#file that includes users and passwords")
-	print ("admins=admin1,admin2                                    "
+	print ("admins=admin1,admin2".ljust(space)+
 	"#comma separated list of admins, that can use the admin console")
-	print ("statistics=1                                            "
+	print ("statistics=1".ljust(space)+
 	"#how often per day should statistical data be logged (0=none) max is 24")
 
 #############
