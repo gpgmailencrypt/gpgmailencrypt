@@ -183,7 +183,7 @@ def print_exampleconfig():
 	print ("output=mail".ljust(space)+
 "#valid values are 'mail'or 'stdout'")
 	print ("locale=en".ljust(space)+
-"#DE|EN|ES|FR|IT|NL|PL|PT|RU|SE")
+"#DA|DE|EN|ES|FI|FR|IT|NL|NO|PL|PT|RU|SV")
 	print ("mailtemplatedir=/usr/share/gpgmailencrypt"
 			"/mailtemplates".ljust(space)+
 "#directory where mail templates are stored")
@@ -1438,6 +1438,7 @@ class _SMIME:
 class _PDF:
 	"""
 	class to create encrypted PDF files out of E-mail files.
+	Don't call this class directly, use gme.pdf_factory() instead!
 	"""
 	@_dbg
 	def __init__(   self, 
@@ -1584,7 +1585,10 @@ class _PDF:
 ###########
 
 class _ZIP:
-	"Class to create or unzip zipfiles." 
+	"""
+	Class to create or unzip zipfiles.
+	Don't call this class directly, use gme.zip_factory() instead!
+	"""
 
 	@_dbg
 	def __init__(self, parent):
@@ -1645,7 +1649,7 @@ class _ZIP:
 															   directory,
 															   None,
 															   compress=False)),
-								shell=True ) 
+						shell=True ) 
 			directory=tempdir
 
 			if _result !=0:
@@ -1667,7 +1671,7 @@ class _ZIP:
 						' '.join(self._createzipcommand_fromdir( f.name,
 																 directory,
 																 password)),
-								 shell=True ) 
+						shell=True ) 
 
 		try:
 			shutil.rmtree(tempdir)
@@ -2137,7 +2141,7 @@ def guess_fileextension(ct):
 
 		if subtype=="basic":
 			return "au"
-		if subtype in ("vnd.rn-realaudio","x-pn-realaudio"):
+		elif subtype in ("vnd.rn-realaudio","x-pn-realaudio"):
 			return "ra"
 		elif subtype in ("vnd.wave","x-wav"):
 			return "wav"
@@ -2336,16 +2340,19 @@ class gme:
 	m_script=2
 	_LOCALEDB={
 	#"CN":("审读","文件","内容","文件附件"),
+	"DA":("aftale","fil","indhold","bilag"),
 	"DE":("Termin","Datei","Inhalt","Anhang"),
 	"EN":("appointment","file","content","attachment"),
 	"ES":("cita","fichero","contenido","apéndice"),
+	"FI":("tapaaminen","tiedosto","sisältö","liite"),
 	"FR":("rendez-vous","fichier","contenu","attachement"),
 	"IT":("appuntamento","file","capacità","allegato"),
 	"NL":("Termijn","Bestand","inhoud","e-mailbijlage"),
+	"NO":("avtale","fil","innhold","vedlegg"),
 	"PL":("termin","plik","zawartość","załącznik"),
 	"PT":("hora","ficheiro","conteúdo","anexo"),
 	"RU":("срок","файл","содержа́ние","прикрепление"),
-	"SE":("möte","fil","innehåll","bilaga"),
+	"SV":("möte","fil","innehåll","bilaga"),
 	}
 	_encryptheader="X-GPGMailencrypt"
 	_pdfencryptheader="X-PDFEncrypted"
@@ -7129,9 +7136,9 @@ def main():
 		else:
 			g.scriptmode(recipient)
 
-#############################
-# gpgmailencrypt main program
-#############################
+############################
+#gpgmailencrypt main program
+############################
 
 if __name__ == "__main__":
 	main()
