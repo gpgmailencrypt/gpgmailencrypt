@@ -20,8 +20,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.2.0beta"
-DATE="14.10.2015"
+VERSION="2.2.0gamma"
+DATE="15.10.2015"
 import asynchat
 import asyncore
 import atexit
@@ -314,7 +314,41 @@ def _splitstring(txt,length=80):
 #########
 
 class _mytimer:
-
+	"""
+	Timer class that can act either as a countdown timer or a periodic revolving 
+	timer.
+	
+	The class will return timer.is_running() == False in case the timer expired.
+	
+	Additionally you can set a your own alarmfunction to do whatever you want
+	when the timer is fired.
+	
+	
+	case 1: A countdown timer
+	
+	timer.set_timer(10,60) 
+	
+	(10 times multiplicated with 60 seconds = 10 minutes)
+	will be called once after 10 minutes
+	
+	
+	case 2: a revolving timer
+	
+	timer.set_timer(0,600,your_alarmfunction)
+	
+	will  your_alarmfunction every 600 seconds
+	
+	
+	case 3: A timer to check fpr inactivity
+	
+	To get a timer to check inactivity you can do the following:
+	mytimer.start(10,60) 
+	
+	and then in your useraction function call timer.set_alive() in case of 
+	user activity.
+	
+	To check if the the timer already expired check timer.is_running()
+	"""
 	def __init__(self):
 		self.counter=0
 		self.alarmtime=10
@@ -324,9 +358,9 @@ class _mytimer:
 		self.alarmfuncargs=[]
 		self.kwalarmfuncargs={}
 
-	def t_action(self):
+	def _action(self):
 		if self.counter==1:
-			self.t_alert()
+			self._alert()
 		else:
 			if self.counter>0:
 				self.counter-=1
@@ -335,31 +369,50 @@ class _mytimer:
 					self.alarmfunc(*self.alarmfuncargs,**self.kwalarmfuncargs)
 			self._create_timer()
 
-	def t_alert(self):
+	def _alert(self):
 		if self.alarmfunc:
 			self.alarmfunc(*self.alarmfuncargs,**self.kwalarmfuncargs)
 		self.running=False
 
 	def _create_timer(self):
 		self.alarm=threading.Timer( self.timer,
-									self.t_action)
+									self._action)
 		self.running=True
 		self.alarm.start()
 
+	
 	def is_running(self):
+		"""returns True if the timer is running, 
+		returns False after the timer expired"""
 		return self.running
 
 	def set_alive(self):
+		"""
+		if the timer is running it increases the duration of the alarm to its
+		original start alarmtime.
+		if the timer isn't running, this function has no effect.
+		"""
 		self.counter=self.alarmtime
 
 	def start(  self,
 				alarmtime=10,
-				timerintervall=1, 
+				timerinterval=1, 
 				alarmfunction=None,
 				alarmargs=(),
 				kwalarmargs={}):
+		"""
+		The timer will be fired after "alarmtime" multiplicated with
+		"timerintervall" in seconds. 
+	
+		if alarmtime is set to 0, it will be an eternal loop, until stop() 
+		is called.You have to set a user defined alarmfunction to use this 
+		option.
+		
+		alarmargs and kwalarmargs are the values for the user defined alarm 
+		function.
+		"""
 		self.alarmtime=alarmtime
-		self.timer=timerintervall
+		self.timer=timerinterval
 		self.alarmfunc=alarmfunction
 		self.alarmfuncargs=alarmargs
 		self.kwalarmfuncargs=kwalarmargs
@@ -367,6 +420,7 @@ class _mytimer:
 		self._create_timer()
 
 	def stop(self):
+		"stops a running timer"
 		self.alarm.cancel()
 		self.running=False
 
@@ -437,10 +491,18 @@ class _GPG:
 			self._keyhome=expanduser('~/.gnupg')
 
 		self.parent.debug("_GPG.__init__ end")
- 
+
+	#############
+	#_set_counter
+	#############
+
 	@_dbg
 	def _set_counter(self,counter):
 		self.count=counter
+
+	############
+	#set_filname
+	############
 
 	@_dbg
 	def set_filename(self, fname):
@@ -449,7 +511,11 @@ class _GPG:
 			self._filename=fname.strip()
 		else:
 			self._filename=''
- 
+
+	############
+	#set_keyhome
+	############
+
 	@_dbg
 	def set_keyhome(self,keyhome):
 		"sets the directory where the gpg keyring is stored"
@@ -458,6 +524,10 @@ class _GPG:
 		else:
 			self._keyhome=''
  
+ 	##############
+ 	#set_recipient
+ 	##############
+
 	@_dbg
 	def set_recipient(self, recipient):
 		"set the recipient e-mail address, for which the data will be encrypted"
@@ -465,11 +535,19 @@ class _GPG:
 			self._recipient=recipient
 			self.parent._GPGkeys = list()
  
+	##########
+	#recipient
+	##########
+
 	@_dbg
 	def recipient(self):
 		"returns the recipient address"
 		return self._recipient	
- 
+
+	############
+	#public_keys
+	############ 
+
 	@_dbg
 	def public_keys(self):
 		"returns a list of all available public keys"
@@ -478,6 +556,10 @@ class _GPG:
 
 		return self.parent._GPGkeys
  
+	#############
+	#private_keys
+	#############
+
 	@_dbg
 	def private_keys(self):
 		"returns a list of all available private keys"
@@ -486,6 +568,10 @@ class _GPG:
 
 		return self.parent._GPGprivatekeys
  
+	###############
+	#has_public_key
+	###############
+
 	@_dbg
 	def has_public_key(self,key):
 		"""returns True if a public key for e-mail address 'key' exists,
@@ -507,6 +593,10 @@ class _GPG:
 			self.parent.debug("_GPGkeys '%s'"%str(self.parent._GPGkeys))
 			return False
  
+	#################
+	#_get_public_keys
+	#################
+
 	@_dbg
 	def _get_public_keys( self ):
 		self.parent.debug("_GPG._get_public_keys")
@@ -557,6 +647,10 @@ class _GPG:
 							"directory '%s'?)"%self._keyhome,"e")
 			self.parent.log_traceback()
  
+	##################
+	#_get_private_keys
+	##################
+
 	@_dbg
 	def _get_private_keys( self ):
 		self.parent.debug("_GPG._get_private_keys")
@@ -607,6 +701,10 @@ class _GPG:
 							"directory '%s'?)"%self._keyhome,"e")
 			self.parent.log_traceback()
  
+	#############
+	#encrypt_file
+	#############
+
 	@_dbg
 	def encrypt_file(   self,
 						filename=None,
@@ -664,6 +762,10 @@ class _GPG:
 		self.parent._del_tempfile(f.name)
 		return result,encdata
  
+	#########################
+	#_encryptcommand_fromfile
+	#########################
+
 	@_dbg
 	def _encryptcommand_fromfile(   self,
 									sourcefile,
@@ -689,6 +791,10 @@ class _GPG:
 
 		return cmd
  
+	#############
+	#decrypt_file
+	#############
+
 	@_dbg
 	def decrypt_file(   self,
 						filename=None,
@@ -740,6 +846,10 @@ class _GPG:
 		self.parent._del_tempfile(f.name)
 		return result,encdata
  
+	#########################
+	#_decryptcommand_fromfile
+	#########################
+
 	@_dbg
 	def _decryptcommand_fromfile(   self,
 									sourcefile,
@@ -773,14 +883,26 @@ class _GPGEncryptedAttachment(email.message.Message):
 		self._filename=None
 		self.set_type("text/plain")
 
+	##########
+	#as_string
+	##########
+
 	def as_string(self, unixfrom=False):
 		fp = StringIO()
 		g = Generator(fp)
 		g.flatten(self, unixfrom=unixfrom)
 		return fp.getvalue()
 
+	#############
+	#set_filename
+	#############
+
 	def set_filename(self,f):
 		self._filename=f
+
+	#############
+	#get_filename
+	#############
 
 	def get_filename(self):
 		if self._filename != None:
@@ -788,8 +910,16 @@ class _GPGEncryptedAttachment(email.message.Message):
 		else:
 			return email.message.Message.get_filename(self)
 
+	###################
+	#set_masterboundary
+	###################
+
 	def set_masterboundary(self,b):
 		self._masterboundary=b
+
+	###############
+	#_write_headers
+	###############
 
 	def _write_headers(self,g):
 		print ("Content-Type: application/pgp-encrypted",file=g._fp)
@@ -832,6 +962,10 @@ class _SMIME:
 		self._recipient=None
 		self.parent.debug("_SMIME.__init__ end")
  
+	############
+	#public_keys
+	############ 
+
 	@_dbg
 	def public_keys(self):
 		"returns a list of all available public keys"
@@ -842,6 +976,10 @@ class _SMIME:
 
 		return result
  
+	#############
+	#private_keys
+	############# 
+
 	@_dbg
 	def private_keys(self):
 		"returns a list of all available private keys"
@@ -854,6 +992,10 @@ class _SMIME:
 
 		return result
  
+	#############
+	#set_filename
+	############# 
+
 	@_dbg
 	def set_filename(self, fname):
 		"sets the filename of the file, which content has to be encrypted"
@@ -863,6 +1005,10 @@ class _SMIME:
 		else:
 			self._filename=''
  
+	############
+	#set_keyhome
+	############ 
+
 	@_dbg
 	def set_keyhome(self,keyhome):
 		"sets the directory where the smime keys are stored"
@@ -871,7 +1017,11 @@ class _SMIME:
 			self._keyhome=expanduser(keyhome.strip())
 		else:
 			self._keyhome=''
- 
+
+ 	##############
+	#set_recipient
+	############## 
+
 	@_dbg
 	def set_recipient(self, recipient):
 		"set the recipient e-mail address, for which the data will be encrypted"
@@ -879,11 +1029,19 @@ class _SMIME:
 		if isinstance(recipient, str):
 			self._recipient=recipient
  
+	##########
+	#recipient
+	########## 
+
 	@_dbg
 	def recipient(self):
 		"returns the recipient address"
 		return self._recipient	
  
+	###############
+	#has_public_key
+	############### 
+
 	@_dbg
 	def has_public_key(self,key):
 		"""returns True if a public key for e-mail address 'key' exists,
@@ -901,6 +1059,10 @@ class _SMIME:
 
 		return True
  
+	#############
+	#encrypt_file
+	############# 
+
 	@_dbg
 	def encrypt_file(   self,
 						filename=None,
@@ -953,6 +1115,10 @@ class _SMIME:
 		m=email.message_from_string(encdata)
 		return result,m.get_payload()
  
+	##########################
+	#_command_encrypt_fromfile
+	########################## 
+
 	@_dbg
 	def _command_encrypt_fromfile(  self,
 									sourcefile,
@@ -975,6 +1141,10 @@ class _SMIME:
 				"-out", sourcefile,  
 				_recipient[0] ]
 		return cmd
+
+	#############
+	#decrypt_file
+	############# 
 
 	@_dbg
 	def decrypt_file(   self,
@@ -1024,6 +1194,10 @@ class _SMIME:
 		m=email.message_from_string(encdata)
 		return result,m.get_payload()
  
+	###########################
+	#_command_decrypt_from_file
+	###########################
+
 	@_dbg
 	def _command_decrypt_fromfile(  self,
 									sourcefile,
@@ -1037,6 +1211,10 @@ class _SMIME:
 				"-inkey" , _recipient[2] ]
 		return cmd
  
+	############
+	#_opensslcmd
+	############ 
+
 	@_dbg
 	def _opensslcmd(self,cmd):
 		result=""
@@ -1047,6 +1225,10 @@ class _SMIME:
 		result=p.stdout.read()
 		return result, p.returncode
  
+	#######################
+	#get_certemailaddresses
+	#######################
+
 	@_dbg
 	def get_certemailaddresses(self,certfile):
 		"""returns a list of all e-mail addresses the 'certfile' for which 
@@ -1079,6 +1261,10 @@ class _SMIME:
 
 		return email
  
+	####################
+	#get_certfingerprint
+	####################
+
 	@_dbg
 	def get_certfingerprint(self,cert):
 		"""
@@ -1101,6 +1287,10 @@ class _SMIME:
 
 		return fingerprint
  
+	############################
+	#extract_publickey_from_mail
+	############################
+
 	@_dbg
 	def extract_publickey_from_mail(self,
 									mail,
@@ -1142,6 +1332,10 @@ class _SMIME:
 		os.remove(fname)
 		return targetname
  
+	###############
+	#create_keylist
+	###############
+
 	@_dbg
 	def create_keylist(self,directory):
 		"""
@@ -1173,6 +1367,10 @@ class _SMIME:
 
 		return result
  
+	###################
+	#verify_certificate
+	###################
+
 	@_dbg
 	def verify_certificate(self,cert):
 		"""
@@ -1184,6 +1382,10 @@ class _SMIME:
 		_result = subprocess.call( " ".join(cmd) ,shell=True) 
 		return _result==0
  
+	##########
+	#_copyfile
+	##########
+
 	@_dbg
 	def _copyfile(self,src, dst):
 		length=16*1024
@@ -1217,6 +1419,10 @@ class _PDF:
 		self.count=counter
 		self.parent=parent
  
+	#############
+	#set_filename
+	#############
+
 	@_dbg
 	def set_filename(self, fname):
 		"sets the filename of the file, which content has to be encrypted"
@@ -1226,6 +1432,10 @@ class _PDF:
 		else:
 			self._filename=''
  
+	###############
+	#create_pdffile
+	###############
+
 	@_dbg
 	def create_pdffile( self,
 						password,
@@ -1281,6 +1491,10 @@ class _PDF:
 		self.parent._del_tempfile(encryptedfile)
 		return result,encdata
  
+	###########################
+	#_createpdfcommand_fromfile
+	###########################
+
 	@_dbg
 	def _createpdfcommand_fromfile(self,resultfile):
 		cmd=[   self.parent._PDFCREATECMD, 
@@ -1292,6 +1506,10 @@ class _PDF:
 				"--mostly-hide-warning"]
 		return cmd
  
+	#################
+	#_encrypt_pdffile
+	#################
+
 	@_dbg
 	def _encrypt_pdffile(   self,
 							inputfilename,
@@ -1316,6 +1534,10 @@ class _PDF:
 
 		return result,f.name
  
+	#########################
+	#_encryptcommand_fromfile
+	#########################
+
 	@_dbg
 	def _encryptcommand_fromfile(
 							self,
@@ -1334,16 +1556,25 @@ class _PDF:
 
 class _ZIP:
 	"Class to create or unzip zipfiles." 
+
 	@_dbg
 	def __init__(self, parent):
 		self.parent=parent
 		self.zipcipher=self.parent._ZIPCIPHER
+
+	##############
+	#set_zipcipher
+	##############
 
 	@_dbg
 	def set_zipcipher(self,cipher):
 		"valid ciphers are ZipCrypto,AES128,AES256"
 		self.zipcipher=cipher.upper()
  
+	###############
+	#create_zipfile
+	###############
+
 	@_dbg
 	def create_zipfile( self,
 						directory,
@@ -1428,6 +1659,10 @@ class _ZIP:
 		self.parent._del_tempfile(f.name)
 		return result,encdata
  
+	##########################
+	#_createzipcommand_fromdir
+	##########################
+
 	@_dbg
 	def _createzipcommand_fromdir(  self,
 									resultfile,
@@ -1456,6 +1691,10 @@ class _ZIP:
 			cmd.insert(4,"-mx%i"%self.parent._ZIPCOMPRESSION)
 
 		return cmd
+
+	###############
+	#get_zipcontent
+	###############
 
 	def get_zipcontent( self,
 						zipfile,
@@ -1497,6 +1736,10 @@ class _ZIP:
 			pass
 					
 		return True,encdatalist
+
+	###########
+	#unzip_file
+	###########
 
 	@_dbg
 	def unzip_file( self,
@@ -1574,6 +1817,10 @@ class _ZIP:
 
 		return result,directory
  
+	##########################
+	#_createunzipcommand_indir
+	##########################
+
 	@_dbg
 	def _createunzipcommand_indir(  self,
 									sourcefile,
@@ -5798,6 +6045,10 @@ def start_adminconsole(host,port):
 			self.port=0
 			self.timer=_mytimer()
 
+		#########
+		#_sendcmd
+		#########
+		
 		def _sendcmd(self, cmd,arg=""):
 			if self.smtp==None:
 				return (None,None)
@@ -5806,11 +6057,19 @@ def start_adminconsole(host,port):
 			print(msg.decode("UTF-8"))
 			return (code, msg)
 
+		#########
+		#getreply
+		#########
+		
 		def getreply(self):
 			if self.smtp==None:
 					return None
 			return self.smtp.getreply()	
 
+		######
+		#start
+		######
+		
 		def start(self,host="localhost",port=0):
 			self.host=host
 			self.port=port
@@ -5894,6 +6153,10 @@ def start_adminconsole(host,port):
 
 			self.timer.stop()
 
+		###########
+		#print_help
+		###########
+		
 		def print_help(self):
 			space=20
 			print("\nAllowed commands:")
@@ -5922,6 +6185,10 @@ def start_adminconsole(host,port):
 		def __init__(self, options):
 			self.options = sorted(options)
 
+		#########
+		#complete
+		#########
+		
 		def complete(   self, 
 						text, 
 						state):
@@ -5942,6 +6209,10 @@ def start_adminconsole(host,port):
 			except IndexError:
 				return None
 
+		################
+		#display_matches
+		################
+		
 		def display_matches(	self, 
 								substitution, 
 								matches, 
@@ -6051,12 +6322,18 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 			f.close()
 		except:
 			_sslpossible=False
+
 		if _sslpossible==False:
 			self.use_tls=False
 			self.use_smtps=False
 			self.force_tls=False
 			self.parent.log("SSL connection not possible. Cert- and/or key "
 							"file couldn't be opened","e")
+
+	#####################
+	#create_sslconnection
+	#####################
+	
 	def create_sslconnection(self,conn):
 		newconn=None
 		try:
@@ -6087,6 +6364,10 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 			self.parent.log_traceback()
 		return newconn
 
+	##############
+	#handle_accept
+	##############
+	
 	def handle_accept(self):
 		pair = self.accept()
 
@@ -6115,6 +6396,10 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 						sslkeyfile=self.sslkeyfile,
 						sslversion=self.sslversion)
 
+	################
+	#process_message
+	################
+	
 	@_dbg
 	def process_message(	self, 
 							peer, 
@@ -6138,6 +6423,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 
 class _hksmtpchannel(smtpd.SMTPChannel):
 	"helper class for _gpgmailencryptserver"
+
 	def __init__(self, 
 				smtp_server, 
 				newsocket,	 
@@ -6192,6 +6478,9 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		if _sslpossible and self.sslversion:
 			self.starttls_available=True
 
+	######################
+	#collect_incoming_data
+	######################
 
 	#the following method is taken from SMTPChannel and is corrected to not 
 	#throw an encoding error if something else than unciode comes 
@@ -6225,6 +6514,10 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			encodeddata=data.decode("UTF-8",_unicodeerror)
 
 		self.received_lines.append(encodeddata)
+
+	#################
+	#found_terminator
+	#################
 
 	def found_terminator(self):
 		line = "".join(self._SMTPChannel__line)
@@ -6299,11 +6592,19 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 
 		smtpd.SMTPChannel.found_terminator(self)
 
+	######
+	#_dash
+	######
+
 	def _dash(self,count):
 		if count>0:
 			return "-"
 		else:
 			return " "
+
+	#############
+	#reset_values
+	#############
 
 	def reset_values(self):
 		self.parent.debug("_gpgmailencryptserver: reset_values")
@@ -6312,6 +6613,10 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		self.user=""
 		self.password=""
 		self.seen_greeting=False
+
+	#############
+	#handle_error
+	#############
 
 	def handle_error(self):
 		self.parent.debug("handle_error")
@@ -6323,6 +6628,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 	##########
 	#smtp_HELO
 	##########
+
 	def smtp_HELO(self,arg):
 		self.parent.debug("_gpgmailencryptserver: HELO")
 
@@ -6339,6 +6645,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 	##########
 	#smtp_EHLO
 	##########
+
 	def smtp_EHLO(self, arg):
 		self.parent.debug("_gpgmailencryptserver: EHLO")
 
@@ -6352,16 +6659,14 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		else:
 			self.seen_greeting = arg
 			self.extended_smtp = True
+
 		_starttls=self.use_tls and not self.tls_active
 		_size=self.data_size_limit>0
 		_auth=(self.use_authentication 
 				   and (not self.force_tls 
 				   or (self.force_tls and self.tls_active))
 			  )
-		countentries=  (_starttls+
-						_size+
-						_auth
-					   )
+		countentries=  _starttls+_size+_auth
 		self.push('250%s%s' % (self._dash(countentries),self.fqdn) )
 		countentries-=1
 
@@ -6381,6 +6686,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 	##########
 	#smtp_RSET
 	##########
+
 	def smtp_RSET(self, arg):
 		self.parent.debug("_gpgmailencryptserver: RSET")
 		self.reset_values()
@@ -6389,8 +6695,10 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 	##########
 	#smtp_AUTH
 	##########
+
 	def smtp_AUTH(self,arg):
 		self.parent.debug("_gpgmailencryptserver: AUTH")
+
 		if not self.use_authentication and not self.adminmode:
 			self.push("503 Error: authentication not enabled")
 			return
@@ -6473,29 +6781,31 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 	##############
 	#smtp_STARTTLS
 	##############
+
 	def smtp_STARTTLS(self,arg):
 		self.parent.debug("_gpgmailencryptserver: STARTTLS")
 
+		if self.use_tls==False:
+				self.push("454 TLS not available due to temporary reason")
+				return
+ 
 		if arg:
 			self.push("501 Syntax error: no arguments allowed")
 			return
-
+ 
 		self.push("220 Go ahead")
-		#this part should be before 220 Go ahead, but it will break the
-		#connection
 		conn=self.smtp_server.create_sslconnection(self.conn)
-
-		if conn==None:
-				self.push("454 TLS not available due to temporary reason")
-				return
-
 		self.conn=conn
 		self.set_socket(conn)
 		self.reset_values()
 		self.tls_active=True
 
 	#ADMIN functions
+	
+	###########
 	#smtp_DEBUG
+	###########
+
 	def smtp_DEBUG(self,arg):
 		syntaxerror="501 Syntax error: DEBUG TRUE|FALSE or ON|OFF or YES|NO"
 
@@ -6516,7 +6826,10 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		self.parent.set_debug(res)
 		self.push("250 OK")
 
+	#####################
 	#smtp_RESETSTATISTICS
+	#####################
+
 	def smtp_RESETSTATISTICS(self,arg):
 
 		if arg:
@@ -6526,7 +6839,10 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		self.parent.reset_statistics()
 		self.push("250 OK")
 
+	################
 	#smtp_STATISTICS
+	################
+
 	def smtp_STATISTICS(self,arg):
 
 		if arg:
@@ -6550,7 +6866,10 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 									str(statistics[s]).rjust(4)) )
 			c+=1
 
+	##############
 	#smtp_MESSAGES
+	##############
+
 	def smtp_MESSAGES(self,arg):
 
 		if arg:
@@ -6576,14 +6895,20 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			self.push("250%s%s"%(dash,str(s)) )
 			c+=1
 
+	###########
 	#smtp_FLUSH
+	###########
+
 	def smtp_FLUSH(self,arg):
 		self.parent.log("FLUSH")
 		self.parent.check_deferred_list()
 		self.parent.check_mailqueue()
 		self.push("250 OK")
 
+	############
 	#smtp_RELOAD
+	############
+
 	def smtp_RELOAD(self,arg):
 
 		if arg:
@@ -6595,7 +6920,10 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		self.parent._parse_commandline()
 		self.push("250 OK")
 
+	###########
 	#smtp_USERS
+	###########
+
 	def smtp_USERS(self,arg):
 
 		if arg:
@@ -6619,7 +6947,10 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			self.push("250%s%s %s"%(dash,user["user"],adm))
 			c+=1
 
+	#############
 	#smtp_SETUSER
+	#############
+
 	def smtp_SETUSER(self,arg):
 
 		if not arg:
@@ -6643,7 +6974,10 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		else:
 			self.push("454 User could not be set")
 
+	#############
 	#smtp_DELUSER
+	#############
+
 	def smtp_DELUSER(self,arg):
 
 		if not arg:
@@ -6671,7 +7005,10 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		else:
 			self.push("454 User could not be deleted")
 
+	###########
 	#smtp_ADMIN
+	###########
+
 	def smtp_ADMIN(self,arg):
 		self.adminmode=True
 
