@@ -33,30 +33,31 @@ import email
 import email.message
 import email.mime
 import email.utils 
-from   email.generator	  import Generator
-from   email.mime.base	  import MIMEBase
+from   email.generator	  	import Generator
+from   email.mime.base	  	import MIMEBase
 from   email.mime.multipart import MIMEMultipart
-from   email.mime.text	  import MIMEText
+from   email.mime.text	  	import MIMEText
 from   functools			import wraps
 import getopt
 import getpass
 import hashlib
 import html.parser
 import inspect
-from io					 import BytesIO
-from io					 import StringIO
-from io					 import TextIOWrapper 
+from io					 	import BytesIO
+from io					 	import StringIO
+from io					 	import TextIOWrapper 
 import locale
 import mimetypes
 import os
-from   os.path			  import expanduser
 import quopri
 import random
 import re
+
 try:
 	import readline
 except:
 	pass
+
 import select
 import shutil
 import signal
@@ -149,14 +150,14 @@ def show_usage():
 	print ("-h --help :         print this help")
 	print ("-k f --keyhome f:   sets gpg key directory to 'f'")
 	print ("-l t --log t:       print information into _logfile, with valid")
-	print("                     types 't' 'none','stderr','syslog','file'")
+	print ("                    types 't' 'none','stderr','syslog','file'")
 	print ("-n domainnames:     sets the used domain names (comma separated")
-	print("                     lists, no space), which should be encrypted,")
-	print("                     empty is all")
+	print ("                    lists, no space), which should be encrypted,")
+	print ("                    empty is all")
 	print ("-m mailfile :       write email file to 'mailfile', otherwise")
-	print("                     email will be sent via smtp")
+	print ("                    email will be sent via smtp")
 	print ("-o p --output p:    valid values for p are 'mail' or 'stdout',")
-	print("                     alternatively set an outputfile with -m")
+	print ("                    alternatively set an outputfile with -m")
 	print ("-x --example:       print example config file")
 	print ("-v --verbose:       print debugging information into _logfile")
 	print ("-z --zip:           zip attachments")
@@ -513,11 +514,11 @@ class _GPG:
 		self.set_recipient(None)
 
 		if isinstance(keyhome,str):
-			self._keyhome = expanduser(keyhome)
+			self._keyhome = os.path.expanduser(keyhome)
 		elif self.parent and self.parent._GPGKEYHOME:
-			self._keyhome=expanduser(self.parent._GPGKEYHOME)
+			self._keyhome=os.path.expanduser(self.parent._GPGKEYHOME)
 		else:
-			self._keyhome=expanduser('~/.gnupg')
+			self._keyhome=os.path.expanduser('~/.gnupg')
 
 		self.parent.debug("_GPG.__init__ end")
 
@@ -549,7 +550,7 @@ class _GPG:
 	def set_keyhome(self,keyhome):
 		"sets the directory where the gpg keyring is stored"
 		if isinstance(keyhome,str):
-			self._keyhome=expanduser(keyhome.strip())
+			self._keyhome=os.path.expanduser(keyhome.strip())
 		else:
 			self._keyhome=''
  
@@ -982,9 +983,9 @@ class _SMIME:
 		self.parent.debug("_SMIME.__init__ %s"%self.parent._SMIMEKEYHOME)
 
 		if type(keyhome)==str:
-			self._keyhome = expanduser(keyhome)
+			self._keyhome = os.path.expanduser(keyhome)
 		else:
-			self._keyhome=expanduser(self.parent._SMIMEKEYHOME)
+			self._keyhome=os.path.expanduser(self.parent._SMIMEKEYHOME)
 
 		self._recipient = ''
 		self._filename=''	
@@ -1043,7 +1044,7 @@ class _SMIME:
 		"sets the directory where the smime keys are stored"
 
 		if isinstance(keyhome,str):
-			self._keyhome=expanduser(keyhome.strip())
+			self._keyhome=os.path.expanduser(keyhome.strip())
 		else:
 			self._keyhome=''
 
@@ -1372,7 +1373,7 @@ class _SMIME:
 		created from the files in 'directory' 
 		"""
 		result={}
-		directory=expanduser(directory)
+		directory=os.path.expanduser(directory)
 
 		try:
 			_udir=os.listdir(directory)
@@ -1420,8 +1421,8 @@ class _SMIME:
 		length=16*1024
 
 		try:
-			with open(expanduser(src), 'rb') as fsrc:
-				with open(expanduser(dst), 'wb') as fdst:
+			with open(os.path.expanduser(src), 'rb') as fsrc:
+				with open(os.path.expanduser(dst), 'wb') as fdst:
 						while 1:
 							buf = fsrc.read(length)
 							if not buf:
@@ -2491,7 +2492,7 @@ class gme:
 			self._encoding="UTF-8"
 
 		self._deferlist=os.path.expanduser("~/deferlist.txt")
-		self._deferdir=expanduser("~/gpgmaildirtmp")
+		self._deferdir=os.path.expanduser("~/gpgmaildirtmp")
 
 		if not os.path.exists(self._deferdir):
 			os.makedirs(self._deferdir)
@@ -3032,7 +3033,7 @@ class gme:
 						"'%s'"%self._PREFERRED_ENCRYPTION)
 
 			if _opt  =='-f':
-				   self._INFILE=expanduser(_arg)
+				   self._INFILE=os.path.expanduser(_arg)
 				   self.debug("Set _INFILE to '%s'"%self._INFILE)
 
 			if _opt  =='-h' or  _opt == '--help':
@@ -3069,7 +3070,7 @@ class gme:
 						self._OUTPUT=self.o_stdout
 
 			if _opt  =='-m':
-				   self._OUTFILE=expanduser(_arg)
+				   self._OUTFILE=os.path.expanduser(_arg)
 				   self._OUTPUT=self.o_file
 				   self.debug("Set _OUTFILE to '%s'"%self._OUTFILE)
 
@@ -4181,7 +4182,7 @@ class gme:
 		if not isinstance(mailfile,str):
 			return
 
-		self._OUTFILE=expanduser(mailfile)
+		self._OUTFILE=os.path.expanduser(mailfile)
 		self._OUTPUT=self.o_file
 
 	
@@ -6348,8 +6349,8 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 			self.parent.log("_gpgmailencryptserver: error",e)
 			exit(5)
 
-		self.sslcertfile=sslcertfile
-		self.sslkeyfile=sslkeyfile
+		self.sslcertfile=os.path.expanduser(sslcertfile)
+		self.sslkeyfile=os.path.expanduser(sslkeyfile)
 		self.sslversion=sslversion
 		self.use_smtps=use_smtps
 		self.force_tls=False
