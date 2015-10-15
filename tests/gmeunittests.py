@@ -1,6 +1,6 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 import unittest,sys,tempfile
-sys.path.append("..")
+sys.path.insert(1,"..")
 import gpgmailencrypt
 
 email_unencrypted="""
@@ -571,7 +571,11 @@ class gmetests(unittest.TestCase):
 		self.assertTrue(x=="DES3")
 	def test_parsecommandline(self):
 		with gpgmailencrypt.gme() as gme:
-			sys.argv=['/home/test/gpgmailencrypt.py', '-o', 'file', '-m', 'res.eml', '-e', 'smime', 'testaddress@gpgmailencry.pt']
+			sys.argv=[  '/home/test/gpgmailencrypt.py', 
+						'-o', 'file', 
+						'-m', 'res.eml', 
+						'-e', 'smime', 
+						'testaddress@gpgmailencry.pt']
 			gme._parse_commandline()
 			self.assertTrue(gme.get_output()==gme.o_file)
 			self.assertTrue(gme.get_default_preferredencryption()=="SMIME")
@@ -579,7 +583,9 @@ class gmetests(unittest.TestCase):
 	def test_preferredmethod(self):
 		with gpgmailencrypt.gme() as gme:
 			gme.set_configfile("./gmetest.conf")
-			self.assertTrue(gme.get_preferredencryptionmethod("testaddress@gpgmailencry.pt")=="PGPMIME")
+			self.assertTrue(
+				gme.get_preferredencryptionmethod(
+					"testaddress@gpgmailencry.pt")=="PGPMIME")
 			gme.close()
 	def test_admsetpassword(self):
 		with gpgmailencrypt.gme() as gme:
@@ -630,7 +636,7 @@ class gmetests(unittest.TestCase):
 	def test_GPGpublickeys(self):
 		with gpgmailencrypt.gme() as gme:
 			gme.set_configfile("./gmetest.conf")
-			gpg=gpgmailencrypt._GPG(gme)
+			gpg=gme.gpg_factory()
 			pk=gpg.public_keys()
 			controllist=list()
 			controllist.append("testaddress@gpgmailencry.pt")
@@ -641,7 +647,7 @@ class gmetests(unittest.TestCase):
 	def test_GPGprivatekeys(self):
 		with gpgmailencrypt.gme() as gme:
 			gme.set_configfile("./gmetest.conf")
-			gpg=gpgmailencrypt._GPG(gme)
+			gpg=gme.gpg_factory()
 			pk=gpg.private_keys()
 			controllist=list()
 			controllist.append("testaddress@gpgmailencry.pt")
@@ -693,18 +699,26 @@ class gmetests(unittest.TestCase):
 	def test_encryptdecryptgpg(self):
 		with gpgmailencrypt.gme() as gme:
 			gme.set_configfile("./gmetest.conf")
-			gpg=gpgmailencrypt._GPG(gme)
+			gpg=gme.gpg_factory()
 			teststring="dies ist ein Täst"
-			f=tempfile.NamedTemporaryFile(mode='w',delete=False,prefix='unittest-')
+			f=tempfile.NamedTemporaryFile(  mode='w',
+											delete=False,
+											prefix='unittest-')
 			f.write(teststring)
 			f.close()
 			success=False
-			_result,encdata=gpg.encrypt_file(filename=f.name,recipient="testaddress@gpgmailencry.pt")
+			_result,encdata=gpg.encrypt_file(
+										filename=f.name,
+										recipient="testaddress@gpgmailencry.pt")
 			if _result==True:
-				f=tempfile.NamedTemporaryFile(mode='w',delete=False,prefix='unittest-')
+				f=tempfile.NamedTemporaryFile(  mode='w',
+												delete=False,
+												prefix='unittest-')
 				f.write(encdata)
 				f.close()
-				_result,encdata=gpg.decrypt_file(filename=f.name,recipient="testaddress@gpgmailencry.pt")
+				_result,encdata=gpg.decrypt_file(
+								filename=f.name,
+								recipient="testaddress@gpgmailencry.pt")
 				if _result==True:
 					success=(encdata==teststring)
 			gme.close()
@@ -714,7 +728,7 @@ class gmetests(unittest.TestCase):
 	def test_SMIMEpublickeys(self):
 		with gpgmailencrypt.gme() as gme:
 			gme.set_configfile("./gmetest.conf")
-			smime=gpgmailencrypt._SMIME(gme)
+			smime=gme.smime_factory()
 			pk=smime.public_keys()
 			controllist=list()
 			controllist.append("testaddress2@gpgmailencry.pt")
@@ -724,7 +738,7 @@ class gmetests(unittest.TestCase):
 	def test_SMIMEprivatekeys(self):
 		with gpgmailencrypt.gme() as gme:
 			gme.set_configfile("./gmetest.conf")
-			smime=gpgmailencrypt._SMIME(gme)
+			smime=gme.smime_factory()
 			pk=smime.private_keys()
 			controllist=list()
 			controllist.append("testaddress2@gpgmailencry.pt")
@@ -751,7 +765,8 @@ class gmetests(unittest.TestCase):
 	def test_individualcipher(self):
 		with gpgmailencrypt.gme() as gme:
 			gme.set_configfile("./gmetest.conf")
-			self.assertTrue(gme._smimeuser["testaddress@gpgmailencry.pt"][1]=="AES256")
+			self.assertTrue(
+					gme._smimeuser["testaddress@gpgmailencry.pt"][1]=="AES256")
 			gme.close()
 	def test_hasnotsmimekey(self):
 		with gpgmailencrypt.gme() as gme:
@@ -762,19 +777,27 @@ class gmetests(unittest.TestCase):
 	def test_encryptdecryptsmime(self):
 		with gpgmailencrypt.gme() as gme:
 			gme.set_configfile("./gmetest.conf")
-			smime=gpgmailencrypt._SMIME(gme)
+			smime=gme.smime_factory()
 			teststring="dies ist ein Täst"
-			f=tempfile.NamedTemporaryFile(mode='w',delete=False,prefix='unittest-')
+			f=tempfile.NamedTemporaryFile(  mode='w',
+											delete=False,
+											prefix='unittest-')
 			f.write(teststring)
 			f.close()
 			success=False
-			_result,encdata=smime.encrypt_file(filename=f.name,recipient="testaddress@gpgmailencry.pt")
+			_result,encdata=smime.encrypt_file(
+									filename=f.name,
+									recipient="testaddress@gpgmailencry.pt")
 			if _result==True:
-				f=tempfile.NamedTemporaryFile(mode='w',delete=False,prefix='unittest-')
+				f=tempfile.NamedTemporaryFile(  mode='w',
+												delete=False,
+												prefix='unittest-')
 				f.write(smimeheader)
 				f.write(encdata)
 				f.close()
-				_result,encdata=smime.decrypt_file(filename=f.name,recipient="testaddress2@gpgmailencry.pt")
+				_result,encdata=smime.decrypt_file(
+								filename=f.name,
+								recipient="testaddress2@gpgmailencry.pt")
 				if _result==True:
 					success=(encdata==teststring)
 			gme.close()
@@ -787,5 +810,52 @@ class gmetests(unittest.TestCase):
 			self.assertTrue(gme.is_pdfencrypted(email_pdfencrypted))
 			gme.close()
 
+	#ZIPESTS
+	def test_zipcipher(self):
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			gme.set_zipcipher("AES128")
+			self.assertTrue(gme.get_zipcipher()=="AES128")
+			gme.close()
+	def test_zipcipher2(self):
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			gme.set_zipcipher("ZipCrypto")
+			self.assertFalse(gme.get_zipcipher()=="AES128")
+			gme.close()
+	def test_zipunzip(self):
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			ZIP=gme.zip_factory()
+			teststring="dies ist ein Täst"
+			directory = tempfile.mkdtemp()
+			f=open("%s/testfile.txt"%directory,mode='w')
+			f.write(teststring)
+			f.close()
+			success=False
+			_result,encdata=ZIP.create_zipfile( directory,
+												password="secret",
+												containerfile="container")
+			data=None
+			if _result==True:
+				f=tempfile.NamedTemporaryFile(  mode='wb',
+												delete=False,
+												prefix='unittest-')
+				f.write(encdata)
+				f.close()
+				_result,encdata=ZIP.get_zipcontent( zipfile=f.name,
+													password="secret",
+													containerfile="container")
+				self.assertTrue(_result==True)
+				try:
+					self.assertTrue(encdata[0][0]=="testfile.txt")
+					data=encdata[0][1].decode("UTF-8")
+				except:
+					raise
+					
+			success=(data==teststring)
+			gme.close()
+		self.assertTrue(success)
+		
 if __name__ == '__main__':
-    unittest.main()
+	unittest.main()
