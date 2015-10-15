@@ -349,6 +349,7 @@ class _mytimer:
 	
 	To check if the the timer already expired check timer.is_running()
 	"""
+
 	def __init__(self):
 		self.counter=0
 		self.alarmtime=10
@@ -357,6 +358,10 @@ class _mytimer:
 		self.alarmfunc=None
 		self.alarmfuncargs=[]
 		self.kwalarmfuncargs={}
+
+	########
+	#_action
+	########
 
 	def _action(self):
 		if self.counter==1:
@@ -369,10 +374,18 @@ class _mytimer:
 					self.alarmfunc(*self.alarmfuncargs,**self.kwalarmfuncargs)
 			self._create_timer()
 
+	#######
+	#_alert
+	#######
+
 	def _alert(self):
 		if self.alarmfunc:
 			self.alarmfunc(*self.alarmfuncargs,**self.kwalarmfuncargs)
 		self.running=False
+
+	##############
+	#_create_timer
+	##############
 
 	def _create_timer(self):
 		self.alarm=threading.Timer( self.timer,
@@ -381,10 +394,18 @@ class _mytimer:
 		self.alarm.start()
 
 	
+	###########
+	#is_running
+	###########
+
 	def is_running(self):
 		"""returns True if the timer is running, 
 		returns False after the timer expired"""
 		return self.running
+
+	##########
+	#set_alive
+	##########
 
 	def set_alive(self):
 		"""
@@ -393,6 +414,10 @@ class _mytimer:
 		if the timer isn't running, this function has no effect.
 		"""
 		self.counter=self.alarmtime
+
+	######
+	#start
+	######
 
 	def start(  self,
 				alarmtime=10,
@@ -418,6 +443,10 @@ class _mytimer:
 		self.kwalarmfuncargs=kwalarmargs
 		self.counter=self.alarmtime
 		self._create_timer()
+
+	#####
+	#stop
+	#####
 
 	def stop(self):
 		"stops a running timer"
@@ -4432,10 +4461,10 @@ class gme:
 		else:
 			return False
 
-	#############################
-	#is_encrypted function family
-	#############################
- 
+	####################
+	#_pgpinlineencrypted
+	####################
+
 	@_dbg
 	def _pgpinlineencrypted(self,msg):
 
@@ -4457,6 +4486,10 @@ class gme:
 		else:
 			return False
  
+	######################
+	#is_pgpinlineencrypted
+	######################
+
 	@_dbg
 	def is_pgpinlineencrypted(self,msg):
 		"returns whether or not the email is already PGPINLINE encrypted"
@@ -4483,6 +4516,10 @@ class gme:
 
 		return False
  
+	####################
+	#is_pgpmimenecrypted
+	####################
+
 	@_dbg
 	def is_pgpmimeencrypted(self,msg):
 		"returns whether or not the email is already PGPMIME encrypted"
@@ -4502,6 +4539,10 @@ class gme:
 		else:
 			return False
  
+	##################
+	#is_smimeencrypted
+	##################
+
 	@_dbg
 	def is_smimeencrypted(self,msg):
 		"returns whether or not the email is already SMIME encrypted"
@@ -4523,6 +4564,10 @@ class gme:
 		else:
 			return False
  
+	################
+	#is_pdfencrypted
+	################
+
 	@_dbg
 	def is_pdfencrypted(self,msg):
 		"returns whether or not the email is already PDF encrypted"
@@ -4544,6 +4589,10 @@ class gme:
 		else:
 			return False
  
+	#############
+	#is_encrypted
+	#############
+
 	@_dbg
 	def is_encrypted(self,msg):
 		"returns whether or not the email is already encrypted"
@@ -6787,6 +6836,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 
 		if self.use_tls==False:
 				self.push("454 TLS not available due to temporary reason")
+				self.parent.log("STARTTLS called, but is not active","w")
 				return
  
 		if arg:
