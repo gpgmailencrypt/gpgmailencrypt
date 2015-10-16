@@ -3,7 +3,8 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 """
-gpgmailencrypt is an encrypting e-mail gateway, that  can encrypt e-mails.
+gpgmailencrypt is an e-mail gateway, that  can encrypt e-mails.
+
 It supports
 * PGP/Inline
 * PGP/Mime
@@ -16,11 +17,12 @@ for programmers.
 It takes e-mails and  returns the e-mail encrypted to another e-mail server
 if a encryption key exists for the recipient. Otherwise it returns the e-mail 
 unencrypted.The encryption method can be selected per user.
+
 Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.2.0gamma"
+VERSION="2.2.0"
 DATE="15.10.2015"
 import asynchat
 import asyncore
@@ -340,7 +342,7 @@ class _mytimer:
 	will  your_alarmfunction every 600 seconds
 	
 	
-	case 3: A timer to check fpr inactivity
+	case 3: A timer to check for inactivity
 	
 	To get a timer to check inactivity you can do the following:
 	mytimer.start(10,60) 
