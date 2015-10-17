@@ -147,6 +147,7 @@ class viruscheck():
 			"x-bzip":"BZIP",
 			"x-bzip2":"BZIP2",
 			"vnd.android.package-archive":"ZIP",
+			"java-archive":"ZIP",
 			"x-snappy-framed":None,
 			"x-xz":"XZ",
 			"x-ace-compressed":None,

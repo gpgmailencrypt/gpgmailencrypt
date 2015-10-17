@@ -693,7 +693,7 @@ class _ZIP(_baseunpacker):
 	#################
 
 	def unpackingformats(self):
-		return ["7z","ZIP","EXE"]
+		return ["7z","APK","JAR","ZIP","EXE"]
 
 	###########
 	#unzip_file
