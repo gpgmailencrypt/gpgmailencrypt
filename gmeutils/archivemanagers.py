@@ -191,6 +191,67 @@ class _CAB(_baseunpacker):
 				">/dev/null"]
 		return cmd
 
+######
+#_GZIP
+######
+
+class _GZIP(_baseunpacker):
+	def __init__(self,parent):
+		self._cmd=shutil.which("gzip")
+
+	################
+	#uncompress_file
+	################
+
+	def uncompress_file(self, filename,directory=None):
+		result=False
+
+		if directory==None:
+			directory = tempfile.mkdtemp()
+
+		uncmd=' '.join(self._gzipcommand_indir(filename,directory))
+		_result = subprocess.call(uncmd, shell=True) 
+
+		if _result !=0:
+		  #self.parent.log("Error executing command (Error code %d)"%_result,"e")
+		  return result,None
+		else:
+			result=True
+
+		return result,directory
+	
+	#################
+	#unpackingformats
+	#################
+
+	def unpackingformats(self):
+		return ["GZIP","Z"]
+
+	###################
+	#_gzipcommand_indir
+	###################
+
+	def _gzipcommand_indir(  self,
+									sourcefile,
+									directory):
+		format=""
+		path,origname=os.path.split(sourcefile)
+		fname, extension = os.path.splitext(origname)
+		extension=extension.lower()
+		new_ext=""
+
+		if extension in [".tgz"]:
+			new_ext=".tar"
+		elif extension not in [".gz"]:
+			new_ext=".out"
+		
+		directory=os.path.join(directory,fname+new_ext)	
+		cmd=[   self._cmd, 
+				"-cd",sourcefile,
+				"> \"%s\""%directory,
+			]
+		return cmd
+
 #####
 #_RAR
 #####
@@ -296,6 +357,14 @@ class _RIPOLE(_baseunpacker):
 				">/dev/null"
 			]
 		return cmd
+
+	####################
+	#keep_for_viruscheck
+	####################
+
+	def keep_for_viruscheck(self):
+		return True
+
 #####
 #_TAR
 #####
@@ -354,6 +423,71 @@ class _TAR(_baseunpacker):
 				"-f",sourcefile,
 				"-C%s"%directory,
 			]
+		return cmd
+
+#####
+#_XZ
+#####
+
+class _XZ(_baseunpacker):
+	def __init__(self,parent):
+		self._cmd=shutil.which("xz")
+
+	################
+	#uncompress_file
+	################
+
+	def uncompress_file(self, filename,directory=None):
+		result=False
+
+		if directory==None:
+			directory = tempfile.mkdtemp()
+
+		uncmd=' '.join(self._xzcommand_indir(filename,directory))
+		_result = subprocess.call(uncmd, shell=True) 
+
+		if _result !=0:
+		  #self.parent.log("Error executing command (Error code %d)"%_result,"e")
+		  return result,None
+		else:
+			result=True
+
+		return result,directory
+	
+	#################
+	#unpackingformats
+	#################
+
+	def unpackingformats(self):
+		return ["XZ","LZMA"]
+
+	##################
+	#_xzcommand_indir
+	##################
+
+	def _xzcommand_indir(  self,
+									sourcefile,
+									directory):
+		format=""
+		path,origname=os.path.split(sourcefile)
+		fname, extension = os.path.splitext(origname)
+		extension=extension.lower()
+		lzma=(extension=="lzma")
+		new_ext=""
+
+		if extension in [".txz","tlzma"]:
+			new_ext=".tar"
+		elif extension not in [".xz",".lzma"]:
+			new_ext=".out"
+		
+		directory=os.path.join(directory,fname+new_ext)	
+		cmd=[   self._cmd, 
+				"-cd",sourcefile,
+				"> \"%s\""%directory,
+			]
+
+		if lzma:
+			cmd.insert(3,"--format=lzma")
 		return cmd
 
 ###########
@@ -484,7 +618,7 @@ class _ZIP(_baseunpacker):
 		elif self.zipcipher=="AES256":
 			cipher="AES256"
 
-		cmd=[   self.parent._7ZIPCMD, 
+		cmd=[   self._cmd, 
 				"a",resultfile, 
 				os.path.join(directory,"*"),
 				"-tzip",
@@ -648,7 +782,7 @@ class _ZIP(_baseunpacker):
 									sourcefile,
 									directory,
 									password):
-		cmd=[   self.parent._7ZIPCMD, 
+		cmd=[  	self._cmd, 
 				"e",sourcefile,
 				"-o%s"%directory,
 				">/dev/null"]
@@ -665,16 +799,20 @@ def get_archivemanager(manager, parent=None):
 		return _BZ2(parent=parent)
 	elif manager=="CAB":
 		return _CAB(parent=parent)
+	elif manager=="GZIP":
+		return _GZIP(parent=parent)
 	elif manager=="RAR":
 		return _RAR(parent=parent)
 	elif manager=="RIPOLE":
 		return _RIPOLE(parent=parent)
 	elif manager=="TAR":
 		return _TAR(parent=parent)
+	elif manager=="XZ":
+		return _XZ(parent=parent)
 	elif manager=="ZIP":
 		return _ZIP(parent=parent)
 	
 	return None
 
 def get_managerlist():
-	return ["ARJ","BZIP2","CAB","RAR","RIPOLE","TAR","ZIP"]
+	return ["ARJ","BZIP2","CAB","GZIP","RAR","RIPOLE","TAR","XZ","ZIP"]

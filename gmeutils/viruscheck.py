@@ -132,8 +132,8 @@ class viruscheck():
 		result=False
 		subtypes={
 			"zip":"ZIP",
-			"x-compressed":"Z",
-			"x-compress":"Z",
+			"x-compressed":"GZIP",
+			"x-compress":"GZIP",
 			"x-gzip":"GZIP",
 			"x-gtar":"TGZ",
 			"x-lzip":"LZ",
@@ -146,7 +146,7 @@ class viruscheck():
 			"x-7z-compressed":"7Z",
 			"x-bzip":"BZIP",
 			"x-bzip2":"BZIP2",
-			"vnd.android.package-archive":None,
+			"vnd.android.package-archive":"ZIP",
 			"x-snappy-framed":None,
 			"x-xz":"XZ",
 			"x-ace-compressed":None,
@@ -189,7 +189,7 @@ class viruscheck():
 					"tar":"TAR",
 					"tgz":"TARGZ",
 					"xar":"AR",
-					"xz":"Z",
+					"xz":"XZ",
 					"z":"Z",
 					"zip":"ZIP",
 					"zoo":"ZOO"}
@@ -371,7 +371,7 @@ class viruscheck():
 			return False,description
 
 		directory=self.unpack_email(mail)			
-		#self._print_archivemap()
+		self._print_archivemap()
 		#print(self.virusscanner)
 		#print(directory)
 		result=False
@@ -453,5 +453,6 @@ if __name__ == "__main__":
 
 	print(v.has_virus(mymail))
 
-	u=archivemanagers._CAB(p)
-	u.uncompress_file("/home/horst/tst2/cab.cab")
+	u=archivemanagers._XZ(p)
+	u.uncompress_file("/home/horst/tst2/testtxt.txt.lzma")
+	

@@ -3257,7 +3257,9 @@ class gme:
 	@_dbg
 	def zip_factory(self):
 		"returns a ZIP class"
-		return _ZIP(self)
+		z= _ZIP(self)
+		z._cmd=self._7ZIPCMD
+		return z
 
 	############
 	#pdf_factory
