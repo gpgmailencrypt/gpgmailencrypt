@@ -425,6 +425,57 @@ class _TAR(_baseunpacker):
 			]
 		return cmd
 
+######
+#_TNEF
+######
+
+class _TNEF(_baseunpacker):
+	"handles winmail.dat files"
+	def __init__(self,parent):
+		self.cmd=shutil.which("tnef")
+
+	################
+	#uncompress_file
+	################
+
+	def uncompress_file(self, filename,directory=None):
+		result=False
+
+		if directory==None:
+			directory = tempfile.mkdtemp()
+
+		uncmd=' '.join(self._untnefcommand_indir(filename,directory))
+		_result = subprocess.call(uncmd, shell=True) 
+
+		if _result !=0:
+		  #self.parent.log("Error executing command (Error code %d)"%_result,"e")
+		  return result,None
+		else:
+			result=True
+
+		return result,directory
+
+
+	#################
+	#unpackingformats
+	#################
+
+	def unpackingformats(self):
+		return ["TNEF"]
+ 
+	#######################
+	#_ununtnefcommand_indir
+	#######################
+
+	def _untnefcommand_indir(  self,
+									sourcefile,
+									directory):
+		cmd=[   self.cmd, 
+				"-C \"%s\""%directory,
+				"-f",sourcefile,
+				">/dev/null"]
+		return cmd
+
 #####
 #_XZ
 #####
@@ -807,6 +858,8 @@ def get_archivemanager(manager, parent):
 		return _RIPOLE(parent=parent)
 	elif manager=="TAR":
 		return _TAR(parent=parent)
+	elif manager=="TNEF":
+		return _TNEF(parent=parent)
 	elif manager=="XZ":
 		return _XZ(parent=parent)
 	elif manager=="ZIP":
@@ -815,4 +868,4 @@ def get_archivemanager(manager, parent):
 	return None
 
 def get_managerlist():
-	return ["ARJ","BZIP2","CAB","GZIP","RAR","RIPOLE","TAR","XZ","ZIP"]
+	return ["ARJ","BZIP2","CAB","GZIP","RAR","RIPOLE","TAR","TNEF","XZ","ZIP"]

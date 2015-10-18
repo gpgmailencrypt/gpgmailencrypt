@@ -583,10 +583,11 @@ class _virus_check():
 			if mngr!=None and len(mngr.cmd)>0:
 				self.unpacker[m]=mngr
 				_archivemanager[m]=self.unpacker[m].unpackingformats()
-		
+	
 		for a in _archivemanager:
-			self.log("Found archivemanager '%s'"%a)
 			archiveformats=_archivemanager[a]
+			self.log("Archivemanager %s registered: Filetypes: %s"
+							%(a,archiveformats))
 
 			for f in archiveformats:
 				ff=f.upper()
@@ -602,7 +603,8 @@ class _virus_check():
 
 	def _print_archivemap(self):
 			for f in self.archivemap:
-				print(("Format %s"%f).ljust(20)+"Unpacker %s"%self.archivemap[f]) 
+				print(("Format %s"%f).ljust(20)+
+					"Unpacker %s"%self.archivemap[f]) 
 		
 	############
 	#_is_archive
@@ -647,7 +649,9 @@ class _virus_check():
 			"vnd.ms-cab-compressed":"CAB",
 			"x-cfs-compressed":None,
 			"x-stuffit":None,
-			"x-stuffitx":None
+			"x-stuffitx":None,
+			"ms-tnef":"TNEF",
+			"vnd.ms-tnef":"TNEF",
 			}
 						  
 		extensions={"7z":"7Z",
@@ -709,6 +713,9 @@ class _virus_check():
 				return result,archivetype
 			except:
 				pass
+
+			if filename.lower() in ["winmail.dat","win.dat"]:
+				archivetype="TNEF"
 				
 		if archivetype!=None:
 			result=True
@@ -842,9 +849,6 @@ class _virus_check():
 											suffix=".html",
 											dir=tmpdir)
 				fname = f.name
-				#fname=os.path.join(tmpdir,filename)
-				print("\n\n!!!!!!!!!!!!!!!!!!!!!!!HTML %s"%fname)
-
 				f.write(payload.get_payload(decode=True))
 				f.close()
 
@@ -2697,6 +2701,51 @@ class gme:
 			self.log_traceback()
 			return
 
+		
+		if _cfg.has_section('logging'):
+
+			try:
+				l=_cfg.get('logging','log').lower()
+
+				if l=="syslog":
+					self._LOGGING=self.l_syslog
+					self._prepare_syslog()
+				elif l=='file':
+					self._LOGGING=self.l_file
+				elif l=='stderr':
+					self._LOGGING=self.l_stderr
+				else:
+					self._LOGGING=self.l_none
+			except:
+				pass
+
+			try:
+				self._LOGFILE=_cfg.get('logging','file')
+			except:
+				pass
+
+			try:
+				self._DEBUG=_cfg.getboolean('logging','debug')
+			except:
+				pass
+
+			try:
+				s=_cfg.get('logging','debugsearchtext')
+
+				if len(s)>0:
+					self._DEBUGSEARCHTEXT=s.split(",")
+
+			except:
+				pass
+
+			try:
+				e=_cfg.get('logging','debugexcludetext')
+
+				if len(e)>0:
+					self._DEBUGEXCLUDETEXT=e.split(",")
+			except:
+				pass
+
 		if _cfg.has_section('default'):
 
 			try:
@@ -2774,50 +2823,6 @@ class gme:
 
 			try:
 				self._ALWAYSENCRYPT=_cfg.getboolean('default','alwaysencrypt')
-			except:
-				pass
-		
-		if _cfg.has_section('logging'):
-
-			try:
-				l=_cfg.get('logging','log').lower()
-
-				if l=="syslog":
-					self._LOGGING=self.l_syslog
-					self._prepare_syslog()
-				elif l=='file':
-					self._LOGGING=self.l_file
-				elif l=='stderr':
-					self._LOGGING=self.l_stderr
-				else:
-					self._LOGGING=self.l_none
-			except:
-				pass
-
-			try:
-				self._LOGFILE=_cfg.get('logging','file')
-			except:
-				pass
-
-			try:
-				self._DEBUG=_cfg.getboolean('logging','debug')
-			except:
-				pass
-
-			try:
-				s=_cfg.get('logging','debugsearchtext')
-
-				if len(s)>0:
-					self._DEBUGSEARCHTEXT=s.split(",")
-
-			except:
-				pass
-
-			try:
-				e=_cfg.get('logging','debugexcludetext')
-
-				if len(e)>0:
-					self._DEBUGEXCLUDETEXT=e.split(",")
 			except:
 				pass
 
