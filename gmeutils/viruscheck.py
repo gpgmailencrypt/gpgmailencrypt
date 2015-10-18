@@ -1,19 +1,11 @@
 #!/usr/bin/env python3
-import datetime
 import email
 import email.message
 import os
-
-try:
-	import pyclamd
-except:
-	pass
-	
 import shutil
-import subprocess
-import sys
 import tempfile
 
+import sys
 sys.path.insert(1,"/home/horst/Programmierecke/gpgmailencrypt")
 
 import gmeutils.archivemanagers as archivemanagers
@@ -80,12 +72,13 @@ class viruscheck():
 
 	def _search_virusscanner(self):
 
-		try:
-			clamd=pyclamd.ClamdAgnostic()
-			scanner=virusscanners._clamavscan()
-			self.virusscanner["CLAMAV"]=scanner
-		except:
-			pass
+		
+		for s in virusscanners.get_virusscannerlist():
+			vscanner=virusscanners.get_virusscanner(s)
+			if vscanner!=None:
+				self.virusscanner[s]=vscanner
+		if len(self.virusscanner)==0:
+			self.log("No virusscanners available!","e")
 
 	#######################
 	#_search_archivemanager
@@ -97,7 +90,7 @@ class viruscheck():
 		for m in archivemanagers.get_managerlist():
 			mngr=archivemanagers.get_archivemanager(m,self.parent)
 
-			if mngr!=None and len(mngr._cmd)>0:
+			if mngr!=None and len(mngr.cmd)>0:
 				self.unpacker[m]=mngr
 				_archivemanager[m]=self.unpacker[m].unpackingformats()
 		
@@ -371,12 +364,17 @@ class viruscheck():
 		if mail==None:
 			return False,description
 
+		if len(self.virusscanner)==0:
+			description.append("No virusscanners available")
+			return False,description
+			
 		directory=self.unpack_email(mail)			
-		self._print_archivemap()
+		#self._print_archivemap()
 		#print(self.virusscanner)
 		#print(directory)
 		result=False
-
+		print(self.virusscanner)
+		
 		for scanner in self.virusscanner:
 			hasvirus,info=self.virusscanner[scanner].has_virus(directory)
 
@@ -404,6 +402,7 @@ class viruscheck():
 
 class parentdummy:
 	def __init__(self):
+		import datetime
 		self._daemonstarttime=datetime.datetime.now()
 		self._ZIPCIPHER="AES128"
 		self._7ZIPCMD=shutil.which("7za")

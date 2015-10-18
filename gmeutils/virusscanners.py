@@ -14,7 +14,7 @@ class _basevirusscanner:
 
 try:
 	import pyclamd
-
+	
 	############
 	#_clamavscan
 	############
@@ -37,7 +37,18 @@ try:
 					information.append(["CLAMAV",filename,scanresult[a][1]])
 			
 			return result,information
-
+	
+	clamavscan_available=True
 except:
-	pass
+	clamavscan_available=False
 
+def get_virusscannerlist():
+	return ["CLAMAV"]
+
+def get_virusscanner(scanner):
+	scanner=scanner.upper().strip()
+	
+	if scanner=="CLAMAV" and clamavscan_available:
+		return _clamavscan()
+	
+	return None

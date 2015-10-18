@@ -2264,7 +2264,7 @@ class gme:
 		self._PDFPASSWORDLENGTH=10
 		self._PDFPASSWORDLIFETIME=48*60*60
 		self._PDF_PASSWORDFILE="/etc/gpgpdfpasswords.pw"
-		self._7ZIPCMD="/usr/bin/7za"
+		self._7ZIPCMD=""
 		self._ZIPCIPHER="ZipCrypto"
 		self._ZIPCOMPRESSION=5
 		self._ZIPATTACHMENTS=False
@@ -3258,7 +3258,8 @@ class gme:
 	def zip_factory(self):
 		"returns a ZIP class"
 		z= _ZIP(self)
-		z._cmd=self._7ZIPCMD
+		if len(self._7ZIPCMD)>0:
+			z.cmd=self._7ZIPCMD
 		return z
 
 	############
@@ -3423,7 +3424,7 @@ class gme:
 			#compressed archives
 			if subtype in ["zip","x-compressed","x-compress","x-gzip",
 						  "x-gtar","x-lzip","x-lzma","x-lzh","x-lzip",
-						  "x-lzop","x-zoo","x-rar-compressed",
+						  "x-lzop","x-zoo","x-rar-compressed","java-archive",
 						  "x-7z-compressed","x-bzip","x-bzip2",
 						  "vnd.android.package-archive","x-snappy-framed",
 						  "x-xz","x-ace-compressed","x-astrotite-afa",

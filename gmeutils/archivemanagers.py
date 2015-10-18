@@ -13,7 +13,7 @@ sys.path.insert(1,"/home/horst/Programmierecke/gpgmailencrypt")
 class _baseunpacker():
 
 	def __init__(self,parent):
-		self._cmd=""
+		self.cmd=""
 
 	def uncompress_file(self, filename,directory=None):
 		raise NotImplementedError
@@ -31,7 +31,7 @@ class _baseunpacker():
 class _ARJ(_baseunpacker):
 
 	def __init__(self,parent):
-		self._cmd=shutil.which("arj")
+		self.cmd=shutil.which("arj")
 
 	################
 	#uncompress_file
@@ -70,7 +70,7 @@ class _ARJ(_baseunpacker):
 									sourcefile,
 									directory):
 		#arj x  package.arj "-httarget" -u -y -r
-		cmd=[   self._cmd, 
+		cmd=[   self.cmd, 
 				"x",sourcefile,
 				"\"-ht%s\""%directory,
 				"-u",
@@ -85,7 +85,7 @@ class _ARJ(_baseunpacker):
 
 class _BZ2(_baseunpacker):
 	def __init__(self,parent):
-		self._cmd=shutil.which("bzip2")
+		self.cmd=shutil.which("bzip2")
 
 	################
 	#uncompress_file
@@ -134,7 +134,7 @@ class _BZ2(_baseunpacker):
 			new_ext=".out"
 		
 		directory=os.path.join(directory,fname+new_ext)	
-		cmd=[   self._cmd, 
+		cmd=[   self.cmd, 
 				"-cd",sourcefile,
 				"> \"%s\""%directory,
 			]
@@ -147,7 +147,7 @@ class _BZ2(_baseunpacker):
 class _CAB(_baseunpacker):
 
 	def __init__(self,parent):
-		self._cmd=shutil.which("cabextract")
+		self.cmd=shutil.which("cabextract")
 
 	################
 	#uncompress_file
@@ -185,7 +185,7 @@ class _CAB(_baseunpacker):
 	def _uncabcommand_indir(  self,
 									sourcefile,
 									directory):
-		cmd=[   self._cmd, 
+		cmd=[   self.cmd, 
 				"-d%s"%directory,
 				sourcefile,
 				">/dev/null"]
@@ -197,7 +197,7 @@ class _CAB(_baseunpacker):
 
 class _GZIP(_baseunpacker):
 	def __init__(self,parent):
-		self._cmd=shutil.which("gzip")
+		self.cmd=shutil.which("gzip")
 
 	################
 	#uncompress_file
@@ -246,7 +246,7 @@ class _GZIP(_baseunpacker):
 			new_ext=".out"
 		
 		directory=os.path.join(directory,fname+new_ext)	
-		cmd=[   self._cmd, 
+		cmd=[   self.cmd, 
 				"-cd",sourcefile,
 				"> \"%s\""%directory,
 			]
@@ -258,7 +258,7 @@ class _GZIP(_baseunpacker):
 
 class _RAR(_baseunpacker):
 	def __init__(self,parent):
-		self._cmd=shutil.which("unrar")
+		self.cmd=shutil.which("unrar")
 
 	################
 	#uncompress_file
@@ -298,7 +298,7 @@ class _RAR(_baseunpacker):
 		format=""
 		extension=os.path.splitext(sourcefile)[1].lower()
 
-		cmd=[   self._cmd, 
+		cmd=[   self.cmd, 
 				"e",sourcefile,
 				directory,
 				">/dev/null"
@@ -311,7 +311,7 @@ class _RAR(_baseunpacker):
 
 class _RIPOLE(_baseunpacker):
 	def __init__(self,parent):
-		self._cmd=shutil.which("ripole")
+		self.cmd=shutil.which("ripole")
 
 	################
 	#uncompress_file
@@ -351,7 +351,7 @@ class _RIPOLE(_baseunpacker):
 		format=""
 		extension=os.path.splitext(sourcefile)[1].lower()
 
-		cmd=[   self._cmd, 
+		cmd=[   self.cmd, 
 				"-i",sourcefile,
 				"-d",directory,
 				">/dev/null"
@@ -371,7 +371,7 @@ class _RIPOLE(_baseunpacker):
 
 class _TAR(_baseunpacker):
 	def __init__(self,parent):
-		self._cmd=shutil.which("tar")
+		self.cmd=shutil.which("tar")
 
 	################
 	#uncompress_file
@@ -418,7 +418,7 @@ class _TAR(_baseunpacker):
 		elif extension in ["gz","tgz"]:
 			format="x"
 		
-		cmd=[   self._cmd, 
+		cmd=[   self.cmd, 
 				"-x%s"%format,
 				"-f",sourcefile,
 				"-C%s"%directory,
@@ -431,7 +431,7 @@ class _TAR(_baseunpacker):
 
 class _XZ(_baseunpacker):
 	def __init__(self,parent):
-		self._cmd=shutil.which("xz")
+		self.cmd=shutil.which("xz")
 
 	################
 	#uncompress_file
@@ -481,7 +481,7 @@ class _XZ(_baseunpacker):
 			new_ext=".out"
 		
 		directory=os.path.join(directory,fname+new_ext)	
-		cmd=[   self._cmd, 
+		cmd=[   self.cmd, 
 				"-cd",sourcefile,
 				"> \"%s\""%directory,
 			]
@@ -503,7 +503,7 @@ class _ZIP(_baseunpacker):
 	def __init__(self, parent):
 		self.parent=parent
 		self.zipcipher=self.parent._ZIPCIPHER
-		self._cmd=shutil.which("7za")
+		self.cmd=shutil.which("7za")
 
 	##############
 	#set_zipcipher
@@ -618,7 +618,7 @@ class _ZIP(_baseunpacker):
 		elif self.zipcipher=="AES256":
 			cipher="AES256"
 
-		cmd=[   self._cmd, 
+		cmd=[   self.cmd, 
 				"a",resultfile, 
 				os.path.join(directory,"*"),
 				"-tzip",
@@ -782,7 +782,7 @@ class _ZIP(_baseunpacker):
 									sourcefile,
 									directory,
 									password):
-		cmd=[  	self._cmd, 
+		cmd=[  	self.cmd, 
 				"e",sourcefile,
 				"-o%s"%directory,
 				">/dev/null"]
@@ -790,8 +790,8 @@ class _ZIP(_baseunpacker):
 			cmd.insert(4,"-p%s"%password)
 		return cmd
 
-def get_archivemanager(manager, parent=None):
-	manager=manager.upper()
+def get_archivemanager(manager, parent):
+	manager=manager.upper().strip()
 
 	if manager=="ARJ":
 		return _ARJ(parent=parent)
