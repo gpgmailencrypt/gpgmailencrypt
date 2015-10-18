@@ -183,6 +183,9 @@ def print_exampleconfig():
 "#comma separated list of domain names,") 
 	print ("".ljust(space)+
 "#that should be encrypted, empty is all")
+	print ("homedomains=localhost".ljust(space)+
+"#a comma separated list of domains, for which this server is working"
+"and users might receive system mail and can use pdf encrypt")
 	print ("spamsubject =***SPAM".ljust(space)+
 "#Spam recognition string, spam will not be encrypted")
 	print ("output=mail".ljust(space)+
@@ -195,9 +198,11 @@ def print_exampleconfig():
 	print ("systemmailfrom=gpgmailencrypt@localhost".ljust(space)+
 "#e-mail address used when sending system mails")
 	print ("alwaysencrypt=False".ljust(space)+
-"#if True e-mails will be sent encrypted, even if there is no key.")
+"#if True e-mails will be sent encrypted, even if there is no key")
 	print ("".ljust(space)+
 "#Fallback encryption is encrypted pdf")
+	print ("checkviruses=False".ljust(space)+
+"#if true,e-mails will be checked for viruses before being encrypted")
 	print ("")
 	print ("[gpg]")
 	print ("keyhome = /var/lib/gpgmailencrypt/.gnupg".ljust(space)+
@@ -254,9 +259,6 @@ def print_exampleconfig():
 "#see https://github.com/andrewferrier/email2pdf)")
 	print ("pdftkcommand=/usr/bin/pdftk".ljust(space)+
 "#path where to find pdftk (needed for encrypting pdf files")
-	print ("pdfdomains=localhost".ljust(space)+
-"#a comma separated list of sender domains, which are allowed to "
-"use pdf-encrypt")
 	print ("passwordlength=10".ljust(space)+
 "#Length of the automatic created password")
 	print ("passwordlifetime=172800".ljust(space)+
@@ -533,8 +535,13 @@ class _virus_check():
 	###########
 	#_mktempdir
 	###########
+
 	def _mktempdir(self,directory=None):
 		return tempfile.mkdtemp(dir=directory)
+
+	#######
+	#_chmod
+	#######
 
 	def _chmod(self,directory):
 		for root, directories, files in os.walk(directory):  
@@ -671,7 +678,6 @@ class _virus_check():
 					"zip":"ZIP",
 					"zoo":"ZOO"}
 
-
 		if maintype in ["application","other"]:
 
 			fname=os.path.split(filename)[1].lower()
@@ -690,7 +696,6 @@ class _virus_check():
 					
 					return result,archivetype
 					
-
 			try:
 				archivetype=extensions[extension]
 				result=True
@@ -815,7 +820,6 @@ class _virus_check():
 		_c=0
 
 		for payload in mail.walk():
-			self.debug("payload %i"%_c)
 			_c+=1
 			is_attachment = payload.get_param(   
 								'attachment', 
@@ -825,15 +829,26 @@ class _virus_check():
 								'inline', 
 								None, 
 								'Content-Disposition' ) is not None
+			contenttype=payload.get_content_type()				
 
 			if is_attachment:
+				self.debug("payload %i"%_c)
 				self.unpack_attachment(payload,tmpdir)
-			else:
-				self.debug("not an attachment")
-			
+			elif contenttype=="text/html":
+				self.debug("payload %i"%_c)
+				f=tempfile.NamedTemporaryFile(  mode='wb',
+											delete=False,
+											prefix='content-',
+											suffix=".html",
+											dir=tmpdir)
+				fname = f.name
+				#fname=os.path.join(tmpdir,filename)
+				print("\n\n!!!!!!!!!!!!!!!!!!!!!!!HTML %s"%fname)
+
+				f.write(payload.get_payload(decode=True))
+				f.close()
 
 		self._chmod(tmpdir)
-
 		return tmpdir
 
 	##########
@@ -3087,6 +3102,7 @@ class gme:
 				'output=',
 				'verbose',
 				'version',
+				'viruscheck=',
 				'zip'])
 		except getopt.GetoptError as e:
 			self._LOGGING=self.l_stderr
@@ -3198,6 +3214,14 @@ class gme:
 
 			if (_opt  =='-z' or  _opt == '--zip'):
 				   self._ZIPATTACHMENTS=True
+
+			if _opt == '--viruscheck':
+
+					if _arg in ["true","yes",None]:
+				   		self.set_check_viruses(True)
+					elif _arg in ["false","no"]:
+				   		self.set_check_viruses(False)
+				   	
 
 		if not self._RUNMODE==self.m_daemon:
 
@@ -5789,9 +5813,11 @@ class gme:
 								to_addr):
 		self.log("Virus found in e-mail from %s to %s"%(from_addr,to_addr),"w")
 		self._count_viruses+=1
+
 		for i in information:
 			self.log("Virusinfo: %s"% i,"w")
 		_time=time.time()
+
 		if self._RUNMODE==self.m_daemon:
 			fname=self._store_temporaryfile(mailtext,
 											quarantinedir=True)
@@ -5815,8 +5841,9 @@ class gme:
 			new_toaddr=to_addr
 
 		infotxt=""
+
 		for i in information:
-			infotxt+="%s<br>"	%i		
+			infotxt+="%s<br>"%i		
 	
 		if domain in self._HOMEDOMAINS:
 			msgtxt=self._load_mailmaster("03-virusinformation",
