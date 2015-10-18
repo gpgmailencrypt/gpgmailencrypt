@@ -815,7 +815,7 @@ class _virus_check():
 		_c=0
 
 		for payload in mail.walk():
-			self.debug("\npayload %i"%_c)
+			self.debug("payload %i"%_c)
 			_c+=1
 			is_attachment = payload.get_param(   
 								'attachment', 
@@ -856,20 +856,19 @@ class _virus_check():
 		#print(self.virusscanner)
 		#print(directory)
 		result=False
-		print(self.virusscanner)
 		
 		for scanner in self.virusscanner:
 			hasvirus,info=self.virusscanner[scanner].has_virus(directory)
 
 			if hasvirus:	
-				self.log("Virus found")
+				self.debug("_virus_check.has_virus Virus found")
 				result=True
 				description=info
 				break
 
 		try:
-			#shutil.rmtree(directory)
-			pass
+			if not self.parent._DEBUG:
+				shutil.rmtree(directory)
 		except:
 			pass
 	
@@ -2464,6 +2463,7 @@ class gme:
 		"class creator"
 		self._deferred_emails=[]
 		self._email_queue={}
+		self._virus_queue={}
 		self._queue_id=0
 		self._daemonstarttime=datetime.datetime.now()
 		self._RUNMODE=None
@@ -2593,9 +2593,14 @@ class gme:
 
 		self._deferlist=os.path.expanduser("~/deferlist.txt")
 		self._deferdir=os.path.expanduser("~/gpgmaildirtmp")
+		self._viruslist=os.path.expanduser("~/viruslist.txt")
+		self._quarantinedir=os.path.expanduser("~/gmequarantine")
 
 		if not os.path.exists(self._deferdir):
 			os.makedirs(self._deferdir)
+
+		if not os.path.exists(self._quarantinedir):
+			os.makedirs(self._quarantinedir)
 
 		#GLOBAL CONFIG VARIABLES
 		self._STATISTICS_PER_DAY=1
@@ -2614,6 +2619,7 @@ class gme:
 		self._SMTP_USER=""
 		self._SMTP_PASSWORD=""
 		self._DOMAINS=""
+		self._HOMEDOMAINS=["localhost"]
 		self._CONFIGFILE='/etc/gpgmailencrypt.conf'
 		self._MAILTEMPLATEDIR="/usr/share/gpgmailencrypt/mailtemplates"
 		self._INFILE=""
@@ -2643,7 +2649,6 @@ class gme:
 		self._USEPDF=False
 		self._PDFCREATECMD="/usr/local/bin/email2pdf"
 		self._PDFENCRYPTCMD="/usr/bin/pdftk"
-		self._PDFDOMAINS=["localhost"]
 		self._PDFSECUREZIPCONTAINER=False
 		self._PDFPASSWORDLENGTH=10
 		self._PDFPASSWORDLIFETIME=48*60*60
@@ -2682,6 +2687,14 @@ class gme:
 			try:
 				self._VIRUSCHECK=_cfg.getboolean('default','checkviruses')
 				self.set_check_viruses(self._VIRUSCHECK)
+			except:
+				pass
+
+			try:
+				domains=_cfg.get('default','homedomains').split(",")
+				self._HOMEDOMAINS=[]
+				for d in domains:
+					self._HOMEDOMAINS.append(d.lower().strip())	
 			except:
 				pass
 
@@ -2925,14 +2938,6 @@ class gme:
 
 			try:
 				self._PDFENCRYPTCMD=_cfg.get('pdf','pdftkcommand')
-			except:
-				pass
-
-			try:
-				domains=_cfg.get('pdf','pdfdomains').split(",")
-				self._PDFDOMAINS=[]
-				for d in domains:
-					self._PDFDOMAINS.append(d.lower().strip())	
 			except:
 				pass
 
@@ -3540,6 +3545,7 @@ class gme:
 								message,
 								add_deferred=False,
 								spooldir=False,
+								quarantinedir=False,
 								fromaddr="",
 								toaddr=""):
 		self.debug("_store_temporaryfile add_deferred=%s"%add_deferred)
@@ -3550,6 +3556,8 @@ class gme:
 
 			if add_deferred or spooldir:
 				tmpdir=self._deferdir
+			elif quarantinedir:
+				tmpdir=self._quarantinedir
 
 			f=tempfile.NamedTemporaryFile(  mode='wb',
 											delete=False,
@@ -4064,6 +4072,30 @@ class gme:
 		except:
 			self.log("Couldn't store defer list '%s'"%self._deferlist)
 			self.log_traceback()
+		self.store_virus_list()
+
+	####################
+	#store_virus_list
+	####################
+ 
+	@_dbg
+	def store_virus_list(self):
+		"stores the list with emails, that contain viruses"
+
+		try:
+			self.debug("store_virus_list '%s'"%self._viruslist)
+			f=open(self._viruslist,"w")
+
+			for qid in self._virus_queue:
+				mail=self._virus_queue[qid]
+				mail[3]=str(mail[3])
+				f.write("|".join(mail))
+				f.write("\n")
+
+			f.close()
+		except:
+			self.log("Couldn't store virus list '%s'"%self._viruslist)
+			self.log_traceback()
 
 	######################
 	#_is_old_deferred_mail
@@ -4177,9 +4209,10 @@ class gme:
 				self._count_pgpinlinemails, 
 				self._count_smimemails ,
 				self._count_pdfmails))
-		self.log("systemerrors: %i, systemwarnings: %i" %(
+		self.log("Systemerrors: %i, systemwarnings: %i" %(
 				self._systemerrors,
 				self._systemwarnings))
+		self.log("Virus infected mails: %i" %self._count_viruses)
 
 	##############
 	#_new_tempfile
@@ -4394,6 +4427,7 @@ class gme:
 			"total pgpinline":self._count_pgpinlinemails,
 			"systemerrors":self._systemerrors,
 			"systemwarnings":self._systemwarnings,
+			"virus infected mails":self._count_viruses,
 			}
 
 	###########
@@ -5588,7 +5622,7 @@ class gme:
 			if len(addr)==2:
 				domain = addr[1]
 
-			if domain in self._PDFDOMAINS:
+			if domain in self._HOMEDOMAINS:
 				msgtxt=self._load_mailmaster("01-pdfpassword",
 					"<table><tr><td>Subject:</td><td>%SUBJECT%</td></tr>"
 					"<tr><td>From:</td><td>%FROM%</td></tr><tr><td>To:</td>"
@@ -5742,6 +5776,72 @@ class gme:
 
 		return newmsg
 
+	##################
+	#_handle_virusmail
+	##################
+
+	@_dbg
+	def _handle_virusmail(		self,
+								information,
+								queue_id,
+								mailtext,
+								from_addr,
+								to_addr):
+		self.log("Virus found in e-mail from %s to %s"%(from_addr,to_addr),"w")
+		self._count_viruses+=1
+		for i in information:
+			self.log("Virusinfo: %s"% i,"w")
+		_time=time.time()
+		if self._RUNMODE==self.m_daemon:
+			fname=self._store_temporaryfile(mailtext,
+											quarantinedir=True)
+			self._virus_queue[queue_id]=[ 	fname,
+											from_addr,
+											to_addr,
+											_time]
+
+		self._remove_mail_from_queue(queue_id)
+		#now send infomail
+		faddr= email.utils.parseaddr(from_addr)[1].split('@')
+		toaddr= email.utils.parseaddr(from_addr)[1].split('@')
+		new_toaddr=None
+
+		if len(faddr)==2:
+			domain = faddr[1]
+			new_toaddr=from_addr
+
+		if not domain in self._HOMEDOMAINS and len(taddr)==2:
+			domain = taddr[1]
+			new_toaddr=to_addr
+
+		infotxt=""
+		for i in information:
+			infotxt+="%s<br>"	%i		
+	
+		if domain in self._HOMEDOMAINS:
+			msgtxt=self._load_mailmaster("03-virusinformation",
+				"""The email from %FROM% to %TO% with id %ID% was stopped,<br>
+				because it contains a virus.<br><br>Details:<br>
+				%INFORMATION%
+				""")
+			msgtxt=replace_variables(msgtxt,
+					{"FROM":html.escape(from_addr),
+					 "TO":html.escape(to_addr),
+					 "ID":str(_time),
+					 "INFORMATION":infotxt
+					})
+			msg=MIMEMultipart()
+			msg.set_type("multipart/alternative")
+			res,htmlheader,htmlbody,htmlfooter=self._split_html(msgtxt)
+			htmlmsg=MIMEText(msgtxt,"html")
+			plainmsg=MIMEText(htmlbody)
+			msg.attach(plainmsg)
+			msg.attach(htmlmsg)
+			msg['Subject'] = 'Virus mail information' 
+			msg['To'] = new_toaddr
+			msg['From'] = self._SYSTEMMAILFROM
+			self.encrypt_mails(msg.as_string(),from_addr)
+		
 	####################
 	#encrypt_single_mail
 	####################	
@@ -5757,6 +5857,27 @@ class gme:
 		_prefer_pdf=False
 		_prefer_smime=False
 		mresult=None
+
+		if self.is_encrypted(mailtext):
+			m="Email already encrypted"
+			self.debug(m)
+			self._count_alreadyencryptedmails+=1
+			self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
+			return
+
+		if self._VIRUSCHECK==True and self._virus_checker!=None:
+			result,info=self._virus_checker.has_virus(mailtext)
+
+			if result==True:
+				self._handle_virusmail(info,queue_id,mailtext,from_addr,to_addr)
+				return
+			elif len(info)>0:
+				self.log("No virus found, but received the following messages",
+						"w")
+
+				for i in info:
+					self.log("Virusinfo: %s"% i,"w")
+
 		_encrypt_subject=self.check_encryptsubject(mailtext)
 
 		try:
@@ -5801,7 +5922,7 @@ class gme:
 
 		if method=="PDF" or self._ALWAYSENCRYPT or _prefer_pdf:
 
-			if domain in self._PDFDOMAINS:
+			if domain in self._HOMEDOMAINS:
 				_prefer_pdf=True
 
 		if method=="NONE":
@@ -5818,13 +5939,6 @@ class gme:
 			if self._ZIPATTACHMENTS:
 				mailtext=self.zip_attachments(mailtext)
 
-			self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
-			return
-
-		if self.is_encrypted(mailtext):
-			m="Email already encrypted"
-			self.debug(m)
-			self._count_alreadyencryptedmails+=1
 			self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
 			return
 
@@ -5867,7 +5981,7 @@ class gme:
 
 		if not mresult and (_encrypt_subject or _prefer_pdf):
 
-			if domain in self._PDFDOMAINS:
+			if domain in self._HOMEDOMAINS:
 				mresult=self.encrypt_pdf_mail(  mailtext,
 												to_pdf,
 												from_addr,
