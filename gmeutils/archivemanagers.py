@@ -12,10 +12,14 @@ sys.path.insert(1,"/home/horst/Programmierecke/gpgmailencrypt")
 
 class _baseunpacker():
 
-	def __init__(self,parent):
+	def __init__(self,parent,chdir=False):
 		self.cmd=""
+		self.chdir=chdir
+		self.parent=parent
 
-	def uncompress_file(self, filename,directory=None):
+	def uncompresscommand( 	self,
+							sourcefile,
+							directory):
 		raise NotImplementedError
 
 	def unpackingformats(self):
@@ -23,15 +27,6 @@ class _baseunpacker():
 
 	def keep_for_viruscheck(self):
 		return False
-
-#####
-#_ARJ
-#####
-
-class _ARJ(_baseunpacker):
-
-	def __init__(self,parent):
-		self.cmd=shutil.which("arj")
 
 	################
 	#uncompress_file
@@ -42,18 +37,62 @@ class _ARJ(_baseunpacker):
 
 		if directory==None:
 			directory = tempfile.mkdtemp()
+		
+		if self.chdir:
+			os.chdir(directory)
+			_origdir=os.getcwd()
 
-		unarjcmd=' '.join(self._unarjcommand_indir(filename,directory))
-		_result = subprocess.call(unarjcmd, shell=True) 
+		uncompresscmd=' '.join(self.uncompresscommand(filename,directory))
+		_result = subprocess.call(uncompresscmd, shell=True) 
+		if self.chdir:
+			os.chdir(_origdir)
 
 		if _result !=0:
-		  #self.parent.log("Error executing command (Error code %d)"%_result,"e")
 		  return result,None
 		else:
 			result=True
 
 		return result,directory
 
+####
+#_AR
+####
+
+class _AR(_baseunpacker):
+
+	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent,chdir=True)
+		self.cmd=shutil.which("ar")
+
+	#################
+	#unpackingformats
+	#################
+
+	def unpackingformats(self):
+		return ["AR","DEB"]
+ 
+	##################
+	#uncompresscommand
+	##################
+
+	def uncompresscommand(  self,
+									sourcefile,
+									directory):
+		cmd=[   self.cmd, 
+				"-x",
+				sourcefile,
+				">/dev/null"]
+		return cmd
+
+#####
+#_ARJ
+#####
+
+class _ARJ(_baseunpacker):
+
+	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent)
+		self.cmd=shutil.which("arj")
 
 	#################
 	#unpackingformats
@@ -62,14 +101,13 @@ class _ARJ(_baseunpacker):
 	def unpackingformats(self):
 		return ["ARJ"]
  
-	############################
-	#_ununarjcommand_indir
-	############################
+	##################
+	#uncompresscommand
+	##################
 
-	def _unarjcommand_indir(  self,
+	def uncompresscommand(  self,
 									sourcefile,
 									directory):
-		#arj x  package.arj "-httarget" -u -y -r
 		cmd=[   self.cmd, 
 				"x",sourcefile,
 				"\"-ht%s\""%directory,
@@ -84,30 +122,11 @@ class _ARJ(_baseunpacker):
 #####
 
 class _BZ2(_baseunpacker):
+
 	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent)
 		self.cmd=shutil.which("bzip2")
 
-	################
-	#uncompress_file
-	################
-
-	def uncompress_file(self, filename,directory=None):
-		result=False
-
-		if directory==None:
-			directory = tempfile.mkdtemp()
-
-		unbz2cmd=' '.join(self._bz2command_indir(filename,directory))
-		_result = subprocess.call(unbz2cmd, shell=True) 
-
-		if _result !=0:
-		  #self.parent.log("Error executing command (Error code %d)"%_result,"e")
-		  return result,None
-		else:
-			result=True
-
-		return result,directory
-	
 	#################
 	#unpackingformats
 	#################
@@ -116,10 +135,10 @@ class _BZ2(_baseunpacker):
 		return ["BZIP","BZIP2"]
 
 	##################
-	#_bz2command_indir
+	#uncompresscommand
 	##################
 
-	def _bz2command_indir(  self,
+	def uncompresscommand(  self,
 									sourcefile,
 									directory):
 		format=""
@@ -147,29 +166,8 @@ class _BZ2(_baseunpacker):
 class _CAB(_baseunpacker):
 
 	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent)
 		self.cmd=shutil.which("cabextract")
-
-	################
-	#uncompress_file
-	################
-
-	def uncompress_file(self, filename,directory=None):
-		result=False
-
-		if directory==None:
-			directory = tempfile.mkdtemp()
-
-		uncmd=' '.join(self._uncabcommand_indir(filename,directory))
-		_result = subprocess.call(uncmd, shell=True) 
-
-		if _result !=0:
-		  #self.parent.log("Error executing command (Error code %d)"%_result,"e")
-		  return result,None
-		else:
-			result=True
-
-		return result,directory
-
 
 	#################
 	#unpackingformats
@@ -178,11 +176,11 @@ class _CAB(_baseunpacker):
 	def unpackingformats(self):
 		return ["CAB"]
  
-	######################
-	#_ununcabcommand_indir
-	######################
+	##################
+	#uncompresscommand
+	##################
 
-	def _uncabcommand_indir(  self,
+	def uncompresscommand(  self,
 									sourcefile,
 									directory):
 		cmd=[   self.cmd, 
@@ -192,34 +190,46 @@ class _CAB(_baseunpacker):
 		return cmd
 
 ######
+#_CPIO
+######
+
+class _CPIO(_baseunpacker):
+
+	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent,chdir=True)
+		self.cmd=shutil.which("cpio")
+
+	#################
+	#unpackingformats
+	#################
+
+	def unpackingformats(self):
+		return ["CPIO"]
+ 
+	##################
+	#uncompresscommand
+	##################
+
+	def uncompresscommand(  self,
+									sourcefile,
+									directory):
+		cmd=[   self.cmd, 
+				"-i",
+				"--quiet",
+				"-F",sourcefile,
+				">/dev/null"]
+		return cmd
+
+######
 #_GZIP
 ######
 
 class _GZIP(_baseunpacker):
+
 	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent)
 		self.cmd=shutil.which("gzip")
 
-	################
-	#uncompress_file
-	################
-
-	def uncompress_file(self, filename,directory=None):
-		result=False
-
-		if directory==None:
-			directory = tempfile.mkdtemp()
-
-		uncmd=' '.join(self._gzipcommand_indir(filename,directory))
-		_result = subprocess.call(uncmd, shell=True) 
-
-		if _result !=0:
-		  #self.parent.log("Error executing command (Error code %d)"%_result,"e")
-		  return result,None
-		else:
-			result=True
-
-		return result,directory
-	
 	#################
 	#unpackingformats
 	#################
@@ -227,11 +237,11 @@ class _GZIP(_baseunpacker):
 	def unpackingformats(self):
 		return ["GZIP","Z"]
 
-	###################
-	#_gzipcommand_indir
-	###################
+	##################
+	#uncompresscommand
+	##################
 
-	def _gzipcommand_indir(  self,
+	def uncompresscommand(  self,
 									sourcefile,
 									directory):
 		format=""
@@ -253,33 +263,79 @@ class _GZIP(_baseunpacker):
 		return cmd
 
 #####
+#_LHA
+#####
+
+class _LHA(_baseunpacker):
+
+	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent)
+		self.cmd=shutil.which("lha")
+
+
+	#################
+	#unpackingformats
+	#################
+
+	def unpackingformats(self):
+		return ["LHA"]
+ 
+	##################
+	#uncompresscommand
+	##################
+
+	def uncompresscommand(  self,
+									sourcefile,
+									directory):
+		cmd=[   self.cmd, 
+				"-w=%s"%directory,
+				"-e",
+				sourcefile,
+				">/dev/null"]
+		return cmd
+
+#####
+#_LZO
+#####
+
+class _LZO(_baseunpacker):
+
+	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent)
+		self.cmd=shutil.which("lzop")
+
+
+	#################
+	#unpackingformats
+	#################
+
+	def unpackingformats(self):
+		return ["LZO"]
+ 
+	##################
+	#uncompresscommand
+	##################
+
+	def uncompresscommand(  self,
+									sourcefile,
+									directory):
+		cmd=[   self.cmd, 
+				"-p%s"%directory,
+				"-d",
+				"-P",
+				sourcefile,
+				">/dev/null"]
+		return cmd
+
+#####
 #_RAR
 #####
 
 class _RAR(_baseunpacker):
+
 	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent)
 		self.cmd=shutil.which("unrar")
-
-	################
-	#uncompress_file
-	################
-
-	def uncompress_file(self, filename,directory=None):
-		result=False
-
-		if directory==None:
-			directory = tempfile.mkdtemp()
-
-		unrarcmd=' '.join(self._rarcommand_indir(filename,directory))
-		_result = subprocess.call(unrarcmd, shell=True) 
-
-		if _result !=0:
-		  #self.parent.log("Error executing command (Error code %d)"%_result,"e")
-		  return result,None
-		else:
-			result=True
-
-		return result,directory
 	
 	#################
 	#unpackingformats
@@ -289,10 +345,10 @@ class _RAR(_baseunpacker):
 		return ["RAR"]
 
 	##################
-	#_rarcommand_indir
+	#uncompresscommand
 	##################
 
-	def _rarcommand_indir(  self,
+	def uncompresscommand(  self,
 									sourcefile,
 									directory):
 		format=""
@@ -310,30 +366,11 @@ class _RAR(_baseunpacker):
 ########
 
 class _RIPOLE(_baseunpacker):
+
 	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent)
 		self.cmd=shutil.which("ripole")
 
-	################
-	#uncompress_file
-	################
-
-	def uncompress_file(self, filename,directory=None):
-		result=False
-
-		if directory==None:
-			directory = tempfile.mkdtemp()
-
-		unrarcmd=' '.join(self._rarcommand_indir(filename,directory))
-		_result = subprocess.call(unrarcmd, shell=True) 
-
-		if _result !=0:
-		  #self.parent.log("Error executing command (Error code %d)"%_result,"e")
-		  return result,None
-		else:
-			result=True
-
-		return result,directory
-	
 	#################
 	#unpackingformats
 	#################
@@ -341,11 +378,11 @@ class _RIPOLE(_baseunpacker):
 	def unpackingformats(self):
 		return ["DOC","XLS","DOT","XLT","PPS","PPT"]
 
-	#####################
-	#_ripolecommand_indir
-	#####################
+	##################
+	#uncompresscommand
+	##################
 
-	def _ripolecommand_indir(  self,
+	def uncompresscommand(  self,
 									sourcefile,
 									directory):
 		format=""
@@ -370,29 +407,10 @@ class _RIPOLE(_baseunpacker):
 #####
 
 class _TAR(_baseunpacker):
+
 	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent)
 		self.cmd=shutil.which("tar")
-
-	################
-	#uncompress_file
-	################
-
-	def uncompress_file(self, filename,directory=None):
-		result=False
-
-		if directory==None:
-			directory = tempfile.mkdtemp()
-
-		untarcmd=' '.join(self._tarcommand_indir(filename,directory))
-		_result = subprocess.call(untarcmd, shell=True) 
-
-		if _result !=0:
-		  #self.parent.log("Error executing command (Error code %d)"%_result,"e")
-		  return result,None
-		else:
-			result=True
-
-		return result,directory
 	
 	#################
 	#unpackingformats
@@ -402,10 +420,10 @@ class _TAR(_baseunpacker):
 		return ["TAR","TARBZ2","TARBZ","TARGZ"]
 
 	##################
-	#_tarcommand_indir
+	#uncompresscommand
 	##################
 
-	def _tarcommand_indir(  self,
+	def uncompresscommand(  self,
 									sourcefile,
 									directory):
 		format=""
@@ -431,30 +449,10 @@ class _TAR(_baseunpacker):
 
 class _TNEF(_baseunpacker):
 	"handles winmail.dat files"
+
 	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent)
 		self.cmd=shutil.which("tnef")
-
-	################
-	#uncompress_file
-	################
-
-	def uncompress_file(self, filename,directory=None):
-		result=False
-
-		if directory==None:
-			directory = tempfile.mkdtemp()
-
-		uncmd=' '.join(self._untnefcommand_indir(filename,directory))
-		_result = subprocess.call(uncmd, shell=True) 
-
-		if _result !=0:
-		  #self.parent.log("Error executing command (Error code %d)"%_result,"e")
-		  return result,None
-		else:
-			result=True
-
-		return result,directory
-
 
 	#################
 	#unpackingformats
@@ -463,11 +461,11 @@ class _TNEF(_baseunpacker):
 	def unpackingformats(self):
 		return ["TNEF"]
  
-	#######################
-	#_ununtnefcommand_indir
-	#######################
+	##################
+	#uncompresscommand
+	##################
 
-	def _untnefcommand_indir(  self,
+	def uncompresscommand(  self,
 									sourcefile,
 									directory):
 		cmd=[   self.cmd, 
@@ -481,30 +479,11 @@ class _TNEF(_baseunpacker):
 #####
 
 class _XZ(_baseunpacker):
+
 	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent)
 		self.cmd=shutil.which("xz")
 
-	################
-	#uncompress_file
-	################
-
-	def uncompress_file(self, filename,directory=None):
-		result=False
-
-		if directory==None:
-			directory = tempfile.mkdtemp()
-
-		uncmd=' '.join(self._xzcommand_indir(filename,directory))
-		_result = subprocess.call(uncmd, shell=True) 
-
-		if _result !=0:
-		  #self.parent.log("Error executing command (Error code %d)"%_result,"e")
-		  return result,None
-		else:
-			result=True
-
-		return result,directory
-	
 	#################
 	#unpackingformats
 	#################
@@ -513,20 +492,20 @@ class _XZ(_baseunpacker):
 		return ["XZ","LZMA"]
 
 	##################
-	#_xzcommand_indir
+	#uncompresscommand
 	##################
 
-	def _xzcommand_indir(  self,
+	def uncompresscommand(  self,
 									sourcefile,
 									directory):
 		format=""
 		path,origname=os.path.split(sourcefile)
 		fname, extension = os.path.splitext(origname)
 		extension=extension.lower()
-		lzma=(extension=="lzma")
+		lzma=(extension==".lzma")
 		new_ext=""
 
-		if extension in [".txz","tlzma"]:
+		if extension in [".txz",".tlzma"]:
 			new_ext=".tar"
 		elif extension not in [".xz",".lzma"]:
 			new_ext=".out"
@@ -844,14 +823,22 @@ class _ZIP(_baseunpacker):
 def get_archivemanager(manager, parent):
 	manager=manager.upper().strip()
 
-	if manager=="ARJ":
+	if manager=="AR":
+		return _AR(parent=parent)
+	elif manager=="ARJ":
 		return _ARJ(parent=parent)
 	elif manager=="BZIP2":
 		return _BZ2(parent=parent)
 	elif manager=="CAB":
 		return _CAB(parent=parent)
+	elif manager=="CPIO":
+		return _CPIO(parent=parent)
 	elif manager=="GZIP":
 		return _GZIP(parent=parent)
+	elif manager=="LHA":
+		return _LHA(parent=parent)
+	elif manager=="LZO":
+		return _LZO(parent=parent)
 	elif manager=="RAR":
 		return _RAR(parent=parent)
 	elif manager=="RIPOLE":
@@ -868,4 +855,5 @@ def get_archivemanager(manager, parent):
 	return None
 
 def get_managerlist():
-	return ["ARJ","BZIP2","CAB","GZIP","RAR","RIPOLE","TAR","TNEF","XZ","ZIP"]
+	return ["AR","ARJ","BZIP2","CAB","CPIO","GZIP","LHA",
+			"LZO","RAR","RIPOLE","TAR","TNEF","XZ","ZIP"]
