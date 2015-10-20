@@ -565,8 +565,11 @@ class _virus_check():
 		
 		for s in virusscanners.get_virusscannerlist():
 			vscanner=virusscanners.get_virusscanner(s)
+
 			if vscanner!=None:
 				self.virusscanner[s]=vscanner
+				self.log("Virusscanner %s registered"%s)
+				
 		if len(self.virusscanner)==0:
 			self.log("No virusscanners available!","e")
 
@@ -2484,7 +2487,7 @@ class gme:
 		"class creator"
 		self._deferred_emails=[]
 		self._email_queue={}
-		self._virus_queue={}
+		self._virus_queue=[]
 		self._queue_id=0
 		self._daemonstarttime=datetime.datetime.now()
 		self._RUNMODE=None
@@ -4054,6 +4057,28 @@ class gme:
 			self._remove_mail_from_queue(m_id)
 			return True
 
+	################
+	#load_virus_list
+	################
+ 
+	@_dbg
+	def load_virus_list(self):
+		"loads the list with virus infected emails"
+		self._virus_queue=[]
+
+		try:
+			f=open(self._viruslist)
+
+			for l in f:
+				mail=l.split("|")
+				mail[3]=float(mail[3])
+				self._virus_queue.append(mail)
+
+			f.close()
+			self._count_viruses=len(self._virus_queue)
+		except:
+			self.log("Couldn't load defer list '%s'"%self._viruslist)
+
 	###################
 	#load_deferred_list
 	###################
@@ -4117,8 +4142,7 @@ class gme:
 			self.debug("store_virus_list '%s'"%self._viruslist)
 			f=open(self._viruslist,"w")
 
-			for qid in self._virus_queue:
-				mail=self._virus_queue[qid]
+			for mail in self._virus_queue:
 				mail[3]=str(mail[3])
 				f.write("|".join(mail))
 				f.write("\n")
@@ -5828,10 +5852,10 @@ class gme:
 		if self._RUNMODE==self.m_daemon:
 			fname=self._store_temporaryfile(mailtext,
 											quarantinedir=True)
-			self._virus_queue[queue_id]=[ 	fname,
+			self._virus_queue.append([ 	fname,
 											from_addr,
 											to_addr,
-											_time]
+											_time])
 
 		self._remove_mail_from_queue(queue_id)
 		#now send infomail
@@ -6202,6 +6226,7 @@ class gme:
 
 		signal.signal(signal.SIGTERM, _sigtermhandler)
 		self.load_deferred_list()
+		self.load_virus_list()
 		smtpd.__version__="gpgmailencrypt smtp server %s"%VERSION
 		_deferredlisthandler()
 		self.log("gpgmailencrypt %s starts as daemon on %s:%s"%(
