@@ -23,7 +23,7 @@ Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
 VERSION="2.3.0dev"
-DATE="16.10.2015"
+DATE="21.10.2015"
 import asynchat
 import asyncore
 import atexit
@@ -608,124 +608,6 @@ class _virus_check():
 			for f in self.archivemap:
 				print(("Format %s"%f).ljust(20)+
 					"Unpacker %s"%self.archivemap[f]) 
-		
-	############
-	#_is_archive
-	############
-
-	def _is_archive(self,filename,filetype):
-		maintype,subtype=filetype.lower().split("/")
-		fname, extension = os.path.splitext(filename)
-		archivetype=None
-		result=False
-		subtypes={
-			"zip":"ZIP",
-			"x-compressed":"GZIP",
-			"x-compress":"GZIP",
-			"x-gzip":"GZIP",
-			"x-gtar":"TGZ",
-			"x-lzip":"LZ",
-			"x-lzma":"LZMA",
-			"x-lzh":"LHA",
-			"x-lzip":"LZIP",
-			"x-lzop":"LZO",
-			"x-zoo":None,
-			"x-rar-compressed":"RAR",
-			"x-7z-compressed":"7Z",
-			"x-bzip":"BZIP",
-			"x-bzip2":"BZIP2",
-			"vnd.android.package-archive":"ZIP",
-			"java-archive":"ZIP",
-			"x-snappy-framed":None,
-			"x-xz":"XZ",
-			"x-ace-compressed":None,
-			"x-astrotite-afa":None,
-			"x-alz-compressed":None,
-			"x-b1":None,
-			"x-dar":None,
-			"x-dgc-compressed":None,
-			"x-apple-diskimage":None,
-			"x-apple-diskimage":None,
-			"x-lzx":None,
-			"x-arj":"ARJ",
-			"x-tar":"TAR",
-			"vnd.ms-cab-compressed":"CAB",
-			"x-cfs-compressed":None,
-			"x-stuffit":None,
-			"x-stuffitx":None,
-			"ms-tnef":"TNEF",
-			"vnd.ms-tnef":"TNEF",
-			}
-						  
-		extensions={"7z":"7Z",
-					"ar":"AR",
-					"arj":"ARJ",
-					"apk":"ZIP",
-					"bz":"BZIP",
-					"bz2":"BZIP2ARJ",
-					"cab":"CABRPM",
-					"cpio":"CPIO",
-					"deb":"AR",
-					"exe":"EXE",
-					"gz":"GZIP",
-					"iso":"ISO",
-					"jar":"ZIP",
-					"lz":"LZIP",
-					"lha":"LHA",
-					"lzh":"LHA",
-					"lzma":"LZMA",
-					"lzo":"LZO",
-					"rar":"RAR",
-					"s7z":"RAR",
-					"tar":"TAR",
-					"tgz":"TARGZ",
-					"war":"ZIP",
-					"wim":"ZIP",
-					"xar":"AR",
-					"xz":"XZ",
-					"z":None,
-					"zip":"ZIP",
-					"zoo":None}
-
-		if maintype in ["application","other"]:
-
-			fname=os.path.split(filename)[1].lower()
-			extension=extension[1:]
-			tar=(".tar" in fname)
-
-			if tar:
-
-				if extension =="bz2":
-					archivetype="TARBZ2"
-				elif extension =="gz":
-					archivetype="TARGZ"
-
-				if archivetype!= None:
-					result=True
-					
-					return result,archivetype
-					
-			try:
-				archivetype=extensions[extension]
-				result=True
-				return result,archivetype
-			except:
-				pass	
-
-			try:
-				archivetype=subtypes[subtype]
-				result=True
-				return result,archivetype
-			except:
-				pass
-
-			if filename.lower() in ["winmail.dat","win.dat"]:
-				archivetype="TNEF"
-				
-		if archivetype!=None:
-			result=True
-			
-		return result, archivetype
 
 	#############################
 	#check_directory_for_archives
@@ -738,7 +620,7 @@ class _virus_check():
 			for f in files:
 				pathf=os.path.join(root,f)
 				self.debug("check file %s"%f)
-				isarchive,archivetype=self._is_archive(f,"other/other")
+				archivetype=archivemanagers.get_archivetype(f,"other/other")
 				_unpacker=None
 
 				try:
@@ -749,13 +631,14 @@ class _virus_check():
 				#self.debug("\nFile %s, is archive %s of type %s,unpacker %s"
 				#			%(f,isarchive,archivetype,_unpacker))
 
-				if isarchive and _unpacker!=None:
+				if archivetype!=None and _unpacker!=None:
 					_u=None
 					
 					try:
 						_u=self.unpacker[_unpacker]
 					except:
 						return
+
 					self.debug("unpack archive %s"%f)
 					subdir=self._mktempdir(directory=directory)
 					newdir=os.path.join(directory,subdir)
@@ -786,7 +669,7 @@ class _virus_check():
 				self.log("file '%s' could not be stored"%filename)
 				self.log_traceback()
 
-			isarchive,archivetype=self._is_archive(filename,contenttype)
+			archivetype=archivemanagers.get_archivetype(filename,contenttype)
 			_unpacker=None
 
 			try:
@@ -794,10 +677,10 @@ class _virus_check():
 			except:
 				pass
 			
-			self.debug("File %s, is archive %s of type %s,unpacker %s"
-						%(filename,isarchive,archivetype,_unpacker))
+			self.debug("File %s, is archivetype %s,unpacker %s"
+						%(filename,archivetype,_unpacker))
 
-			if isarchive and _unpacker!=None:
+			if archivetype!=None and _unpacker!=None:
 				_u=None
 				
 				try:

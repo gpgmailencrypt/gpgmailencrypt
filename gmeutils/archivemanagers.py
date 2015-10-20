@@ -4,7 +4,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-sys.path.insert(1,"/home/horst/Programmierecke/gpgmailencrypt")
 
 ####################
 #CLASS _baseunpacker
@@ -76,8 +75,8 @@ class _AR(_baseunpacker):
 	##################
 
 	def uncompresscommand(  self,
-									sourcefile,
-									directory):
+							sourcefile,
+							directory):
 		cmd=[   self.cmd, 
 				"-x",
 				sourcefile,
@@ -106,8 +105,8 @@ class _ARJ(_baseunpacker):
 	##################
 
 	def uncompresscommand(  self,
-									sourcefile,
-									directory):
+							sourcefile,
+							directory):
 		cmd=[   self.cmd, 
 				"x",sourcefile,
 				"\"-ht%s\""%directory,
@@ -139,8 +138,8 @@ class _BZ2(_baseunpacker):
 	##################
 
 	def uncompresscommand(  self,
-									sourcefile,
-									directory):
+							sourcefile,
+							directory):
 		format=""
 		path,origname=os.path.split(sourcefile)
 		fname, extension = os.path.splitext(origname)
@@ -181,8 +180,8 @@ class _CAB(_baseunpacker):
 	##################
 
 	def uncompresscommand(  self,
-									sourcefile,
-									directory):
+							sourcefile,
+							directory):
 		cmd=[   self.cmd, 
 				"-d%s"%directory,
 				sourcefile,
@@ -242,8 +241,8 @@ class _GZIP(_baseunpacker):
 	##################
 
 	def uncompresscommand(  self,
-									sourcefile,
-									directory):
+							sourcefile,
+							directory):
 		format=""
 		path,origname=os.path.split(sourcefile)
 		fname, extension = os.path.splitext(origname)
@@ -272,7 +271,6 @@ class _LHA(_baseunpacker):
 		_baseunpacker.__init__(self,parent)
 		self.cmd=shutil.which("lha")
 
-
 	#################
 	#unpackingformats
 	#################
@@ -285,8 +283,8 @@ class _LHA(_baseunpacker):
 	##################
 
 	def uncompresscommand(  self,
-									sourcefile,
-									directory):
+							sourcefile,
+							directory):
 		cmd=[   self.cmd, 
 				"-w=%s"%directory,
 				"-e",
@@ -304,7 +302,6 @@ class _LZO(_baseunpacker):
 		_baseunpacker.__init__(self,parent)
 		self.cmd=shutil.which("lzop")
 
-
 	#################
 	#unpackingformats
 	#################
@@ -317,8 +314,8 @@ class _LZO(_baseunpacker):
 	##################
 
 	def uncompresscommand(  self,
-									sourcefile,
-									directory):
+							sourcefile,
+							directory):
 		cmd=[   self.cmd, 
 				"-p%s"%directory,
 				"-d",
@@ -349,8 +346,8 @@ class _RAR(_baseunpacker):
 	##################
 
 	def uncompresscommand(  self,
-									sourcefile,
-									directory):
+							sourcefile,
+							directory):
 		format=""
 		extension=os.path.splitext(sourcefile)[1].lower()
 
@@ -383,8 +380,8 @@ class _RIPOLE(_baseunpacker):
 	##################
 
 	def uncompresscommand(  self,
-									sourcefile,
-									directory):
+							sourcefile,
+							directory):
 		format=""
 		extension=os.path.splitext(sourcefile)[1].lower()
 
@@ -424,8 +421,8 @@ class _TAR(_baseunpacker):
 	##################
 
 	def uncompresscommand(  self,
-									sourcefile,
-									directory):
+							sourcefile,
+							directory):
 		format=""
 		extension=os.path.splitext(sourcefile)[1].lower()
 
@@ -466,8 +463,8 @@ class _TNEF(_baseunpacker):
 	##################
 
 	def uncompresscommand(  self,
-									sourcefile,
-									directory):
+							sourcefile,
+							directory):
 		cmd=[   self.cmd, 
 				"-C \"%s\""%directory,
 				"-f",sourcefile,
@@ -496,8 +493,8 @@ class _XZ(_baseunpacker):
 	##################
 
 	def uncompresscommand(  self,
-									sourcefile,
-									directory):
+							sourcefile,
+							directory):
 		format=""
 		path,origname=os.path.split(sourcefile)
 		fname, extension = os.path.splitext(origname)
@@ -857,3 +854,108 @@ def get_archivemanager(manager, parent):
 def get_managerlist():
 	return ["AR","ARJ","BZIP2","CAB","CPIO","GZIP","LHA",
 			"LZO","RAR","RIPOLE","TAR","TNEF","XZ","ZIP"]
+
+def get_archivetype(filename,filetype):
+	maintype,subtype=filetype.lower().split("/")
+	fname, extension = os.path.splitext(filename)
+	archivetype=None
+	subtypes={
+		"java-archive":					"ZIP",
+		"ms-tnef":						"TNEF",
+		"vnd.ms-cab-compressed":		"CAB",
+		"vnd.android.package-archive":	"ZIP",
+		"vnd.ms-tnef":					"TNEF",
+		"x-7z-compressed":				"7Z",
+		"x-ace-compressed":				None,
+		"x-alz-compressed":				None,
+		"x-apple-diskimage":			None,
+		"x-apple-diskimage":			None,
+		"x-arj":						"ARJ",
+		"x-astrotite-afa":				None,
+		"x-b1":							None,
+		"x-bzip":						"BZIP",
+		"x-bzip2":						"BZIP2",
+		"x-cfs-compressed":				None,
+		"x-compressed":					"GZIP",
+		"x-compress":					"GZIP",
+		"x-dar":						None,
+		"x-dgc-compressed":				None,
+		"x-gtar":						"TGZ",
+		"x-gzip":						"GZIP",
+		"x-lzh":						"LHA",
+		"x-lzip":						"LZIP",
+		"x-lzma":						"LZMA",
+		"x-lzop":						"LZO",
+		"x-lzx":						None,
+		"x-tar":						"TAR",
+		"x-rar-compressed":				"RAR",
+		"x-snappy-framed":				None,
+		"x-stuffit":					None,
+		"x-stuffitx":					None,
+		"x-xz":							"XZ",
+		"zip":							"ZIP",
+		"x-zoo":						None,
+
+		}
+					  
+	extensions={"7z":	"7Z",
+				"ar":	"AR",
+				"arj":	"ARJ",
+				"apk":	"ZIP",
+				"bz":	"BZIP",
+				"bz2":	"BZIP2",
+				"cab":	"CAB",
+				"cpio":	"CPIO",
+				"deb":	"AR",
+				"exe":	"EXE",
+				"gz":	"GZIP",
+				"iso":	"ISO",
+				"jar":	"ZIP",
+				"lz":	"LZIP",
+				"lha":	"LHA",
+				"lzh":	"LHA",
+				"lzma":	"LZMA",
+				"lzo":	"LZO",
+				"rar":	"RAR",
+				"s7z":	"7Z",
+				"tar":	"TAR",
+				"tgz":	"TARGZ",
+				"war":	"ZIP",
+				"wim":	"ZIP",
+				"xar":	"AR",
+				"xz":	"XZ",
+				"z":	"GZIP",
+				"zip":	"ZIP",
+				"zoo":	None}
+
+	if maintype in ["application","other"]:
+		fname=os.path.split(filename)[1].lower()
+		extension=extension[1:]
+		tar=(".tar" in fname)
+
+		if tar:
+
+			if extension =="bz2":
+				archivetype="TARBZ2"
+			elif extension =="gz":
+				archivetype="TARGZ"
+
+			return archivetype
+					
+		try:
+			archivetype=extensions[extension]
+			return archivetype
+		except:
+			pass	
+
+		try:
+			archivetype=subtypes[subtype]
+			return archivetype
+		except:
+			pass
+
+		if filename.lower() in ["winmail.dat","win.dat"]:
+			archivetype="TNEF"
+				
+	return archivetype
+
