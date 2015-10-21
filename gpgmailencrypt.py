@@ -5851,6 +5851,24 @@ class gme:
 			self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
 			return
 
+		if (self._VIRUSCHECK==True and self._virus_checker!=None):
+			result,info=self._virus_checker.has_virus(mailtext)
+
+			if result==True:
+				self._handle_virusmail(	info,
+										queue_id,
+										mailtext,
+										from_addr,
+										to_addr)
+				return
+			elif len(info)>0:
+				self.log(
+				"No virus found, but received the following messages",
+				"w")
+
+				for i in info:
+					self.log("Virusinfo: %s"% i,"w")
+
 		_encrypt_subject=self.check_encryptsubject(mailtext)
 
 		try:
@@ -6015,26 +6033,6 @@ class gme:
 				s.extract_publickey_from_mail(  f.name,
 												self._SMIMEKEYEXTRACTDIR)
 				self._del_tempfile(f.name)
-
-			if (self._VIRUSCHECK==True 
-			and self._virus_checker!=None
-			and self.is_encrypted(mailtext)):
-				result,info=self._virus_checker.has_virus(mailtext)
-
-				if result==True:
-					self._handle_virusmail(	info,
-											queue_id,
-											mailtext,
-											from_addr,
-											to_addr)
-					return
-				elif len(info)>0:
-					self.log(
-					"No virus found, but received the following messages",
-					"w")
-
-					for i in info:
-						self.log("Virusinfo: %s"% i,"w")
 
 			if self._SPAMCHECK and self._spam_cmd!=None:
 				self.debug("Spamcheck")
