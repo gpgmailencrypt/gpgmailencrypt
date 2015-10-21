@@ -6282,8 +6282,10 @@ def start_adminconsole(host,port):
 		#########
 		
 		def _sendcmd(self, cmd,arg=""):
+
 			if self.smtp==None:
 				return (None,None)
+
 			self.smtp.putcmd(cmd,arg)
 			(code, msg) = self.getreply()
 			print(msg.decode("UTF-8"))
@@ -6294,8 +6296,10 @@ def start_adminconsole(host,port):
 		#########
 		
 		def getreply(self):
+
 			if self.smtp==None:
 					return None
+
 			return self.smtp.getreply()	
 
 		######
@@ -6314,12 +6318,12 @@ def start_adminconsole(host,port):
 
 			print("gpgmailencrypt admin console")
 			print("============================")
+
 			try:
 				self.smtp.starttls()
 			except:
 				print("WARNING. Connection is not encrypted. "
 					"STARTTLS was not possible")
-				pass
 			
 			user=input("User: ")
 			password=getpass.getpass("Password: ")

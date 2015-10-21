@@ -62,6 +62,7 @@ setup(
     author='Horst Knorr',
     author_email='gpgmailencrypt@gmx.de',
     license='GPL v3',
+    install_requires=["pyclamd"],
     cmdclass={'install': install},
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
@@ -83,7 +84,7 @@ setup(
     zip_safe=False,
     keywords='Email encryption daemon gateway',
     scripts =["scripts/gme_admin.py","scripts/encryptmaildir.py","scripts/gme.py"],
-    packages=["","mailtemplates","documentation","misc"],
+    packages=["","gmeutils","mailtemplates","documentation","misc"],
     package_data={'mailtemplates': ['*/*'],"documentation":["*"],"misc":["*"]},
     # https://packaging.python.org/en/latest/requirements.html
 )
