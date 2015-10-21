@@ -201,8 +201,6 @@ def print_exampleconfig():
 "#if True e-mails will be sent encrypted, even if there is no key")
 	print ("".ljust(space)+
 "#Fallback encryption is encrypted pdf")
-	print ("checkviruses=False".ljust(space)+
-"#if true,e-mails will be checked for viruses before being encrypted")
 	print ("")
 	print ("[gpg]")
 	print ("keyhome = /var/lib/gpgmailencrypt/.gnupg".ljust(space)+
@@ -306,6 +304,20 @@ def print_exampleconfig():
 	"#comma separated list of admins, that can use the admin console")
 	print ("statistics=1".ljust(space)+
 	"#how often per day should statistical data be logged (0=none) max is 24")
+	print ("")
+	print ("[virus]")
+	print ("checkviruses=False".ljust(space)+
+"#if true,e-mails will be checked for viruses before being encrypted")
+	print ("")
+	print ("[spam]")
+	print ("checkspam=False".ljust(space)+
+	"#if true, e-mails will be checked if they are spam")
+	print ("host=localhost".ljust(space)+
+	"#server where spamassassin is running")
+	print ("port=783".ljust(space)+
+	"#port of the spamassassin server")
+	print ("maxsize=500000".ljust(space)+
+	"#maximum size of e-mail,that will be checked if it is spam")
 
 #############
 #_splitstring
@@ -2566,6 +2578,10 @@ class gme:
 		self._ZIPATTACHMENTS=False
 		self._ADMINS=[]
 		self._VIRUSCHECK=False
+		self._SPAMCHECK=False
+		self._SPAMHOST="localhost"
+		self._SPAMPORT=783
+		self._SPAMMAXSIZE=500000
 		self._read_configfile()
 
 		if self._DEBUG:
@@ -2635,12 +2651,6 @@ class gme:
 				pass
 
 		if _cfg.has_section('default'):
-
-			try:
-				self._VIRUSCHECK=_cfg.getboolean('default','checkviruses')
-				self.set_check_viruses(self._VIRUSCHECK)
-			except:
-				pass
 
 			try:
 				domains=_cfg.get('default','homedomains').split(",")
@@ -2936,6 +2946,33 @@ class gme:
 					self._SMIMEKEYEXTRACTDIR=k.strip()
 			except:
 				pass
+
+		if _cfg.has_section('spam'):
+			try:
+				self._SPAMCHECK=_cfg.getboolean('spam','checkspam')
+			except:
+				pass
+			try:
+				self._SPAMHOST=_cfg.get('spam','host')
+			except:
+				pass
+			try:
+				self._SPAMPORT=_cfg.getint('spam','port')
+			except:
+				pass
+			try:
+				self._SPAMMAXSIZE=_cfg.getint('spam','maxsize')
+			except:
+				pass
+
+		if _cfg.has_section('virus'):
+			try:
+				self._VIRUSCHECK=_cfg.getboolean('virus','checkviruses')
+				self.set_check_viruses(self._VIRUSCHECK)
+			except:
+				pass
+
+
 
 		s=self.smime_factory()
 		self._smimeuser.update(s.create_keylist(self._SMIMEKEYHOME))
@@ -5983,6 +6020,19 @@ class gme:
 				s.extract_publickey_from_mail(  f.name,
 												self._SMIMEKEYEXTRACTDIR)
 				self._del_tempfile(f.name)
+
+			if self._SPAMCHECK:
+				self.debug("Spamcheck")
+				p=subprocess.Popen(["/usr/bin/spamc",
+									"-s",str(self._SPAMMAXSIZE),
+									"-d",self._SPAMHOST,
+									"-p",str(self._SPAMPORT)],
+									stdin=subprocess.PIPE,
+									stdout=subprocess.PIPE,
+									stderr=subprocess.PIPE)
+				mailtext=p.communicate(input=mailtext.encode("UTF-8",
+											_unicodeerror))[0].decode("UTF-8",
+											_unicodeerror)
 
 			for to_addr in recipient:
 				self.debug("encrypt_mail for user '%s'"%to_addr)
