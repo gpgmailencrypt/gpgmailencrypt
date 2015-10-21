@@ -2582,6 +2582,7 @@ class gme:
 		self._SPAMHOST="localhost"
 		self._SPAMPORT=783
 		self._SPAMMAXSIZE=500000
+		self._spam_cmd=shutil.which("spamc")
 		self._read_configfile()
 
 		if self._DEBUG:
@@ -3030,6 +3031,7 @@ class gme:
 				'keyhome=',
 				'log=',
 				'output=',
+				'spamcheck=',
 				'verbose',
 				'version',
 				'viruscheck=',
@@ -3152,6 +3154,12 @@ class gme:
 					elif _arg in ["false","no"]:
 				   		self.set_check_viruses(False)
 				   	
+			if _opt == '--spamcheck':
+					print("SETSPAMCHECK ",_arg)
+					if _arg in ["true","yes",None]:
+				   		self._SPAMCHECK=True
+					elif _arg in ["false","no"]:
+				   		self._SPAMCHECK=False
 
 		if not self._RUNMODE==self.m_daemon:
 
@@ -5843,19 +5851,6 @@ class gme:
 			self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
 			return
 
-		if self._VIRUSCHECK==True and self._virus_checker!=None:
-			result,info=self._virus_checker.has_virus(mailtext)
-
-			if result==True:
-				self._handle_virusmail(info,queue_id,mailtext,from_addr,to_addr)
-				return
-			elif len(info)>0:
-				self.log("No virus found, but received the following messages",
-						"w")
-
-				for i in info:
-					self.log("Virusinfo: %s"% i,"w")
-
 		_encrypt_subject=self.check_encryptsubject(mailtext)
 
 		try:
@@ -6021,9 +6016,29 @@ class gme:
 												self._SMIMEKEYEXTRACTDIR)
 				self._del_tempfile(f.name)
 
-			if self._SPAMCHECK:
+			if (self._VIRUSCHECK==True 
+			and self._virus_checker!=None
+			and self.is_encrypted(mailtext)):
+				result,info=self._virus_checker.has_virus(mailtext)
+
+				if result==True:
+					self._handle_virusmail(	info,
+											queue_id,
+											mailtext,
+											from_addr,
+											to_addr)
+					return
+				elif len(info)>0:
+					self.log(
+					"No virus found, but received the following messages",
+					"w")
+
+					for i in info:
+						self.log("Virusinfo: %s"% i,"w")
+
+			if self._SPAMCHECK and self._spam_cmd!=None:
 				self.debug("Spamcheck")
-				p=subprocess.Popen(["/usr/bin/spamc",
+				p=subprocess.Popen([self._spam_cmd,
 									"-s",str(self._SPAMMAXSIZE),
 									"-d",self._SPAMHOST,
 									"-p",str(self._SPAMPORT)],
