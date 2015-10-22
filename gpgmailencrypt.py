@@ -23,7 +23,7 @@ Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
 VERSION="2.3.0dev"
-DATE="21.10.2015"
+DATE="23.10.2015"
 import asynchat
 import asyncore
 import atexit
@@ -186,7 +186,7 @@ def print_exampleconfig():
 	print ("homedomains=localhost".ljust(space)+
 "#a comma separated list of domains, for which this server is working"
 "and users might receive system mail and can use pdf encrypt")
-	print ("spamsubject =***SPAM".ljust(space)+
+	print ("spamsubject =***SPAM***".ljust(space)+
 "#Spam recognition string, spam will not be encrypted")
 	print ("output=mail".ljust(space)+
 "#valid values are 'mail'or 'stdout'")
@@ -2514,6 +2514,7 @@ class gme:
 		self._deferdir=os.path.expanduser("~/gpgmaildirtmp")
 		self._viruslist=os.path.expanduser("~/viruslist.txt")
 		self._quarantinedir=os.path.expanduser("~/gmequarantine")
+		self._spam_cmd=shutil.which("spamc")
 
 		if not os.path.exists(self._deferdir):
 			os.makedirs(self._deferdir)
@@ -2552,7 +2553,6 @@ class gme:
 		self._SMIMECMD="/usr/bin/openssl"
 		self._SMIMECIPHER="DES3"
 		self._SMIMEAUTOMATICEXTRACTKEYS=False
-		self._SPAMSUBJECT="***SPAM"
 		self._OUTPUT=self.o_mail 
 		self._DEBUGSEARCHTEXT=[]
 		self._DEBUGEXCLUDETEXT=[]
@@ -2582,7 +2582,11 @@ class gme:
 		self._SPAMHOST="localhost"
 		self._SPAMPORT=783
 		self._SPAMMAXSIZE=500000
-		self._spam_cmd=shutil.which("spamc")
+		self._SPAMLEVEL=6.2
+		self._SPAMSUSPECTLEVEL=2.0
+		self._SPAMCHANGESUBJECT=True
+		self._SPAMSUBJECT="***SPAM***"
+		self._SPAMSUSPECTSUBJECT="***SPAMVERDACHT***"
 		self._read_configfile()
 
 		if self._DEBUG:
@@ -2698,11 +2702,6 @@ class gme:
 
 			try:
 				self._DOMAINS=_cfg.get('default','domains')
-			except:
-				pass
-
-			try:
-				self._SPAMSUBJECT=_cfg.get('default','spamsubject')
 			except:
 				pass
 
@@ -2963,6 +2962,27 @@ class gme:
 				pass
 			try:
 				self._SPAMMAXSIZE=_cfg.getint('spam','maxsize')
+			except:
+				pass
+
+			try:
+				self._SPAMLEVEL=_cfg.getfloat('spam','spamlevel')
+			except:
+				pass
+			try:
+				self._SPAMSUSPECTLEVEL=_cfg.getfloat('spam','spamsuspectlevel')
+			except:
+				pass
+			try:
+				self._SPAMCHANGESUBJECT=_cfg.getboolean('spam','change_subject')
+			except:
+				pass
+			try:
+				self._SPAMSUBJECT=_cfg.get('spam','spam_subject')
+			except:
+				pass
+			try:
+				self._SPAMSUSPECTSUBJECT=_cfg.get('spam','spamsuspect_subject')
 			except:
 				pass
 
@@ -5305,12 +5325,6 @@ class gme:
 		if "Message-Id" in raw_message:
 			msg_id="Id:%s "%raw_message["Message-Id"]
 
-		if ("Subject"  in raw_message 
-		and len(self._SPAMSUBJECT.strip())>0 
-		and self._SPAMSUBJECT in raw_message["Subject"]):
-			self.debug("message is SPAM, don't encrypt")
-			return None
-
 		if self.is_encrypted( raw_message ):
 			self.debug("encrypt_gpg_mail, is already encrypted")
 			return None
@@ -5837,7 +5851,8 @@ class gme:
 								queue_id,
 								mailtext,
 								from_addr,
-								to_addr):
+								to_addr,
+								is_spam=False):
 		_pgpmime=False
 		_prefer_gpg=True
 		_prefer_pdf=False
@@ -5869,6 +5884,12 @@ class gme:
 				for i in info:
 					self.log("Virusinfo: %s"% i,"w")
 
+		if is_spam:
+			m="Email is SPAM"
+			self.debug(m)
+			self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
+			return
+			
 		_encrypt_subject=self.check_encryptsubject(mailtext)
 
 		try:
@@ -6039,13 +6060,25 @@ class gme:
 				p=subprocess.Popen([self._spam_cmd,
 									"-s",str(self._SPAMMAXSIZE),
 									"-d",self._SPAMHOST,
+									"-R",
 									"-p",str(self._SPAMPORT)],
 									stdin=subprocess.PIPE,
 									stdout=subprocess.PIPE,
 									stderr=subprocess.PIPE)
-				mailtext=p.communicate(input=mailtext.encode("UTF-8",
+				result=p.communicate(input=mailtext.encode("UTF-8",
 											_unicodeerror))[0].decode("UTF-8",
 											_unicodeerror)
+				scoretext=result[:result.find("\n")].split("/")[0]
+				score=float(scoretext)
+				is_spam=(score>=self._SPAMLEVEL)
+				spamheader=(
+				"X-Spam-Score: %(score)s\r\n"
+				"X-Spam-Level: %(level)s\r\n"
+				"X-Spam-Flag: %(flag)s\r\n")%{
+						"score":scoretext,
+						"flag":is_spam,
+						"level":"*"*int(score)}
+				mailtext=spamheader+mailtext
 
 			for to_addr in recipient:
 				self.debug("encrypt_mail for user '%s'"%to_addr)
@@ -6066,6 +6099,22 @@ class gme:
 
 				from_addr = raw_message['From']
 
+				if self._SPAMCHANGESUBJECT:
+					subject=self._decode_header(raw_message["Subject"])
+
+					if score>self._SPAMSUSPECTLEVEL:
+
+						if score<self._SPAMLEVEL:
+							subject="%s %s"%(	self._SPAMSUSPECTSUBJECT,
+												subject)
+						else:
+							subject="%s %s"%(	self._SPAMSUBJECT,
+												subject)
+						
+					del raw_message["Subject"]
+					raw_message["Subject"]=subject
+					mailtext=raw_message.as_string()
+
 				if self._RUNMODE==self.m_daemon:
 					self._email_queue[self._queue_id]=[ fname,
 														from_addr,
@@ -6082,7 +6131,8 @@ class gme:
 				self.encrypt_single_mail(   mailid,
 											mailtext,
 											from_addr,
-											to_addr)
+											to_addr,
+											is_spam)
 		except:
 			self._count_deferredmails+=1
 			self.log_traceback()
