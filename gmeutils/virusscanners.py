@@ -8,22 +8,41 @@ import subprocess
 ##################
 
 class _basevirusscanner:
-	def __init__(self):
-		pass
+	def __init__(self,parent):
+		self.parent=parent
 
 	def has_virus(self,directory):
 		raise NotImplementedError
+	
+	def log(self,
+			msg,
+			infotype="m",
+			ln=-1):
 
+		if self.parent:
+			self.parent.log(msg,infotype,ln)
+
+	def log_traceback(self):
+		if self.parent:
+			self.parent.log_traceback()
+
+	def debug(  self,
+				msg,
+				lineno=0):
+		if self.parent:
+			self.parent.debug(msg,lineno)
+	
 #################
 #_bitdefenderscan
 #################
 
 class _bitdefenderscan(_basevirusscanner):
-	def __init__(self):
+	def __init__(self,parent):
 		self.cmd=shutil.which("bdscan")
+		_basevirusscanner.__init__(self,parent)
 
 	def has_virus(self,directory):
-		cmd=[self.cmd,"--no-list",directory]
+		cmd=[self.cmd,"--no-list","--action=ignore",directory]
 		result=False
 		information=[]
 		skip_header=2
@@ -62,7 +81,7 @@ class _bitdefenderscan(_basevirusscanner):
 				result=True
 
 		except:
-			pass
+			self.log_traceback()
 		
 		return result,information
 
@@ -72,8 +91,9 @@ class _bitdefenderscan(_basevirusscanner):
 ########
 
 class _sophosscan(_basevirusscanner):
-	def __init__(self):
+	def __init__(self,parent):
 		self.cmd=shutil.which("savscan")
+		_basevirusscanner.__init__(self,parent)
 
 	def has_virus(self,directory):
 		cmd=[self.cmd,"-ss","-nb","-f","-all","-rec","-sc",directory]
@@ -98,7 +118,7 @@ class _sophosscan(_basevirusscanner):
 				result=True
 
 		except:
-			pass
+			self.log_traceback()
 		
 		return result,information
 
@@ -110,9 +130,9 @@ try:
 	import pyclamd
 	
 	class _clamavscan(_basevirusscanner):
-		def __init__(self):
+		def __init__(self,parent):
 			self.clamd=pyclamd.ClamdAgnostic()
-			pass
+		_basevirusscanner.__init__(self,parent)
 
 		def has_virus(self,directory):
 			result=False
@@ -133,22 +153,23 @@ except:
 	clamavscan_available=False
 
 ################################################################################
+
 def get_virusscannerlist():
 	return ["BITDEFENDER","CLAMAV","SOPHOS"]
 
-def get_virusscanner(scanner):
+def get_virusscanner(scanner,parent):
 	scanner=scanner.upper().strip()
 	
 	if scanner=="CLAMAV" and clamavscan_available:
-		return _clamavscan()
+		return _clamavscan(parent=parent)
 	
 	if scanner=="BITDEFENDER":
-		bd= _bitdefenderscan()
+		bd= _bitdefenderscan(parent=parent)
 		if len(bd.cmd)>0:
 			return bd
 			
 	if scanner=="SOPHOS":
-		bd= _sophosscan()
+		bd= _sophosscan(parent=parent)
 		if len(bd.cmd)>0:
 			return bd
 			

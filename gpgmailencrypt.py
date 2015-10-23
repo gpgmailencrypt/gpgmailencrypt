@@ -587,7 +587,7 @@ class _virus_check():
 
 		
 		for s in virusscanners.get_virusscannerlist():
-			vscanner=virusscanners.get_virusscanner(s)
+			vscanner=virusscanners.get_virusscanner(scanner=s,parent=self)
 
 			if vscanner!=None:
 				self.virusscanner[s]=vscanner
