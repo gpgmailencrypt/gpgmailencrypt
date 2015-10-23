@@ -782,12 +782,10 @@ class _virus_check():
 			return False,description
 			
 		directory=self.unpack_email(mail)			
-		#self._print_archivemap()
-		#print(self.virusscanner)
-		#print(directory)
 		result=False
 		
 		for scanner in self.virusscanner:
+			self.debug("Use virus scanner %s ..."%scanner)
 			hasvirus,info=self.virusscanner[scanner].has_virus(directory)
 
 			if hasvirus:	
@@ -3184,16 +3182,17 @@ class gme:
 				   self._ZIPATTACHMENTS=True
 
 			if _opt == '--viruscheck':
-					if _arg in ["true","yes",None]:
+
+					if _arg.lower() in ["true","yes",None]:
 				   		self.set_check_viruses(True)
-					elif _arg in ["false","no"]:
+					elif _arg.lower() in ["false","no"]:
 						self.set_check_viruses(False)
 				   	
 			if _opt == '--spamcheck':
 
-					if _arg in ["true","yes",None]:
+					if _arg.lower() in ["true","yes",None]:
 				   		self._SPAMCHECK=True
-					elif _arg in ["false","no"]:
+					elif _arg.lower() in ["false","no"]:
 				   		self._SPAMCHECK=False
 
 		if not self._RUNMODE==self.m_daemon:

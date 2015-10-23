@@ -91,6 +91,7 @@ try:
 except:
 	clamavscan_available=False
 
+################################################################################
 def get_virusscannerlist():
 	return ["BITDEFENDER","CLAMAV"]
 
