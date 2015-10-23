@@ -186,8 +186,6 @@ def print_exampleconfig():
 	print ("homedomains=localhost".ljust(space)+
 "#a comma separated list of domains, for which this server is working"
 "and users might receive system mail and can use pdf encrypt")
-	print ("spamsubject =***SPAM***".ljust(space)+
-"#Spam recognition string, spam will not be encrypted")
 	print ("output=mail".ljust(space)+
 "#valid values are 'mail'or 'stdout'")
 	print ("locale=en".ljust(space)+
@@ -318,6 +316,19 @@ def print_exampleconfig():
 	"#port of the spamassassin server")
 	print ("maxsize=500000".ljust(space)+
 	"#maximum size of e-mail,that will be checked if it is spam")
+
+	print ("spamlevel=6.1".ljust(space)+
+	"#")
+	print ("spamsuspectlevel=2.0".ljust(space)+
+	"#")
+	print ("add_spamheader=False".ljust(space)+
+	"#")
+	print ("change_subject=False".ljust(space)+
+	"#")
+	print ("spam_subject=***SPAM***".ljust(space)+
+	"#")
+	print ("spamsuspect_subject=***SPAMSUSPICION***".ljust(space)+
+	"#")
 
 #############
 #_splitstring
@@ -2586,7 +2597,8 @@ class gme:
 		self._SPAMSUSPECTLEVEL=2.0
 		self._SPAMCHANGESUBJECT=True
 		self._SPAMSUBJECT="***SPAM***"
-		self._SPAMSUSPECTSUBJECT="***SPAMVERDACHT***"
+		self._SPAMSUSPECTSUBJECT="***SPAMSUSPICION***"
+		self._SPAMADDHEADER=True
 		self._read_configfile()
 
 		if self._DEBUG:
@@ -2953,6 +2965,10 @@ class gme:
 			except:
 				pass
 			try:
+				self._SPAMADDHEADER==_cfg.getboolean('spam','add_spamheader')
+			except:
+				pass
+			try:
 				self._SPAMHOST=_cfg.get('spam','host')
 			except:
 				pass
@@ -2964,7 +2980,6 @@ class gme:
 				self._SPAMMAXSIZE=_cfg.getint('spam','maxsize')
 			except:
 				pass
-
 			try:
 				self._SPAMLEVEL=_cfg.getfloat('spam','spamlevel')
 			except:
@@ -2986,14 +3001,15 @@ class gme:
 			except:
 				pass
 
+		if self._SPAMSUSPECTLEVEL >=self._SPAMLEVEL:
+			self._SPAMSUSPECTLEVEL=self._SPAMLEVEL-0.5
+
 		if _cfg.has_section('virus'):
 			try:
 				self._VIRUSCHECK=_cfg.getboolean('virus','checkviruses')
 				self.set_check_viruses(self._VIRUSCHECK)
 			except:
 				pass
-
-
 
 		s=self.smime_factory()
 		self._smimeuser.update(s.create_keylist(self._SMIMEKEYHOME))
@@ -3168,14 +3184,13 @@ class gme:
 				   self._ZIPATTACHMENTS=True
 
 			if _opt == '--viruscheck':
-
 					if _arg in ["true","yes",None]:
 				   		self.set_check_viruses(True)
 					elif _arg in ["false","no"]:
-				   		self.set_check_viruses(False)
+						self.set_check_viruses(False)
 				   	
 			if _opt == '--spamcheck':
-					print("SETSPAMCHECK ",_arg)
+
 					if _arg in ["true","yes",None]:
 				   		self._SPAMCHECK=True
 					elif _arg in ["false","no"]:
@@ -5789,6 +5804,7 @@ class gme:
 
 		for i in information:
 			self.log("Virusinfo: %s"% i,"w")
+	
 		_time=time.time()
 
 		if self._RUNMODE==self.m_daemon:
@@ -5865,7 +5881,7 @@ class gme:
 			self._count_alreadyencryptedmails+=1
 			self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
 			return
-
+		
 		if (self._VIRUSCHECK==True and self._virus_checker!=None):
 			result,info=self._virus_checker.has_virus(mailtext)
 
@@ -6035,6 +6051,9 @@ class gme:
 		if isinstance(recipient,str):
 			recipient=[recipient]
 
+		is_spam=False
+		score=0
+
 		try:
 
 			if self._debug_keepmail(mailtext): #DEBUG
@@ -6071,14 +6090,16 @@ class gme:
 				scoretext=result[:result.find("\n")].split("/")[0]
 				score=float(scoretext)
 				is_spam=(score>=self._SPAMLEVEL)
-				spamheader=(
-				"X-Spam-Score: %(score)s\r\n"
-				"X-Spam-Level: %(level)s\r\n"
-				"X-Spam-Flag: %(flag)s\r\n")%{
-						"score":scoretext,
-						"flag":is_spam,
-						"level":"*"*int(score)}
-				mailtext=spamheader+mailtext
+
+				if self._SPAMADDHEADER:
+					spamheader=(
+					"X-Spam-Score: %(score)s\r\n"
+					"X-Spam-Level: %(level)s\r\n"
+					"X-Spam-Flag: %(flag)s\r\n")%{
+							"score":scoretext,
+							"flag":is_spam,
+							"level":"*"*int(score)}
+					mailtext=spamheader+mailtext
 
 			for to_addr in recipient:
 				self.debug("encrypt_mail for user '%s'"%to_addr)
