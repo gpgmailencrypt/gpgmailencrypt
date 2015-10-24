@@ -85,6 +85,36 @@ class _bitdefenderscan(_basevirusscanner):
 		
 		return result,information
 
+############
+#_clamavscan
+############
+
+try:
+	import pyclamd
+	
+	class _clamavscan(_basevirusscanner):
+		def __init__(self,parent):
+			self.clamd=pyclamd.ClamdAgnostic()
+			_basevirusscanner.__init__(self,parent)
+
+		def has_virus(self,directory):
+			result=False
+			scanresult=self.clamd.scan_file(directory)
+			information=[]
+
+			if scanresult!=None and len(scanresult)>0:
+				result=True
+
+				for a in scanresult:
+					filename=os.path.split(a)[1]
+					information.append(["CLAMAV",filename,scanresult[a][1]])
+			
+			return result,information
+	
+	clamavscan_available=True
+except:
+	clamavscan_available=False
+	raise
 
 ########
 #_sophos
@@ -122,36 +152,6 @@ class _sophosscan(_basevirusscanner):
 		
 		return result,information
 
-############
-#_clamavscan
-############
-
-try:
-	import pyclamd
-	
-	class _clamavscan(_basevirusscanner):
-		def __init__(self,parent):
-			self.clamd=pyclamd.ClamdAgnostic()
-		_basevirusscanner.__init__(self,parent)
-
-		def has_virus(self,directory):
-			result=False
-			scanresult=self.clamd.scan_file(directory)
-			information=[]
-
-			if scanresult!=None and len(scanresult)>0:
-				result=True
-
-				for a in scanresult:
-					filename=os.path.split(a)[1]
-					information.append(["CLAMAV",filename,scanresult[a][1]])
-			
-			return result,information
-	
-	clamavscan_available=True
-except:
-	clamavscan_available=False
-
 ################################################################################
 
 def get_virusscannerlist():
@@ -159,7 +159,7 @@ def get_virusscannerlist():
 
 def get_virusscanner(scanner,parent):
 	scanner=scanner.upper().strip()
-	
+
 	if scanner=="CLAMAV" and clamavscan_available:
 		return _clamavscan(parent=parent)
 	
