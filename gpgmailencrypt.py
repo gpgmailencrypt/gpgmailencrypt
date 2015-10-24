@@ -3,7 +3,8 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 """
-gpgmailencrypt is an e-mail gateway, that  can encrypt e-mails.
+gpgmailencrypt is an e-mail gateway, that  can encrypt e-mails, scan for viruses
+and spam.
 
 It supports
 * PGP/Inline
@@ -98,11 +99,8 @@ def _dbg(func):
 		if args:
 			if isinstance(args[0],gme):
 				parent=args[0]
-			elif hasattr(args[0],"parent"):
-				if isinstance(args[0].parent,gme):
-					parent=args[0].parent
 
-		if not parent or not parent._DEBUG:
+		if not parent:
 			return func(*args,**kwargs)
 
 		lineno=0
@@ -305,7 +303,7 @@ def print_exampleconfig():
 	print ("")
 	print ("[virus]")
 	print ("checkviruses=False".ljust(space)+
-"#if true,e-mails will be checked for viruses before being encrypted")
+	"#if true,e-mails will be checked for viruses before being encrypted")
 	print ("")
 	print ("[spam]")
 	print ("checkspam=False".ljust(space)+
@@ -318,17 +316,18 @@ def print_exampleconfig():
 	"#maximum size of e-mail,that will be checked if it is spam")
 
 	print ("spamlevel=6.1".ljust(space)+
-	"#")
+	"#threshold for spam, values higher than that means the mail is spam")
 	print ("spamsuspectlevel=2.0".ljust(space)+
-	"#")
+	"#threshold for spam, values higher than that means the mail might be spam")
+	print("".ljust(space)+"#(value must be smaller than 'spamlevel')")
 	print ("add_spamheader=False".ljust(space)+
-	"#")
+	"#if True the e-mail gets spam headers")
 	print ("change_subject=False".ljust(space)+
-	"#")
+	"#if True, the subject of the mail will get a prefix")
 	print ("spam_subject=***SPAM***".ljust(space)+
-	"#")
+	"#subject prefix for spam")
 	print ("spamsuspect_subject=***SPAMSUSPICION***".ljust(space)+
-	"#")
+	"#subject prefix for suspected spam")
 
 #############
 #_splitstring
@@ -339,11 +338,47 @@ def _splitstring(txt,length=80):
 		return (string[0+i:length+i] for i in range(0, len(string), length))
 	return list(chunkstring(txt,length))
 
+##########
+#_gmechild
+##########
+
+class _gmechild:
+	"base class of all classes that will be used from class gme"
+	
+	def __init__(self,parent):
+		self.parent=parent
+
+	def log(self,
+			msg,
+			infotype="m",
+			ln=-1):
+
+		try:
+			self.parent.log(msg,infotype,ln)
+		except:
+			pass
+
+	def log_traceback(self):
+		try:
+			self.parent.log_traceback()
+		except:
+			pass
+
+	def debug(  self,
+				msg,
+				lineno=0):
+		try:
+			self.parent.debug(msg,lineno)
+		except:
+			pass
+
+
+
 #########
 #_mytimer
 #########
 
-class _mytimer:
+class _mytimer(_gmechild):
 	"""
 	Timer class that can act either as a countdown timer or a periodic revolving 
 	timer.
@@ -380,7 +415,8 @@ class _mytimer:
 	To check if the the timer already expired check timer.is_running()
 	"""
 
-	def __init__(self):
+	def __init__(self,parent=None):
+		_gmechild.__init__(self,parent)
 		self.counter=0
 		self.alarmtime=10
 		self.timer=1
@@ -523,10 +559,10 @@ def replace_variables(  text,
 #viruscheck
 ###########
 
-class _virus_check():
+class _virus_check(_gmechild):
 	
 	def __init__(self,parent):
-		self.parent=parent 
+		_gmechild.__init__(self,parent)
 		self.debug("viruscheck __init__")
 		self.archivemap={}
 		self.unpacker={}
@@ -534,27 +570,6 @@ class _virus_check():
 		self._search_archivemanager()
 		self._search_virusscanner()
 
-	######
-	#debug
-	######
-
-	def debug(self,dbg):
-		self.parent.debug(dbg)
-		
-	####
-	#log
-	####
-
-	def log(self,lg,infotype="m"):
-		self.parent.log(lg,infotype)
-		
-	##############
-	#log_traceback
-	##############
-
-	def log_traceback(self):
-		self.parent.log_traceback()
-		
 	###########
 	#_mktempdir
 	###########
@@ -793,6 +808,8 @@ class _virus_check():
 				result=True
 				description=info
 				break
+			else:
+				self.debug("... %s: no virus found"%scanner)
 
 		try:
 			if not self.parent._DEBUG:
@@ -810,7 +827,7 @@ class _virus_check():
 #CLASS _GPG
 ###########
 
-class _GPG:
+class _GPG(_gmechild):
 	"""class to encrypt and decrypt files via gpg
 	Don't call this class directly, use gme.gpg_factory() instead!
 	"""
@@ -818,11 +835,11 @@ class _GPG:
 	def __init__(   self, 
 					parent,
 					keyhome=None):
+		_gmechild.__init__(self,parent)
 		self._recipient = ''
 		self._filename=''	
 		self.count=0
-		self.parent=parent
-		self.parent.debug("_GPG.__init__")
+		self.debug("_GPG.__init__")
 		self.set_recipient(None)
 
 		if isinstance(keyhome,str):
@@ -832,7 +849,7 @@ class _GPG:
 		else:
 			self._keyhome=os.path.expanduser('~/.gnupg')
 
-		self.parent.debug("_GPG.__init__ end")
+		self.debug("_GPG.__init__ end")
 
 	#############
 	#_set_counter
@@ -919,20 +936,20 @@ class _GPG:
 		"""returns True if a public key for e-mail address 'key' exists,
 			else False
 		"""
-		self.parent.debug("gpg.has_public_key '%s'"%key)
+		self.debug("gpg.has_public_key '%s'"%key)
 
 		if len(self.parent._GPGkeys)==0:
 			self._get_public_keys()
 
 		if not isinstance(key,str):
-			self.parent.debug("has_public_key, key not of type str")
+			self.debug("has_public_key, key not of type str")
 			return False
 
 		if key in self.parent._GPGkeys:	
 			return True
 		else:
-			self.parent.debug("has_publickey, key not in _GPGkeys")
-			self.parent.debug("_GPGkeys '%s'"%str(self.parent._GPGkeys))
+			self.debug("has_publickey, key not in _GPGkeys")
+			self.debug("_GPGkeys '%s'"%str(self.parent._GPGkeys))
 			return False
  
 	#################
@@ -941,13 +958,13 @@ class _GPG:
 
 	@_dbg
 	def _get_public_keys( self ):
-		self.parent.debug("_GPG._get_public_keys")
+		self.debug("_GPG._get_public_keys")
 		self.parent._GPGkeys = list()
 		cmd = '%s --homedir %s --list-keys --with-colons' % (
 					self.parent._GPGCMD, 
 					self._keyhome.replace("%user",
 					self._recipient))
-		self.parent.debug("_GPG.public_keys command: '%s'"%cmd)
+		self.debug("_GPG.public_keys command: '%s'"%cmd)
 
 		try:
 			p = subprocess.Popen(   cmd.split(' '), 
@@ -968,14 +985,14 @@ class _GPG:
 					   "[-a-zA-Z0-9_%\+\.]+@[-_0-9a-zA-Z\.]+\.[-_0-9a-zA-Z\.]+",
 					   email)
 					except:
-						self.parent.log_traceback()
+						self.log_traceback()
 
 					if found != None:
 
 						try:
 							email=email[found.start():found.end()]
 						except:
-							self.parent.log("splitting email address (%s) "
+							self.log("splitting email address (%s) "
 											"didn't work"%email,"w")
 							email=""
 
@@ -985,9 +1002,9 @@ class _GPG:
 							and self.parent._GPGkeys.count(email) == 0):
 							self.parent._GPGkeys.append(email)
 		except:
-			self.parent.log("Error opening keyring (Perhaps wrong "
+			self.log("Error opening keyring (Perhaps wrong "
 							"directory '%s'?)"%self._keyhome,"e")
-			self.parent.log_traceback()
+			self.log_traceback()
  
 	##################
 	#_get_private_keys
@@ -995,12 +1012,12 @@ class _GPG:
 
 	@_dbg
 	def _get_private_keys( self ):
-		self.parent.debug("_GPG._get_private_keys")
+		self.debug("_GPG._get_private_keys")
 		self.parent._GPGprivatekeys = list()
 		cmd = '%s --homedir %s --list-secret-keys --with-colons' % (
 					self.parent._GPGCMD, 
 					self._keyhome.replace("%user",self._recipient))
-		self.parent.debug("_GPG.private_keys command: '%s'"%cmd)
+		self.debug("_GPG.private_keys command: '%s'"%cmd)
 
 		try:
 			p = subprocess.Popen(   cmd.split(' '), 
@@ -1022,14 +1039,14 @@ class _GPG:
 						"\.[-_0-9a-zA-Z\.]+",
 						email)
 					except:
-						self.parent.log_traceback()
+						self.log_traceback()
 
 					if found != None:
 
 						try:
 							email=email[found.start():found.end()]
 						except:
-							self.parent.log("splitting email address (%s) "
+							self.log("splitting email address (%s) "
 											"didn't work"%email,"w")
 							email=""
 
@@ -1039,9 +1056,9 @@ class _GPG:
 						and self.parent._GPGprivatekeys.count(email) == 0):
 							self.parent._GPGprivatekeys.append(email)
 		except:
-			self.parent.log("Error opening keyring (Perhaps wrong "
+			self.log("Error opening keyring (Perhaps wrong "
 							"directory '%s'?)"%self._keyhome,"e")
-			self.parent.log_traceback()
+			self.log_traceback()
  
 	#############
 	#encrypt_file
@@ -1066,27 +1083,27 @@ class _GPG:
 			self.set_filename(filename)
 
 		if len(self._filename) == 0:
-			self.parent.log( 'Error: GPGEncrypt: filename not set',"e")
+			self.log( 'Error: GPGEncrypt: filename not set',"e")
 			return result,None
 
 		if recipient:
 			self.set_recipient(recipient)
 
 		if len(self._recipient)==0:
-			self.parent.log("GPG encrypt file: No recipient set!","e")
+			self.log("GPG encrypt file: No recipient set!","e")
 			return result,None
 
 		f=self.parent._new_tempfile()
-		self.parent.debug("_GPG.encrypt_file _new_tempfile %s"%f.name)
+		self.debug("_GPG.encrypt_file _new_tempfile %s"%f.name)
 		f.close()
 		_result = subprocess.call( 
 					' '.join(self._encryptcommand_fromfile(f.name,binary)),
 					shell=True ) 
-		self.parent.debug("Encryption command: '%s'" %
+		self.debug("Encryption command: '%s'" %
 					' '.join(self._encryptcommand_fromfile(f.name,binary)))
 
 		if _result != 0:
-			self.parent.log("Error executing command (Error code %d)"%_result,
+			self.log("Error executing command (Error code %d)"%_result,
 							"e")
 			return result,None
 		else:
@@ -1094,10 +1111,10 @@ class _GPG:
 
 		if binary:
 			res=open(f.name,mode="br")
-			self.parent.debug("GPG.encrypt_file binary open")
+			self.debug("GPG.encrypt_file binary open")
 		else:
 			res=open(f.name)
-			self.parent.debug("GPG.encrypt_file text open")
+			self.debug("GPG.encrypt_file text open")
 
 		encdata=res.read()
 		res.close()
@@ -1159,29 +1176,29 @@ class _GPG:
 			self.set_filename(filename)
 
 		if len(self._filename) == 0:
-			self.parent.log( 'Error: GPGDecrypt: filename not set',"e")
+			self.log( 'Error: GPGDecrypt: filename not set',"e")
 			return result,None
 
 		f=self.parent._new_tempfile()
-		self.parent.debug("_GPG.decrypt_file _new_tempfile %s"%f.name)
+		self.debug("_GPG.decrypt_file _new_tempfile %s"%f.name)
 		f.close()
 		_result = subprocess.call( 
 			' '.join(self._decryptcommand_fromfile(f.name,binary)),shell=True ) 
-		self.parent.debug("Encryption command: '%s'" %
+		self.debug("Encryption command: '%s'" %
 			' '.join(self._decryptcommand_fromfile(f.name,binary)))
 
 		if _result != 0:
-			self.parent.log("Error executing command (Error code %d)"%_result,
+			self.log("Error executing command (Error code %d)"%_result,
 							"e")
 		else:
 			result=True
 
 		if binary:
 			res=open(f.name,mode="br")
-			self.parent.debug("GPG.decrypt_file binary open")
+			self.debug("GPG.decrypt_file binary open")
 		else:
 			res=open(f.name)
-			self.parent.debug("GPG.decrypt_file text open")
+			self.debug("GPG.decrypt_file text open")
 
 		encdata=res.read()
 		res.close()
@@ -1217,10 +1234,11 @@ class _GPG:
 #CLASS GPGENCRYPTEDATTACHMENT
 #############################
 
-class _GPGEncryptedAttachment(email.message.Message):
+class _GPGEncryptedAttachment(email.message.Message,_gmechild):
 
-	def  __init__(self):
+	def  __init__(self,parent=None):
 		email.message.Message. __init__(self)
+		_gmechild.__init__(self,parent)
 		self._masterboundary=None
 		self._filename=None
 		self.set_type("text/plain")
@@ -1282,7 +1300,7 @@ class _GPGEncryptedAttachment(email.message.Message):
 #CLASS _SMIME
 #############
 
-class _SMIME:
+class _SMIME(_gmechild):
 	"""class to encrypt and decrypt files for SMIME via openssl
 	Don't call this class directly, use gme.smime_factory() instead!
 	"""
@@ -1291,8 +1309,8 @@ class _SMIME:
 	def __init__(   self,
 					parent, 
 					keyhome=None):
-		self.parent=parent
-		self.parent.debug("_SMIME.__init__ %s"%self.parent._SMIMEKEYHOME)
+		_gmechild.__init__(self,parent)
+		self.debug("_SMIME.__init__ %s"%self.parent._SMIMEKEYHOME)
 
 		if type(keyhome)==str:
 			self._keyhome = os.path.expanduser(keyhome)
@@ -1302,7 +1320,7 @@ class _SMIME:
 		self._recipient = ''
 		self._filename=''	
 		self._recipient=None
-		self.parent.debug("_SMIME.__init__ end")
+		self.debug("_SMIME.__init__ end")
  
 	############
 	#public_keys
@@ -1390,13 +1408,13 @@ class _SMIME:
 			else False
 		"""
 		if not isinstance(key,str):
-			self.parent.debug("smime has_public_key, key not of type str")
+			self.debug("smime has_public_key, key not of type str")
 			return False
 
 		try:
 			_u=self.parent._smimeuser[key]
 		except:
-		   self.parent.debug("smime has_public_key, key not found for '%s'"%key)
+		   self.debug("smime has_public_key, key not found for '%s'"%key)
 		   return False
 
 		return True
@@ -1424,28 +1442,28 @@ class _SMIME:
 			self.set_filename(filename)
 
 		if len(self._filename) == 0:
-			self.parent.log( 'Error: _SMIME: filename not set',"m")
+			self.log( 'Error: _SMIME: filename not set',"m")
 			return result,''
 
 		if recipient:
 			self.set_recipient(recipient)
 
 		if len(self._recipient)==0:
-			self.parent.log("SMIME encrypt file: No recipient set!","e")
+			self.log("SMIME encrypt file: No recipient set!","e")
 			return result,None
 
 		f=self.parent._new_tempfile()
-		self.parent.debug("_SMIME.encrypt_file _new_tempfile %s"%f.name)
+		self.debug("_SMIME.encrypt_file _new_tempfile %s"%f.name)
 		f.close()
 		_result = subprocess.call( 
 				' '.join(self._command_encrypt_fromfile( f.name,
 														 binary))
 			   ,shell=True ) 
-		self.parent.debug("Encryption command: '%s'" %
+		self.debug("Encryption command: '%s'" %
 						' '.join(self._command_encrypt_fromfile(f.name,binary)))
 
 		if _result != 0:
-		  self.parent.log("Error executing command (Error code %d)"%_result,"e")
+		  self.log("Error executing command (Error code %d)"%_result,"e")
 		  return result,None
 		else:
 			result=True
@@ -1507,24 +1525,24 @@ class _SMIME:
 			self.set_filename(filename)
 
 		if len(self._filename) == 0:
-			self.parent.log( 'Error: _SMIME: filename not set',"m")
+			self.log( 'Error: _SMIME: filename not set',"m")
 			return result,''
 
 		if recipient:
 			self.set_recipient(recipient)
 
 		f=self.parent._new_tempfile()
-		self.parent.debug("_SMIME.decrypt_file _new_tempfile %s"%f.name)
+		self.debug("_SMIME.decrypt_file _new_tempfile %s"%f.name)
 		f.close()
 		_result = subprocess.call( 
 				' '.join(self._command_decrypt_fromfile(f.name,
 														binary))
 				,shell=True ) 
-		self.parent.debug("Decryption command: '%s'" %
+		self.debug("Decryption command: '%s'" %
 				' '.join(self._command_decrypt_fromfile(f.name,binary)))
 
 		if _result != 0:
-			self.parent.log("Error executing command (Error code %d)"%
+			self.log("Error executing command (Error code %d)"%
 						_result,"e")
 		else:
 			result=True
@@ -1642,7 +1660,7 @@ class _SMIME:
 		This function extracts the key and stores it in the directory 
 		'targetdir'.
 		"""
-		self.parent.debug("extract_publickey_from_mail to '%s'"%targetdir)
+		self.debug("extract_publickey_from_mail to '%s'"%targetdir)
 		f=tempfile.NamedTemporaryFile(mode='wb',delete=False,prefix='mail-')
 		fname=f.name
 
@@ -1659,7 +1677,7 @@ class _SMIME:
 				"-print_certs",
 				"-out",f.name,
 				"2>/dev/null"]
-		self.parent.debug("extractcmd :'%s'"%" ".join(cmd))
+		self.debug("extractcmd :'%s'"%" ".join(cmd))
 		_result = subprocess.call( " ".join(cmd) ,shell=True) 
 		f.close()
 		size=os.path.getsize(fname)
@@ -1690,7 +1708,7 @@ class _SMIME:
 		try:
 			_udir=os.listdir(directory)
 		except:
-			self.parent.log("class _SMIME.create_keylist, "
+			self.log("class _SMIME.create_keylist, "
 			"couldn't read directory '%s'"%directory)
 			return result
 
@@ -1741,14 +1759,14 @@ class _SMIME:
 									break
 							fdst.write(buf)
 		except:
-			self.parent.log("Class smime._copyfile: Couldn't copy file!","e")
-			self.parent.log_traceback()
+			self.log("Class smime._copyfile: Couldn't copy file!","e")
+			self.log_traceback()
 
 ###########
 #CLASS _PDF
 ###########
 
-class _PDF:
+class _PDF(_gmechild):
 	"""
 	class to create encrypted PDF files out of E-mail files.
 	Don't call this class directly, use gme.pdf_factory() instead!
@@ -1757,10 +1775,10 @@ class _PDF:
 	def __init__(   self, 
 					parent,
 					counter=0):
+		_gmechild.__init__(self,parent)
 		self._recipient = ''
 		self._filename=''	
 		self.count=counter
-		self.parent=parent
  
 	#############
 	#set_filename
@@ -1797,11 +1815,11 @@ class _PDF:
 			self.set_filename(filename)
 
 		if len(self._filename) == 0:
-			self.parent.log( 'Error: create_pdffile: filename not set',"e")
+			self.log( 'Error: create_pdffile: filename not set',"e")
 			return result,None
 
 		f=self.parent._new_tempfile(delete=True)
-		self.parent.debug("_PDF.create_file _new_tempfile %s"%f.name)
+		self.debug("_PDF.create_file _new_tempfile %s"%f.name)
 		f.close()
 
 		try:
@@ -1809,25 +1827,25 @@ class _PDF:
 		except:
 			pass
 
-		self.parent.debug("PDF creation command: '%s'" %
+		self.debug("PDF creation command: '%s'" %
 						' '.join(self._createpdfcommand_fromfile(f.name)))
 		_result = subprocess.call( 
 						' '.join(self._createpdfcommand_fromfile(f.name)),
 						shell=True ) 
 
 		if _result !=0:
-		  self.parent.log("Error executing command (Error code %d)"%_result,"e")
+		  self.log("Error executing command (Error code %d)"%_result,"e")
 		  return result,None
 		else:
 			result=True
 		_res,encryptedfile=self._encrypt_pdffile(f.name,password)
 
 		if _res==False:
-		  self.parent.log("Error encrypting pdf file (Error code %d)"%_res,"e")
+		  self.log("Error encrypting pdf file (Error code %d)"%_res,"e")
 		  return False,None
 
 		res=open(encryptedfile,mode="br")
-		self.parent.debug("PDF.encrypt_file binary open")
+		self.debug("PDF.encrypt_file binary open")
 		encdata=res.read()
 		res.close()
 		self.parent._del_tempfile(f.name)
@@ -1859,8 +1877,8 @@ class _PDF:
 							password):
 		result=False
 		f=self.parent._new_tempfile()
-		self.parent.debug("_PDF.encrypt_file _new_tempfile %s"%f.name)
-		self.parent.debug("Encryption command: '%s'" %
+		self.debug("_PDF.encrypt_file _new_tempfile %s"%f.name)
+		self.debug("Encryption command: '%s'" %
 			' '.join(self._encryptcommand_fromfile( inputfilename,
 													f.name,password)))
 		_result = subprocess.call( 
@@ -1869,7 +1887,7 @@ class _PDF:
 				 ,shell=True ) 
 
 		if _result != 0:
-			self.parent.log("Error executing command "
+			self.log("Error executing command "
 							"(Error code %d)"%_result,"e")
 			return result,None
 		else:
@@ -1953,9 +1971,10 @@ _htmlname={
 #class _htmldecode
 ##################
 
-class _htmldecode(html.parser.HTMLParser):
+class _htmldecode(html.parser.HTMLParser,_gmechild):
 
 	def __init__(self,parent):
+		_gmechild.__init__(self,parent)
 		html.parser.HTMLParser.__init__(self)
 		self.data=""
 		self.in_throwaway=0
@@ -1963,7 +1982,6 @@ class _htmldecode(html.parser.HTMLParser):
 		self.first_td_in_row=False
 		self.dbg=False
 		self.abbrtitle=None
-		self.parent=parent
 
 	def get_attrvalue(self,tag,attrs):
 
@@ -1983,7 +2001,7 @@ class _htmldecode(html.parser.HTMLParser):
 	def handle_starttag(self, tag, attrs):
 
 		if self.dbg:
-			self.parent.debug( "<%s>"%tag)
+			self.debug( "<%s>"%tag)
 
 		self.handle_tag(tag,attrs)
 
@@ -2006,14 +2024,14 @@ class _htmldecode(html.parser.HTMLParser):
 	def handle_endtag(self, tag):
 
 		if self.dbg:
-			self.parent.debug("</%s>"%tag)
+			self.debug("</%s>"%tag)
 
 		self.handle_tag(tag,starttag=False)
 
 	def handle_startendtag(self,tag,attrs):
 
 		if self.dbg:
-			self.parent.debug("< %s/>"%tag)
+			self.debug("< %s/>"%tag)
 
 		if tag=="br":
 			self.handle_tag(tag,attrs,starttag=False)
@@ -2023,7 +2041,7 @@ class _htmldecode(html.parser.HTMLParser):
 		if self.in_throwaway==0:
 
 			if self.dbg:
-				self.parent.debug("   data: '%s'"%data)
+				self.debug("   data: '%s'"%data)
 
 			if self.in_keep>0:
 				self.data+=data
@@ -2033,7 +2051,7 @@ class _htmldecode(html.parser.HTMLParser):
 	def handle_charref(self, name):
 
 		if self.dbg:
-			self.parent.debug("handle_charref '%s'"%name)
+			self.debug("handle_charref '%s'"%name)
 
 		if name.startswith('x'):
 			c = chr(int(name[1:], 16))
@@ -2086,16 +2104,16 @@ class _htmldecode(html.parser.HTMLParser):
 			if tag=="tr":
 				self.first_td_in_row=True
 				if self.dbg:
-					self.parent.debug("tr first_td_in_row=True")
+					self.debug("tr first_td_in_row=True")
 
 			if tag in ("td","th") :
 
 				if self.dbg:
-					self.parent.debug("<td/th> first %s"%self.first_td_in_row)
+					self.debug("<td/th> first %s"%self.first_td_in_row)
 
 				if  not self.first_td_in_row:
 					if self.dbg:
-						self.parent.debug("	 td/th \\t")
+						self.debug("	 td/th \\t")
 					self.data+="\t"
 				else:
 					self.first_td_in_row=False
@@ -3001,6 +3019,8 @@ class gme:
 
 		if self._SPAMSUSPECTLEVEL >=self._SPAMLEVEL:
 			self._SPAMSUSPECTLEVEL=self._SPAMLEVEL-0.5
+			self.log("Spamsuspectlevel >=Spamlevel, automatically corrected",
+			"w")
 
 		if _cfg.has_section('virus'):
 			try:
@@ -4391,13 +4411,101 @@ class gme:
 			if len(l)>0:
 				self._LOCALE=l.upper()
 
+	##################
+	#set_check_viruses
+	##################
+
 	def set_check_viruses(self,c):
 		self._VIRUSCHECK=c
 
 		if 	(self._VIRUSCHECK==True and self._virus_checker==None):
 			self._virus_checker=_virus_check(parent=self)
 			
+	##################
+	#get_check_viruses
+	##################
 
+	def get_check_viruses(self):
+		return self._VIRUSCHECK
+
+	###################
+	#get_quarantinelist
+	###################
+
+	def get_quarantinelist(self):
+		return self._virus_queue
+	
+	##################
+	#quarantine_remove
+	##################
+
+	def quarantine_remove(self,v_id):
+		res=None
+		
+		for i in self._virus_queue:
+
+			if float(i[3])==v_id:
+				res=i
+
+				try:
+					os.remove(i[0])
+				except:
+					self.log_traceback()
+				break
+
+		if res:
+
+			try:
+				self._virus_queue.remove(res)
+				self.log("quarantine remove %f"%v_id)
+			except:
+				self.log_traceback()
+
+		if res:
+			return True
+		else:
+			return False
+
+
+	###################
+	#quarantine_release
+	###################
+
+	def quarantine_release(self,v_id):
+		res=None
+
+		for i in self._virus_queue:
+
+			if float(i[3])==v_id:
+				res=i
+				break
+
+		if res:
+
+			with open(res[0]) as f:
+				mail=f.read()
+
+			self._send_textmsg(	m_id=-1,
+								message=mail,
+								from_addr=res[1],
+								to_addr=res[2])
+
+		return self.quarantine_remove(v_id)				
+
+
+	###############
+	#set_check_spam
+	###############
+
+	def set_check_spam(self,c):
+		self._SPAMCHECK=c
+			
+	###############
+	#get_check_spam
+	###############
+
+	def get_check_spam(self):
+		return self._SPAMCHECK
 
 	###############
 	#set_configfile
@@ -6402,9 +6510,10 @@ class gme:
 @_dbg
 def start_adminconsole(host,port):
 	"starts the admin console"
-	class gmeadmin():
+	class gmeadmin(_gmechild):
 
-		def __init__(self):
+		def __init__(self,parent=None):
+			_gmechild.__init__(self,parent)
 			self.smtp= None
 			self.host="localhost"
 			self.port=0
@@ -6625,6 +6734,7 @@ def start_adminconsole(host,port):
 
 class _gpgmailencryptserver(smtpd.SMTPServer):
 	"encryption smtp server based on smtpd"
+	#can't be member of _gmechild because smtpd.SMTPServer uses the name debug
 	ADMINCOMMANDS=[ "DEBUG",
 					"DELUSER",
 					"FLUSH",
@@ -6633,6 +6743,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 					"RESETSTATISTICS",
 					"SETUSER",
 					"STATISTICS",
+					"QUARANTINE",
 					"USERS"]
 	ADMINALLCOMMANDS=ADMINCOMMANDS+["HELP","QUIT"]
 
@@ -6650,7 +6761,6 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 			write_smtpdpasswordfile=None,
 			read_smtpdpasswordfile=None,
 			data_size_limit=smtpd.DATA_SIZE_DEFAULT):
-		self.parent=parent
 
 		try:
 			smtpd.SMTPServer.__init__(  self, 
@@ -6660,7 +6770,8 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 		except socket.error as e:
 			self.parent.log("_gpgmailencryptserver: error",e)
 			exit(5)
-
+	
+		self.parent=parent
 		self.sslcertfile=os.path.expanduser(sslcertfile)
 		self.sslkeyfile=os.path.expanduser(sslkeyfile)
 		self.sslversion=sslversion
@@ -6748,7 +6859,6 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 					conn=self.create_sslconnection(conn)
 					if conn==None:
 						return
-
 			self.parent.debug("_gpgmailencryptserver: Incoming connection "
 								"from %s" % repr(addr))
 			channel = _hksmtpchannel(self, 
@@ -6792,6 +6902,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 
 class _hksmtpchannel(smtpd.SMTPChannel):
 	"helper class for _gpgmailencryptserver"
+	#can't be member of _gmechild because smtpd.SMTPChannel uses the name debug
 
 	def __init__(self, 
 				smtp_server, 
@@ -6809,6 +6920,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				sslversion=None):
 		smtpd.SMTPChannel.__init__(self, smtp_server, newsocket, fromaddr)
 		asynchat.async_chat.__init__(self, newsocket)
+		_gmechild.__init__(self,parent)
 		self.parent=parent
 		self.sslcertfile=sslcertfile
 		self.sslkeyfile=sslkeyfile
@@ -7195,6 +7307,60 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 
 		self.parent.set_debug(res)
 		self.push("250 OK")
+
+	################
+	#smtp_QUARANTINE
+	################
+
+	def smtp_QUARANTINE(self,arg):
+		syntaxerror="501 Syntax error: QUARANTINE SHOW|DELETE xxx|RELEASE xxx"
+
+		if not arg:
+			self.push(syntaxerror)
+			return
+
+		res=arg.split(" ")
+		command=res[0].upper()
+
+		if ((command=="SHOW" and len(res)!=1)
+		or (command in ["DELETE","RELEASE"] and len(res)!=2)):
+			self.push(syntaxerror)
+			return
+
+		if command=="SHOW":
+			l=self.parent.get_quarantinelist()
+			c=len(l)-1
+
+			if c>=0:
+				for i in l:
+					dash=self._dash(c)
+					c-=1
+					msg="%s %s %s"%(i[3],i[1],i[2])
+					self.push("250%s%s"%(dash,msg))
+			else:
+				self.push("250 No viruses found")
+
+		elif command=="DELETE":
+			v_id=float(res[1])
+			res=self.parent.quarantine_remove(v_id)
+
+			if res:
+				self.push("250 OK")
+			else:
+				self.push("501 Couldn't delete %s"%str(v_id))
+
+		elif command=="RELEASE":
+			v_id=float(res[1])
+			res=self.parent.quarantine_release(v_id)
+
+			if res:
+				self.push("250 OK")
+			else:
+				self.push("501 Couldn't release %s"%str(v_id))
+			
+		else:	
+			self.push(syntaxerror)
+
 
 	#####################
 	#smtp_RESETSTATISTICS
