@@ -27,6 +27,24 @@ class _baseunpacker():
 	def keep_for_viruscheck(self):
 		return False
 
+	def log(self,
+			msg,
+			infotype="m",
+			ln=-1):
+
+		if self.parent:
+			self.parent.log(msg,infotype,ln)
+
+	def log_traceback(self):
+		if self.parent:
+			self.parent.log_traceback()
+
+	def debug(  self,
+				msg,
+				lineno=0):
+		if self.parent:
+			self.parent.debug(msg,lineno)
+
 	################
 	#uncompress_file
 	################
@@ -528,7 +546,7 @@ class _ZIP(_baseunpacker):
 	"""
 
 	def __init__(self, parent):
-		self.parent=parent
+		_baseunpacker.__init__(self,parent)
 		self.zipcipher=self.parent._ZIPCIPHER
 		self.cmd=shutil.which("7za")
 
@@ -567,7 +585,7 @@ class _ZIP(_baseunpacker):
 				 zip-file, else None
 		"""
 		f=self.parent._new_tempfile()
-		self.parent.debug("_PDF.create_file _new_tempfile %s"%f.name)
+		self.debug("_PDF.create_file _new_tempfile %s"%f.name)
 		f.close()
 		fname=f.name
 		result=False
@@ -575,7 +593,7 @@ class _ZIP(_baseunpacker):
 		if containerfile!=None:
 			tempdir = tempfile.mkdtemp()
 			fname=os.path.join(tempdir,containerfile)
-			self.parent.debug("ZIP creation command: '%s'" %
+			self.debug("ZIP creation command: '%s'" %
 					   ' '.join(self._createzipcommand_fromdir(fname,
 															   directory,
 															   password)))
@@ -588,7 +606,7 @@ class _ZIP(_baseunpacker):
 			directory=tempdir
 
 			if _result !=0:
-				self.parent.log("Error executing command"
+				self.log("Error executing command"
 								" (Error code %d)"%_result,"e")
 
 				try:
@@ -598,7 +616,7 @@ class _ZIP(_baseunpacker):
 
 				return result,None
 
-		self.parent.debug("ZIP creation command: '%s'" %
+		self.debug("ZIP creation command: '%s'" %
 			' '.join(self._createzipcommand_fromdir(f.name,
 													directory,
 													password)))
@@ -614,13 +632,13 @@ class _ZIP(_baseunpacker):
 			pass
 
 		if _result !=0:
-		  self.parent.log("Error executing command (Error code %d)"%_result,"e")
+		  self.log("Error executing command (Error code %d)"%_result,"e")
 		  return result,None
 		else:
 			result=True
 
 		res=open(f.name+".zip",mode="br")
-		self.parent.debug("ZIP_file binary open")
+		self.debug("ZIP_file binary open")
 		encdata=res.read()
 		res.close()
 		os.rename(f.name+".zip",f.name)
@@ -694,7 +712,7 @@ class _ZIP(_baseunpacker):
 					_f.close()
 					encdatalist.append((filename,data))
 				except:
-					self.parent.log("Data of file '%s' could not be read"%
+					self.log("Data of file '%s' could not be read"%
 									filename)
 
 		try:
@@ -743,18 +761,18 @@ class _ZIP(_baseunpacker):
 		"""
 		if directory==None:
 			directory = tempfile.mkdtemp()
-			self.parent.debug("create end directory %s"%directory)
+			self.debug("create end directory %s"%directory)
 
 		directory1=tempfile.mkdtemp()
 		result=False
 		unzipcmd=' '.join(self._createunzipcommand_indir(   zipfile,
 															directory1,
 															password))
-		self.parent.debug("UNZIP command: '%s'" % unzipcmd)
+		self.debug("UNZIP command: '%s'" % unzipcmd)
 		_result = subprocess.call(unzipcmd, shell=True) 
 
 		if _result !=0:
-		  self.parent.log("Error executing command (Error code %d)"%_result,"e")
+		  self.log("Error executing command (Error code %d)"%_result,"e")
 		  return result,None
 		else:
 			result=True
@@ -768,11 +786,11 @@ class _ZIP(_baseunpacker):
 							os.path.join(directory1,"%s.zip"%containerfile),
 										 directory2,
 										 password))
-			self.parent.debug("UNZIP command2: '%s'" % unzipcmd)
+			self.debug("UNZIP command2: '%s'" % unzipcmd)
 			_result = subprocess.call(unzipcmd, shell=True) 
 
 			if _result==0:
-				self.parent.debug("shutil 1 move %s, %s"%(directory2,directory))
+				self.debug("shutil 1 move %s, %s"%(directory2,directory))
 				source = os.listdir(directory2)
 
 				for s in source:
@@ -784,7 +802,7 @@ class _ZIP(_baseunpacker):
 					 shutil.move(os.path.join(directory1,s),directory)
 			
 		if _result !=0:
-		  self.parent.log("Error executing command (Error code %d)"%_result,"e")
+		  self.log("Error executing command (Error code %d)"%_result,"e")
 		  return result,None
 		else:
 			result=True
@@ -928,7 +946,6 @@ def get_archivetype(filename,filetype):
 		"x-xz":							"XZ",
 		"zip":							"ZIP",
 		"x-zoo":						"ZOO",
-
 		}
 					  
 	extensions={"7z":	"7Z",

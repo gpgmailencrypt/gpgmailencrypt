@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import re
 import shutil
 import subprocess
 
@@ -32,11 +33,11 @@ class _basevirusscanner:
 		if self.parent:
 			self.parent.debug(msg,lineno)
 	
-#################
-#_bitdefenderscan
-#################
+#############
+#_BITDEFENDER
+#############
 
-class _bitdefenderscan(_basevirusscanner):
+class _BITDEFENDER(_basevirusscanner):
 	def __init__(self,parent):
 		self.cmd=shutil.which("bdscan")
 		_basevirusscanner.__init__(self,parent)
@@ -86,13 +87,13 @@ class _bitdefenderscan(_basevirusscanner):
 		return result,information
 
 ############
-#_clamavscan
+#_CLAMAV
 ############
 
 try:
 	import pyclamd
 	
-	class _clamavscan(_basevirusscanner):
+	class _CLAMAV(_basevirusscanner):
 		def __init__(self,parent):
 			self.clamd=pyclamd.ClamdAgnostic()
 			_basevirusscanner.__init__(self,parent)
@@ -114,13 +115,55 @@ try:
 	clamavscan_available=True
 except:
 	clamavscan_available=False
-	raise
+
+#######
+#_FPROT
+#######
+
+class _FPROT(_basevirusscanner):
+	def __init__(self,parent):
+		self.cmd=shutil.which("fpscan")
+		_basevirusscanner.__init__(self,parent)
+
+	def has_virus(self,directory):
+		cmd=[self.cmd,"--report","--mount","--adware",directory]
+		
+		result=False
+		information=[]
+		skip_header=2
+		
+		try:
+			p = subprocess.Popen(   cmd, 
+									stdin=None, 
+									stdout=subprocess.PIPE, 
+									stderr=subprocess.PIPE )
+			p.wait()
+			
+			for line in p.stdout.readlines():
+				_l=line.decode("UTF-8")
+				if _l.startswith("["):
+					found=(re.search("(?<=\<)(.*)(?=\>)",_l))
+					virusinfo=_l[found.start():found.end()]
+					res=_l.split(" ")
+					filename=os.path.split(res[len(res)-1][:-1])[1]
+					information.append(["FPROT",filename,virusinfo])
+					result=True
+					
+
+		except:
+			self.log_traceback()
+			raise
+		
+		return result,information
+
+
+
 
 ########
-#_sophos
+#_SOPHOS
 ########
 
-class _sophosscan(_basevirusscanner):
+class _SOPHOS(_basevirusscanner):
 	def __init__(self,parent):
 		self.cmd=shutil.which("savscan")
 		_basevirusscanner.__init__(self,parent)
@@ -155,23 +198,27 @@ class _sophosscan(_basevirusscanner):
 ################################################################################
 
 def get_virusscannerlist():
-	return ["BITDEFENDER","CLAMAV","SOPHOS"]
+	return ["BITDEFENDER","CLAMAV","FPROT","SOPHOS"]
 
 def get_virusscanner(scanner,parent):
 	scanner=scanner.upper().strip()
 
 	if scanner=="CLAMAV" and clamavscan_available:
-		return _clamavscan(parent=parent)
+		return _CLAMAV(parent=parent)
 	
 	if scanner=="BITDEFENDER":
-		bd= _bitdefenderscan(parent=parent)
-		if len(bd.cmd)>0:
-			return bd
+		s= _BITDEFENDER(parent=parent)
+		if  s.cmd and len(s.cmd)>0:
+			return s
+	if scanner=="FPROT":
+		s= _FPROT(parent=parent)
+		if  s.cmd and len(s.cmd)>0:
+			return s
 			
 	if scanner=="SOPHOS":
-		bd= _sophosscan(parent=parent)
-		if len(bd.cmd)>0:
-			return bd
+		s= _SOPHOS(parent=parent)
+		if  s.cmd and len(s.cmd)>0:
+			return s
 			
 	return None
 
