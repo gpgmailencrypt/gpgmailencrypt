@@ -23,8 +23,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.3.0dev"
-DATE="24.10.2015"
+VERSION="2.3.0alpha"
+DATE="25.10.2015"
 import asynchat
 import asyncore
 import atexit
