@@ -72,6 +72,42 @@ class _baseunpacker():
 
 		return result,directory
 
+##########################
+#CLASS _basedeleteunpacker
+##########################
+
+class _basedeleteunpacker(_baseunpacker):
+
+	################
+	#uncompress_file
+	################
+
+	def uncompress_file(self, filename,directory=None):
+		result=False
+
+		if directory==None:
+			directory = tempfile.mkdtemp()
+		
+		if self.chdir:
+			os.chdir(directory)
+			_origdir=os.getcwd()
+
+		origdir,fname=os.path.split(filename)
+		targetname=os.path.join(directory,fname)
+		shutil.move(filename,targetname)
+		uncompresscmd=' '.join(self.uncompresscommand(targetname,directory))
+		_result = subprocess.call(uncompresscmd, shell=True) 
+
+		if self.chdir:
+			os.chdir(_origdir)
+
+		if _result !=0:
+		  return result,None
+		else:
+			result=True
+
+		return result,directory
+
 ####
 #_AR
 ####
@@ -242,7 +278,7 @@ class _CPIO(_baseunpacker):
 #_FREEZE
 ########
 
-class _FREEZE(_baseunpacker):
+class _FREEZE(_basedeleteunpacker):
 
 	def __init__(self,parent):
 		_baseunpacker.__init__(self,parent)
@@ -266,36 +302,6 @@ class _FREEZE(_baseunpacker):
 				sourcefile,
 				">/dev/null"]
 		return cmd
-
-	################
-	#uncompress_file
-	################
-
-	def uncompress_file(self, filename,directory=None):
-		result=False
-
-		if directory==None:
-			directory = tempfile.mkdtemp()
-		
-		if self.chdir:
-			os.chdir(directory)
-			_origdir=os.getcwd()
-
-		origdir,fname=os.path.split(filename)
-		targetname=os.path.join(directory,fname)
-		shutil.move(filename,targetname)
-		uncompresscmd=' '.join(self.uncompresscommand(targetname,directory))
-		_result = subprocess.call(uncompresscmd, shell=True) 
-
-		if self.chdir:
-			os.chdir(_origdir)
-
-		if _result !=0:
-		  return result,None
-		else:
-			result=True
-
-		return result,directory
 
 ######
 #_GZIP
@@ -404,10 +410,10 @@ class _LRZIP(_baseunpacker):
 #_LZIP
 ######
 
-class _LZIP(_baseunpacker):
+class _LZIP(_basedeleteunpacker):
 
 	def __init__(self,parent):
-		_baseunpacker.__init__(self,parent)
+		_basedeleteunpacker.__init__(self,parent)
 		self.cmd=shutil.which("lzip")
 
 	#################
@@ -429,36 +435,6 @@ class _LZIP(_baseunpacker):
 				sourcefile,
 				">/dev/null"]
 		return cmd
-
-	################
-	#uncompress_file
-	################
-
-	def uncompress_file(self, filename,directory=None):
-		result=False
-
-		if directory==None:
-			directory = tempfile.mkdtemp()
-		
-		if self.chdir:
-			os.chdir(directory)
-			_origdir=os.getcwd()
-
-		origdir,fname=os.path.split(filename)
-		targetname=os.path.join(directory,fname)
-		shutil.move(filename,targetname)
-		uncompresscmd=' '.join(self.uncompresscommand(targetname,directory))
-		_result = subprocess.call(uncompresscmd, shell=True) 
-
-		if self.chdir:
-			os.chdir(_origdir)
-
-		if _result !=0:
-		  return result,None
-		else:
-			result=True
-
-		return result,directory
 
 #####
 #_LZO
@@ -566,6 +542,38 @@ class _RIPOLE(_baseunpacker):
 
 	def keep_for_viruscheck(self):
 		return True
+
+
+######
+#_RZIP
+######
+
+class _RZIP(_basedeleteunpacker):
+
+	def __init__(self,parent):
+		_basedeleteunpacker.__init__(self,parent)
+		self.cmd=shutil.which("rzip")
+
+	#################
+	#unpackingformats
+	#################
+
+	def unpackingformats(self):
+		return ["RZIP"]
+ 
+	##################
+	#uncompresscommand
+	##################
+
+	def uncompresscommand(  self,
+									sourcefile,
+									directory):
+		cmd=[   self.cmd, 
+				"-d",
+				sourcefile,
+				">/dev/null"]
+		return cmd
+
 #####
 #_TAR
 #####
@@ -1044,6 +1052,8 @@ def get_archivemanager(manager, parent):
 		return _RAR(parent=parent)
 	elif manager=="RIPOLE":
 		return _RIPOLE(parent=parent)
+	elif manager=="RZIP":
+		return _RZIP(parent=parent)
 	elif manager=="TAR":
 		return _TAR(parent=parent)
 	elif manager=="TNEF":
@@ -1060,8 +1070,8 @@ def get_archivemanager(manager, parent):
 def get_managerlist():
 	return [	"AR","ARJ","BZIP2","CAB","CPIO",
 				"FREEZE","GZIP","LHA","LZIP","LRZIP",
-				"LZO","RAR","RIPOLE","TAR","TNEF",
-				"XZ","ZIP","ZOO"]
+				"LZO","RAR","RIPOLE","RZIP","TAR",
+				"TNEF","XZ","ZIP","ZOO"]
 
 def get_archivetype(filename,filetype):
 	maintype,subtype=filetype.lower().split("/")
@@ -1128,6 +1138,7 @@ def get_archivetype(filename,filetype):
 				"lzo":	"LZO",
 				"lzx":  None,
 				"rar":	"RAR",
+				"rz":	"RZIP",
 				"s7z":	"7Z",
 				"tar":	"TAR",
 				"tgz":	"TARGZ",
