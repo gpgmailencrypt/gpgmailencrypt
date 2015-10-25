@@ -4053,13 +4053,20 @@ class gme:
 
 			for l in f:
 				mail=l.split("|")
-				mail[3]=float(mail[3])
+
+				try:
+					mail[3]=float(mail[3])
+				except:
+					mail[3]=-1
+					self.log("load_viruslist, id could not be converted"
+							" to float","e")
+
 				self._virus_queue.append(mail)
 
 			f.close()
 			self._count_viruses=len(self._virus_queue)
 		except:
-			self.log("Couldn't load defer list '%s'"%self._viruslist)
+			self.log("Couldn't load viruslist list '%s'"%self._viruslist)
 
 	###################
 	#load_deferred_list
@@ -4075,7 +4082,14 @@ class gme:
 
 			for l in f:
 				mail=l.split("|")
-				mail[3]=float(mail[3])
+
+				try:
+					mail[3]=float(mail[3])
+				except:
+					mail[3]=-1
+					self.log("load_defer list, id could not be converted"
+							" to float","e")
+
 				self._deferred_emails.append(mail)
 
 			f.close()
@@ -4444,14 +4458,17 @@ class gme:
 		
 		for i in self._virus_queue:
 
-			if float(i[3])==v_id:
-				res=i
+			try:
+				if float(i[3])==v_id:
+					res=i
 
-				try:
-					os.remove(i[0])
-				except:
-					self.log_traceback()
-				break
+					try:
+						os.remove(i[0])
+					except:
+						self.log_traceback()
+					break
+			except:
+				self.log("quarantine_remove, could not convert float","w")
 
 		if res:
 
@@ -4476,9 +4493,15 @@ class gme:
 
 		for i in self._virus_queue:
 
-			if float(i[3])==v_id:
-				res=i
-				break
+			
+			try:
+
+				if float(i[3])==v_id:
+					res=i
+					break
+
+			except:
+				self.log("quarantine_release, could not convert float","w")
 
 		if res:
 
@@ -4489,6 +4512,40 @@ class gme:
 								message=mail,
 								from_addr=res[1],
 								to_addr=res[2])
+
+		return self.quarantine_remove(v_id)				
+
+	###################
+	#quarantine_forward
+	###################
+
+	def quarantine_forward(self,v_id,to_addr):
+		res=None
+
+		for i in self._virus_queue:
+
+			
+			try:
+
+				if float(i[3])==v_id:
+					res=i
+					break
+
+			except:
+				self.log("quarantine_forward, could not convert float","w")
+
+		if res:
+
+			with open(res[0]) as f:
+				mail=f.read()
+			m=email.message_from_string(mail)
+			del m["To"]
+			m["To"]=to_addr
+			
+			self._send_textmsg(	m_id=-1,
+								message=m.as_string(),
+								from_addr=res[1],
+								to_addr=to_addr)
 
 		return self.quarantine_remove(v_id)				
 
@@ -6195,7 +6252,12 @@ class gme:
 											_unicodeerror))[0].decode("UTF-8",
 											_unicodeerror)
 				scoretext=result[:result.find("\n")].split("/")[0]
-				score=float(scoretext)
+
+				try:
+					score=float(scoretext)
+				except:
+					self.log("Could not convert score to float","e")
+
 				is_spam=(score>=self._SPAMLEVEL)
 
 				if self._SPAMADDHEADER:
@@ -6647,6 +6709,18 @@ def start_adminconsole(host,port):
 			print("messages".ljust(space)+
 					"shows all systemwarnings and -errors")
 			print("quit".ljust(space)+"leave the console")
+			print("quarantine".ljust(space)+
+			"handles the quarantine queue")
+			print("".ljust(space)+"quarantine show : shows the queue ")
+			print("".ljust(space)+"                  first value is the id")
+			print("".ljust(space)+"quarantine delete  xxx: deletes an entry")
+			print("".ljust(space)+"                        xxx is the id'")
+			print("".ljust(space)+"quarantine release xxx: sends the mail")
+			print("".ljust(space)+"                        xxx is the id'")
+			print("".ljust(space)+"quarantine forward xxx emailadress:")
+			print("".ljust(space)+"                        forwards the email"
+			" to 'emailaddress'")
+			print("".ljust(space)+"                        xxx is the id")
 			print("reload".ljust(space)+"reloads the configuration file")
 			print("resetstatistics".ljust(space)+
 					"sets all statistic values to 0")
@@ -7313,8 +7387,8 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 	################
 
 	def smtp_QUARANTINE(self,arg):
-		syntaxerror="501 Syntax error: QUARANTINE SHOW|DELETE xxx|RELEASE xxx"
-
+		syntaxerror=("501 Syntax error: QUARANTINE SHOW|DELETE xxx|RELEASE xxx"
+			"|FORWARD xxx email@tld")
 		if not arg:
 			self.push(syntaxerror)
 			return
@@ -7323,7 +7397,8 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		command=res[0].upper()
 
 		if ((command=="SHOW" and len(res)!=1)
-		or (command in ["DELETE","RELEASE"] and len(res)!=2)):
+		or (command in ["DELETE","RELEASE"] and len(res)!=2)
+		or (command=="FORWARD" and len(res)!=3)):
 			self.push(syntaxerror)
 			return
 
@@ -7341,8 +7416,12 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				self.push("250 No viruses found")
 
 		elif command=="DELETE":
-			v_id=float(res[1])
-			res=self.parent.quarantine_remove(v_id)
+
+			try:
+				v_id=float(res[1])
+				res=self.parent.quarantine_remove(v_id)
+			except:
+				self.log("could not convert id to float","w")
 
 			if res:
 				self.push("250 OK")
@@ -7350,13 +7429,30 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				self.push("501 Couldn't delete %s"%str(v_id))
 
 		elif command=="RELEASE":
-			v_id=float(res[1])
-			res=self.parent.quarantine_release(v_id)
+
+			try:
+				v_id=float(res[1])
+				res=self.parent.quarantine_release(v_id)
+			except:
+				self.log("could not convert id to float","w")
 
 			if res:
 				self.push("250 OK")
 			else:
 				self.push("501 Couldn't release %s"%str(v_id))
+			
+		elif command=="FORWARD":
+
+			try:
+				v_id=float(res[1])
+				res=self.parent.quarantine_forward(v_id,res[2])
+			except:
+				self.log("could not convert id to float","w")
+
+			if res:
+				self.push("250 OK")
+			else:
+				self.push("501 Couldn't forward %s"%str(v_id))
 			
 		else:	
 			self.push(syntaxerror)
