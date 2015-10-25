@@ -33,6 +33,44 @@ class _basevirusscanner:
 		if self.parent:
 			self.parent.debug(msg,lineno)
 	
+#######
+#_AVAST
+#######
+
+class _AVAST(_basevirusscanner):
+
+	def __init__(self,parent):
+		self.cmd=shutil.which("scan")
+		_basevirusscanner.__init__(self,parent)
+
+	def has_virus(self,directory):
+		cmd=[self.cmd,"-u",directory]
+		result=False
+		information=[]
+		skip_header=2
+		
+		try:
+			p = subprocess.Popen(   cmd, 
+									stdin=None, 
+									stdout=subprocess.PIPE, 
+									stderr=subprocess.PIPE )
+			p.wait()
+			
+			for line in p.stdout.readlines():
+				_l=line.decode("UTF-8")
+
+				if _l.startswith("/"):
+					found=_l.split("\t",1)
+					virusinfo=found[1][:-1]
+					filename=os.path.split(found[0])[1]
+					information.append(["AVAST",filename,virusinfo])
+					result=True
+
+		except:
+			self.log_traceback()
+		
+		return result,information
+
 #############
 #_BITDEFENDER
 #############
@@ -86,9 +124,9 @@ class _BITDEFENDER(_basevirusscanner):
 		
 		return result,information
 
-############
+########
 #_CLAMAV
-############
+########
 
 try:
 	import pyclamd
@@ -127,7 +165,6 @@ class _FPROT(_basevirusscanner):
 
 	def has_virus(self,directory):
 		cmd=[self.cmd,"--report","--mount","--adware",directory]
-		
 		result=False
 		information=[]
 		skip_header=2
@@ -148,16 +185,11 @@ class _FPROT(_basevirusscanner):
 					filename=os.path.split(res[len(res)-1][:-1])[1]
 					information.append(["FPROT",filename,virusinfo])
 					result=True
-					
 
 		except:
 			self.log_traceback()
-			raise
 		
 		return result,information
-
-
-
 
 ########
 #_SOPHOS
@@ -198,10 +230,16 @@ class _SOPHOS(_basevirusscanner):
 ################################################################################
 
 def get_virusscannerlist():
-	return ["BITDEFENDER","CLAMAV","FPROT","SOPHOS"]
+	#return ["AVAST","BITDEFENDER","CLAMAV","FPROT","SOPHOS"]
+	return ["AVAST"]
 
 def get_virusscanner(scanner,parent):
 	scanner=scanner.upper().strip()
+
+	if scanner=="AVAST":
+		s= _AVAST(parent=parent)
+		if  s.cmd and len(s.cmd)>0:
+			return s
 
 	if scanner=="CLAMAV" and clamavscan_available:
 		return _CLAMAV(parent=parent)
@@ -210,6 +248,7 @@ def get_virusscanner(scanner,parent):
 		s= _BITDEFENDER(parent=parent)
 		if  s.cmd and len(s.cmd)>0:
 			return s
+
 	if scanner=="FPROT":
 		s= _FPROT(parent=parent)
 		if  s.cmd and len(s.cmd)>0:
