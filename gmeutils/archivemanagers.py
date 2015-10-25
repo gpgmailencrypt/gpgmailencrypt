@@ -51,7 +51,10 @@ class _baseunpacker():
 
 	def uncompress_file(self, filename,directory=None):
 		result=False
-
+		
+		if not os.path.exists(filename):
+			self.log("file %s does not exist"%filename,"w")
+			
 		if directory==None:
 			directory = tempfile.mkdtemp()
 		
@@ -343,6 +346,35 @@ class _GZIP(_baseunpacker):
 				"-cd",sourcefile,
 				"> \"%s\""%directory,
 			]
+		return cmd
+
+#####
+#_KGB
+#####
+
+class _KGB(_baseunpacker):
+
+	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent,chdir=True)
+		self.cmd=shutil.which("kgb")
+
+	#################
+	#unpackingformats
+	#################
+
+	def unpackingformats(self):
+		return ["KGB"]
+ 
+	##################
+	#uncompresscommand
+	##################
+
+	def uncompresscommand(  self,
+							sourcefile,
+							directory):
+		cmd=[   self.cmd, 
+				sourcefile,
+				">/dev/null"]
 		return cmd
 
 #####
@@ -1040,6 +1072,8 @@ def get_archivemanager(manager, parent):
 		return _FREEZE(parent=parent)
 	elif manager=="GZIP":
 		return _GZIP(parent=parent)
+	elif manager=="KGB":
+		return _KGB(parent=parent)
 	elif manager=="LHA":
 		return _LHA(parent=parent)
 	elif manager=="LRZIP":
@@ -1069,9 +1103,9 @@ def get_archivemanager(manager, parent):
 
 def get_managerlist():
 	return [	"AR","ARJ","BZIP2","CAB","CPIO",
-				"FREEZE","GZIP","LHA","LZIP","LRZIP",
-				"LZO","RAR","RIPOLE","RZIP","TAR",
-				"TNEF","XZ","ZIP","ZOO"]
+				"FREEZE","GZIP","KGB","LHA","LZIP",
+				"LRZIP","LZO","RAR","RIPOLE","RZIP",
+				"TAR","TNEF","XZ","ZIP","ZOO"]
 
 def get_archivetype(filename,filetype):
 	maintype,subtype=filetype.lower().split("/")
@@ -1124,12 +1158,13 @@ def get_archivetype(filename,filetype):
 				"cab":	"CAB",
 				"cpio":	"CPIO",
 				"deb":	"AR",
+				"ear":	"ZIP",
 				"exe":	"EXE",
 				"f":	"FREEZE",
 				"gz":	"GZIP",
 				"iso":	"ISO",
 				"jar":	"ZIP",
-				"mar":	"BZIP2",
+				"kgb":	"KGB",
 				"lz":	"LZIP",
 				"lha":	"LHA",
 				"lrz":	"LRZIP",
@@ -1137,6 +1172,7 @@ def get_archivetype(filename,filetype):
 				"lzma":	"LZMA",
 				"lzo":	"LZO",
 				"lzx":  None,
+				"mar":	"BZIP2",
 				"rar":	"RAR",
 				"rz":	"RZIP",
 				"s7z":	"7Z",
