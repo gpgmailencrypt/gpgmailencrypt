@@ -297,7 +297,6 @@ class _FREEZE(_baseunpacker):
 
 		return result,directory
 
-
 ######
 #_GZIP
 ######
@@ -400,6 +399,66 @@ class _LRZIP(_baseunpacker):
 				sourcefile,
 				">/dev/null"]
 		return cmd
+
+######
+#_LZIP
+######
+
+class _LZIP(_baseunpacker):
+
+	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent)
+		self.cmd=shutil.which("lzip")
+
+	#################
+	#unpackingformats
+	#################
+
+	def unpackingformats(self):
+		return ["LZIP"]
+ 
+	##################
+	#uncompresscommand
+	##################
+
+	def uncompresscommand(  self,
+									sourcefile,
+									directory):
+		cmd=[   self.cmd, 
+				"-d",
+				sourcefile,
+				">/dev/null"]
+		return cmd
+
+	################
+	#uncompress_file
+	################
+
+	def uncompress_file(self, filename,directory=None):
+		result=False
+
+		if directory==None:
+			directory = tempfile.mkdtemp()
+		
+		if self.chdir:
+			os.chdir(directory)
+			_origdir=os.getcwd()
+
+		origdir,fname=os.path.split(filename)
+		targetname=os.path.join(directory,fname)
+		shutil.move(filename,targetname)
+		uncompresscmd=' '.join(self.uncompresscommand(targetname,directory))
+		_result = subprocess.call(uncompresscmd, shell=True) 
+
+		if self.chdir:
+			os.chdir(_origdir)
+
+		if _result !=0:
+		  return result,None
+		else:
+			result=True
+
+		return result,directory
 
 #####
 #_LZO
@@ -977,6 +1036,8 @@ def get_archivemanager(manager, parent):
 		return _LHA(parent=parent)
 	elif manager=="LRZIP":
 		return _LRZIP(parent=parent)
+	elif manager=="LZIP":
+		return _LZIP(parent=parent)
 	elif manager=="LZO":
 		return _LZO(parent=parent)
 	elif manager=="RAR":
@@ -997,8 +1058,10 @@ def get_archivemanager(manager, parent):
 	return None
 
 def get_managerlist():
-	return ["AR","ARJ","BZIP2","CAB","CPIO","FREEZE","GZIP","LHA",
-			"LRZIP","LZO","RAR","RIPOLE","TAR","TNEF","XZ","ZIP","ZOO"]
+	return [	"AR","ARJ","BZIP2","CAB","CPIO",
+				"FREEZE","GZIP","LHA","LZIP","LRZIP",
+				"LZO","RAR","RIPOLE","TAR","TNEF",
+				"XZ","ZIP","ZOO"]
 
 def get_archivetype(filename,filetype):
 	maintype,subtype=filetype.lower().split("/")
