@@ -4477,7 +4477,7 @@ class gme:
 				self.log("quarantine remove %f"%v_id)
 			except:
 				self.log_traceback()
-
+		self._count_viruses=len(self._virus_queue)
 		if res:
 			return True
 		else:
@@ -4512,6 +4512,7 @@ class gme:
 								message=mail,
 								from_addr=res[1],
 								to_addr=res[2])
+			self._count_viruses=len(self._virus_queue)
 
 		return self.quarantine_remove(v_id)				
 
@@ -4546,6 +4547,7 @@ class gme:
 								message=m.as_string(),
 								from_addr=res[1],
 								to_addr=to_addr)
+			self._count_viruses=len(self._virus_queue)
 
 		return self.quarantine_remove(v_id)				
 
@@ -7421,7 +7423,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				v_id=float(res[1])
 				res=self.parent.quarantine_remove(v_id)
 			except:
-				self.log("could not convert id to float","w")
+				self.parent.log("could not convert id to float","w")
 
 			if res:
 				self.push("250 OK")
@@ -7434,7 +7436,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				v_id=float(res[1])
 				res=self.parent.quarantine_release(v_id)
 			except:
-				self.log("could not convert id to float","w")
+				self.parent.log("could not convert id to float","w")
 
 			if res:
 				self.push("250 OK")
@@ -7447,7 +7449,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				v_id=float(res[1])
 				res=self.parent.quarantine_forward(v_id,res[2])
 			except:
-				self.log("could not convert id to float","w")
+				self.parent.log("could not convert id to float","w")
 
 			if res:
 				self.push("250 OK")
