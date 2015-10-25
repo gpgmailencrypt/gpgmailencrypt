@@ -61,6 +61,7 @@ class _baseunpacker():
 
 		uncompresscmd=' '.join(self.uncompresscommand(filename,directory))
 		_result = subprocess.call(uncompresscmd, shell=True) 
+
 		if self.chdir:
 			os.chdir(_origdir)
 
@@ -237,6 +238,66 @@ class _CPIO(_baseunpacker):
 				">/dev/null"]
 		return cmd
 
+########
+#_FREEZE
+########
+
+class _FREEZE(_baseunpacker):
+
+	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent)
+		self.cmd=shutil.which("unfreeze")
+
+	#################
+	#unpackingformats
+	#################
+
+	def unpackingformats(self):
+		return ["FREEZE"]
+ 
+	##################
+	#uncompresscommand
+	##################
+
+	def uncompresscommand(  self,
+									sourcefile,
+									directory):
+		cmd=[   self.cmd, 
+				sourcefile,
+				">/dev/null"]
+		return cmd
+
+	################
+	#uncompress_file
+	################
+
+	def uncompress_file(self, filename,directory=None):
+		result=False
+
+		if directory==None:
+			directory = tempfile.mkdtemp()
+		
+		if self.chdir:
+			os.chdir(directory)
+			_origdir=os.getcwd()
+
+		origdir,fname=os.path.split(filename)
+		targetname=os.path.join(directory,fname)
+		shutil.move(filename,targetname)
+		uncompresscmd=' '.join(self.uncompresscommand(targetname,directory))
+		_result = subprocess.call(uncompresscmd, shell=True) 
+
+		if self.chdir:
+			os.chdir(_origdir)
+
+		if _result !=0:
+		  return result,None
+		else:
+			result=True
+
+		return result,directory
+
+
 ######
 #_GZIP
 ######
@@ -391,7 +452,7 @@ class _RIPOLE(_baseunpacker):
 	#################
 
 	def unpackingformats(self):
-		return ["DOC","XLS","DOT","XLT","PPS","PPT"]
+		return ["DOC","DOT","PPS","PPT","XLS","XLT"]
 
 	##################
 	#uncompresscommand
@@ -432,7 +493,7 @@ class _TAR(_baseunpacker):
 	#################
 
 	def unpackingformats(self):
-		return ["TAR","TARBZ2","TARBZ","TARGZ"]
+		return ["TAR","TARBZ2","TARBZ","TARGZ","TARXZ"]
 
 	##################
 	#uncompresscommand
@@ -446,7 +507,7 @@ class _TAR(_baseunpacker):
 
 		if extension in ["bz2","tbz2"]:
 			format="j"
-		elif extension in ["xz"]:
+		elif extension in ["xz","txz"]:
 			format="J"
 		elif extension in ["gz","tgz"]:
 			format="x"
@@ -879,6 +940,8 @@ def get_archivemanager(manager, parent):
 		return _CAB(parent=parent)
 	elif manager=="CPIO":
 		return _CPIO(parent=parent)
+	elif manager=="FREEZE":
+		return _FREEZE(parent=parent)
 	elif manager=="GZIP":
 		return _GZIP(parent=parent)
 	elif manager=="LHA":
@@ -903,7 +966,7 @@ def get_archivemanager(manager, parent):
 	return None
 
 def get_managerlist():
-	return ["AR","ARJ","BZIP2","CAB","CPIO","GZIP","LHA",
+	return ["AR","ARJ","BZIP2","CAB","CPIO","FREEZE","GZIP","LHA",
 			"LZO","RAR","RIPOLE","TAR","TNEF","XZ","ZIP","ZOO"]
 
 def get_archivetype(filename,filetype):
@@ -958,18 +1021,22 @@ def get_archivetype(filename,filetype):
 				"cpio":	"CPIO",
 				"deb":	"AR",
 				"exe":	"EXE",
+				"f":	"FREEZE",
 				"gz":	"GZIP",
 				"iso":	"ISO",
 				"jar":	"ZIP",
+				"mar":	"BZIP2",
 				"lz":	"LZIP",
 				"lha":	"LHA",
 				"lzh":	"LHA",
 				"lzma":	"LZMA",
 				"lzo":	"LZO",
+				"lzx":  None,
 				"rar":	"RAR",
 				"s7z":	"7Z",
 				"tar":	"TAR",
 				"tgz":	"TARGZ",
+				"txz":	"TARXZ",
 				"war":	"ZIP",
 				"wim":	"ZIP",
 				"xar":	"AR",
