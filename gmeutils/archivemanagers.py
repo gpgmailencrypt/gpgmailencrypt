@@ -142,6 +142,36 @@ class _AR(_baseunpacker):
 		return cmd
 
 #####
+#_ARC
+#####
+
+class _ARC(_baseunpacker):
+
+	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent,chdir=True)
+		self.cmd=shutil.which("arc")
+
+	#################
+	#unpackingformats
+	#################
+
+	def unpackingformats(self):
+		return ["ARC"]
+ 
+	##################
+	#uncompresscommand
+	##################
+
+	def uncompresscommand(  self,
+							sourcefile,
+							directory):
+		cmd=[   self.cmd, 
+				"x",
+				sourcefile,
+				">/dev/null"]
+		return cmd
+
+#####
 #_ARJ
 #####
 
@@ -621,7 +651,7 @@ class _TAR(_baseunpacker):
 	#################
 
 	def unpackingformats(self):
-		return ["TAR","TARBZ2","TARBZ","TARGZ","TARXZ"]
+		return ["TAR","TARBZ2","TARBZ","TARGZ","TARLZMA","TARXZ"]
 
 	##################
 	#uncompresscommand
@@ -645,6 +675,10 @@ class _TAR(_baseunpacker):
 				"-f",sourcefile,
 				"-C%s"%directory,
 			]
+
+		if extension in ["lzma","tlz"]:
+			cmd.insert(2,"--lzma")
+
 		return cmd
 
 ######
@@ -1060,6 +1094,8 @@ def get_archivemanager(manager, parent):
 
 	if manager=="AR":
 		return _AR(parent=parent)
+	elif manager=="ARC":
+		return _ARC(parent=parent)
 	elif manager=="ARJ":
 		return _ARJ(parent=parent)
 	elif manager=="BZIP2":
@@ -1102,7 +1138,7 @@ def get_archivemanager(manager, parent):
 	return None
 
 def get_managerlist():
-	return [	"AR","ARJ","BZIP2","CAB","CPIO",
+	return [	"AR","ARC","ARJ","BZIP2","CAB","CPIO",
 				"FREEZE","GZIP","KGB","LHA","LZIP",
 				"LRZIP","LZO","RAR","RIPOLE","RZIP",
 				"TAR","TNEF","XZ","ZIP","ZOO"]
@@ -1118,16 +1154,10 @@ def get_archivetype(filename,filetype):
 		"vnd.android.package-archive":	"ZIP",
 		"vnd.ms-tnef":					"TNEF",
 		"x-7z-compressed":				"7Z",
-		"x-ace-compressed":				None,
-		"x-alz-compressed":				None,
-		"x-apple-diskimage":			None,
-		"x-apple-diskimage":			None,
 		"x-arj":						"ARJ",
-		"x-astrotite-afa":				None,
 		"x-b1":							None,
 		"x-bzip":						"BZIP",
 		"x-bzip2":						"BZIP2",
-		"x-cfs-compressed":				None,
 		"x-compressed":					"GZIP",
 		"x-compress":					"GZIP",
 		"x-dar":						None,
@@ -1135,15 +1165,12 @@ def get_archivetype(filename,filetype):
 		"x-gtar":						"TGZ",
 		"x-gzip":						"GZIP",
 		"x-lzh":						"LHA",
-		"x-lzip":						None,
+		"x-lzip":						"LZIP",
 		"x-lzma":						"LZMA",
 		"x-lzop":						"LZO",
 		"x-lzx":						None,
 		"x-tar":						"TAR",
 		"x-rar-compressed":				"RAR",
-		"x-snappy-framed":				None,
-		"x-stuffit":					None,
-		"x-stuffitx":					None,
 		"x-xz":							"XZ",
 		"zip":							"ZIP",
 		"x-zoo":						"ZOO",
@@ -1151,6 +1178,7 @@ def get_archivetype(filename,filetype):
 					  
 	extensions={"7z":	"7Z",
 				"ar":	"AR",
+				"arc":	"ARC",
 				"arj":	"ARJ",
 				"apk":	"ZIP",
 				"bz":	"BZIP",
@@ -1177,7 +1205,9 @@ def get_archivetype(filename,filetype):
 				"rz":	"RZIP",
 				"s7z":	"7Z",
 				"tar":	"TAR",
+				"tbz2":	"TARBZ2",
 				"tgz":	"TARGZ",
+				"tlz":	"TARLZMA",
 				"txz":	"TARXZ",
 				"war":	"ZIP",
 				"wim":	"ZIP",
@@ -1185,6 +1215,7 @@ def get_archivetype(filename,filetype):
 				"xz":	"XZ",
 				"z":	"GZIP",
 				"zip":	"ZIP",
+				"zipx":	"ZIP",
 				"zoo":	"ZOO"}
 
 	if maintype in ["application","other"]:
@@ -1198,6 +1229,10 @@ def get_archivetype(filename,filetype):
 				archivetype="TARBZ2"
 			elif extension =="gz":
 				archivetype="TARGZ"
+			elif extension =="lzma":
+				archivetype="TARLZMA"
+			elif extension =="xz":
+				archivetype="TARXZ"
 
 			return archivetype
 					
