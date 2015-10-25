@@ -371,6 +371,36 @@ class _LHA(_baseunpacker):
 				">/dev/null"]
 		return cmd
 
+#######
+#_LRZIP
+#######
+
+class _LRZIP(_baseunpacker):
+
+	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent)
+		self.cmd=shutil.which("lrunzip")
+
+	#################
+	#unpackingformats
+	#################
+
+	def unpackingformats(self):
+		return ["LRZIP"]
+ 
+	##################
+	#uncompresscommand
+	##################
+
+	def uncompresscommand(  self,
+							sourcefile,
+							directory):
+		cmd=[   self.cmd, 
+				"-O \"%s\""%directory,
+				sourcefile,
+				">/dev/null"]
+		return cmd
+
 #####
 #_LZO
 #####
@@ -477,7 +507,6 @@ class _RIPOLE(_baseunpacker):
 
 	def keep_for_viruscheck(self):
 		return True
-
 #####
 #_TAR
 #####
@@ -946,6 +975,8 @@ def get_archivemanager(manager, parent):
 		return _GZIP(parent=parent)
 	elif manager=="LHA":
 		return _LHA(parent=parent)
+	elif manager=="LRZIP":
+		return _LRZIP(parent=parent)
 	elif manager=="LZO":
 		return _LZO(parent=parent)
 	elif manager=="RAR":
@@ -967,7 +998,7 @@ def get_archivemanager(manager, parent):
 
 def get_managerlist():
 	return ["AR","ARJ","BZIP2","CAB","CPIO","FREEZE","GZIP","LHA",
-			"LZO","RAR","RIPOLE","TAR","TNEF","XZ","ZIP","ZOO"]
+			"LRZIP","LZO","RAR","RIPOLE","TAR","TNEF","XZ","ZIP","ZOO"]
 
 def get_archivetype(filename,filetype):
 	maintype,subtype=filetype.lower().split("/")
@@ -997,7 +1028,7 @@ def get_archivetype(filename,filetype):
 		"x-gtar":						"TGZ",
 		"x-gzip":						"GZIP",
 		"x-lzh":						"LHA",
-		"x-lzip":						"LZIP",
+		"x-lzip":						None,
 		"x-lzma":						"LZMA",
 		"x-lzop":						"LZO",
 		"x-lzx":						None,
@@ -1028,6 +1059,7 @@ def get_archivetype(filename,filetype):
 				"mar":	"BZIP2",
 				"lz":	"LZIP",
 				"lha":	"LHA",
+				"lrz":	"LRZIP",
 				"lzh":	"LHA",
 				"lzma":	"LZMA",
 				"lzo":	"LZO",
