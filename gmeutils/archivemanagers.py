@@ -1087,6 +1087,37 @@ class _ZOO(_baseunpacker):
 				">/dev/null"]
 		return cmd
 
+######
+#_ZPAQ
+######
+
+class _ZPAQ(_baseunpacker):
+
+	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent,chdir=True)
+		self.cmd=shutil.which("zp")
+
+	#################
+	#unpackingformats
+	#################
+
+	def unpackingformats(self):
+		return ["ZPAQ"]
+ 
+	##################
+	#uncompresscommand
+	##################
+
+	def uncompresscommand(  self,
+							sourcefile,
+							directory):
+		cmd=[   self.cmd, 
+				"e",
+				sourcefile,
+				">/dev/null"]
+		return cmd
+
+
 ################################################################################
 
 def get_archivemanager(manager, parent):
@@ -1134,6 +1165,8 @@ def get_archivemanager(manager, parent):
 		return _ZIP(parent=parent)
 	elif manager=="ZOO":
 		return _ZOO(parent=parent)
+	elif manager=="ZPAQ":
+		return _ZPAQ(parent=parent)
 	
 	return None
 
@@ -1141,7 +1174,7 @@ def get_managerlist():
 	return [	"AR","ARC","ARJ","BZIP2","CAB","CPIO",
 				"FREEZE","GZIP","KGB","LHA","LZIP",
 				"LRZIP","LZO","RAR","RIPOLE","RZIP",
-				"TAR","TNEF","XZ","ZIP","ZOO"]
+				"TAR","TNEF","XZ","ZIP","ZOO","ZPAQ"]
 
 def get_archivetype(filename,filetype):
 	maintype,subtype=filetype.lower().split("/")
@@ -1216,7 +1249,8 @@ def get_archivetype(filename,filetype):
 				"z":	"GZIP",
 				"zip":	"ZIP",
 				"zipx":	"ZIP",
-				"zoo":	"ZOO"}
+				"zoo":	"ZOO",
+				"zpaq":	"ZPAQ"}
 
 	if maintype in ["application","other"]:
 		fname=os.path.split(filename)[1].lower()
