@@ -172,116 +172,126 @@ def show_usage():
 def print_exampleconfig():
 	"prints an example config file to stdout"
 	space=56
+
 	print ("[default]")
 	print ("prefered_encryption = pgpinline".ljust(space)+
-"#valid values are 'pgpinline','pgpmime' or 'smime'")
+	"#valid values are 'pgpinline','pgpmime' or 'smime'")
 	print ("add_header = no".ljust(space)+
-"#adds a %s header to the mail"%gme._encryptheader)
+	"#adds a %s header to the mail"%gme._encryptheader)
 	print ("domains =".ljust(space)+
-"#comma separated list of domain names,") 
+	"#comma separated list of domain names,") 
 	print ("".ljust(space)+
-"#that should be encrypted, empty is all")
+	"#that should be encrypted, empty is all")
 	print ("homedomains=localhost".ljust(space)+
-"#a comma separated list of domains, for which this server is working"
-"and users might receive system mail and can use pdf encrypt")
+	"#a comma separated list of domains, for which this server is working"
+	"and users might receive system mail and can use pdf encrypt")
 	print ("output=mail".ljust(space)+
-"#valid values are 'mail'or 'stdout'")
+	"#valid values are 'mail'or 'stdout'")
 	print ("locale=en".ljust(space)+
-"#DA|DE|EN|ES|FI|FR|IT|NL|NO|PL|PT|RU|SV")
+	"#DA|DE|EN|ES|FI|FR|IT|NL|NO|PL|PT|RU|SV")
 	print ("mailtemplatedir=/usr/share/gpgmailencrypt"
 			"/mailtemplates".ljust(space)+
-"#directory where mail templates are stored")
+	"#directory where mail templates are stored")
 	print ("systemmailfrom=gpgmailencrypt@localhost".ljust(space)+
-"#e-mail address used when sending system mails")
+	"#e-mail address used when sending system mails")
 	print ("alwaysencrypt=False".ljust(space)+
-"#if True e-mails will be sent encrypted, even if there is no key")
+	"#if True e-mails will be sent encrypted, even if there is no key")
 	print ("".ljust(space)+
-"#Fallback encryption is encrypted pdf")
+	"#Fallback encryption is encrypted pdf")
+
 	print ("")
 	print ("[gpg]")
 	print ("keyhome = /var/lib/gpgmailencrypt/.gnupg".ljust(space)+
-"#home directory of public  gpgkeyring")
+	"#home directory of public  gpgkeyring")
 	print ("gpgcommand = /usr/bin/gpg2")
 	print ("allowgpgcomment = yes".ljust(space)+
-"#allow a comment string in the GPG file")
+	"#allow a comment string in the GPG file")
+
 	print ("")
 	print ("[logging]")
 	print ("log=none".ljust(space)+
-"#valid values are 'none', 'syslog', 'file' or 'stderr'")
+	"#valid values are 'none', 'syslog', 'file' or 'stderr'")
 	print ("file = /tmp/gpgmailencrypt.log")
 	print ("debug = no")
+
 	print ("")
 	print ("[mailserver]")
-	print ("host = 127.0.0.1".ljust(space)+
-"#smtp host")
-	print ("port = 25".ljust(space)+
-"#smtp port")
+	print ("host = 127.0.0.1".ljust(space)+"#smtp host")
+	print ("port = 25".ljust(space)+"#smtp port")
 	print ("authenticate = False".ljust(space)+
-"#user must authenticate")
+	"#user must authenticate")
 	print ("smtpcredential =/etc/gpgmailencrypt.cfg".ljust(space)+
-"#file that keeps user and password information")    
+	"#file that keeps user and password information")    
 	print("".ljust(space)+
-"#file format 'user=password'")
+	"#file format 'user=password'")
+
 	print ("")
 	print ("[encryptionmap]")
 	print ("user@domain.com = PGPMIME".ljust(space)+
-"#PGPMIME|PGPINLINE|SMIME|PDF[:zipencryptionmethod]|NONE")
+	"#PGPMIME|PGPINLINE|SMIME|PDF[:zipencryptionmethod]|NONE")
 	print ("")
 	print ("[usermap]")
 	print (""
-"#user_nokey@domain.com = user_key@otherdomain.com")
+	"#user_nokey@domain.com = user_key@otherdomain.com")
+
 	print ("")
 	print ("[smime]")
 	print ("keyhome = ~/.smime".ljust(space)+
-"#home directory of S/MIME public key files")
+	"#home directory of S/MIME public key files")
 	print ("opensslcommand = /usr/bin/openssl")
 	print ("defaultcipher = DES3".ljust(space)+
-"#DES3|AES128|AES192|AES256")
+	"#DES3|AES128|AES192|AES256")
 	print ("extractkey= no".ljust(space)+
-"#automatically scan emails and extract smime public keys to 'keyextractdir'")
+	"#automatically scan emails and extract smime public keys to "
+	"'keyextractdir'")
 	print ("keyextractdir=~/.smime/extract")
+
 	print ("")
 	print ("[smimeuser]")
 	print ("smime.user@domain.com = user.pem[,cipher]".ljust(space)+
-"#public S/MIME key file [,used cipher, see defaultcipher "
-"in the smime section]")
+	"#public S/MIME key file [,used cipher, see defaultcipher "
+	"in the smime section]")
+
 	print ("")
 	print ("[pdf]")
 	print ("email2pdfcommand=/usr/bin/email2pdf".ljust(space)+
-"#path where to find email2pdf (needed for creating pdfs,")
+	"#path where to find email2pdf (needed for creating pdfs,")
 	print ("".ljust(space)+
-"#see https://github.com/andrewferrier/email2pdf)")
+	"#see https://github.com/andrewferrier/email2pdf)")
 	print ("pdftkcommand=/usr/bin/pdftk".ljust(space)+
-"#path where to find pdftk (needed for encrypting pdf files")
+	"#path where to find pdftk (needed for encrypting pdf files")
 	print ("passwordlength=10".ljust(space)+
-"#Length of the automatic created password")
+	"#Length of the automatic created password")
 	print ("passwordlifetime=172800".ljust(space)+
-"#lifetime for autocreated passwords in seconds. Default is 48 hours")
+	"#lifetime for autocreated passwords in seconds. Default is 48 hours")
 	print ("pdfpasswords=/etc/gpgpdfpasswords.pw".ljust(space)+
-"#file that includes users and passwords for permanent pdf passwords")
+	"#file that includes users and passwords for permanent pdf passwords")
+
 	print ("")
 	print ("[zip]")
 	print ("7zipcommand=/usr/bin7za".ljust(space)+
-"#path where to find 7za")
+	"#path where to find 7za")
 	print ("defaultcipher=ZipCrypto".ljust(space)+
-"#ZipCrypto|AES128||AES192|AES256")
+	"#ZipCrypto|AES128||AES192|AES256")
 	print ("compressionlevel=5".ljust(space)+
-"#1,3,5,7,9  with 1:lowest compression, but very fast, 9 is ")
+	"#1,3,5,7,9  with 1:lowest compression, but very fast, 9 is ")
 	print ("".ljust(space)+
-"#highest compression, but very slow, default is 5")
+	"#highest compression, but very slow, default is 5")
 	print ("securezipcontainer=False".ljust(space)+
-"#attachments will be stored in an encrypted zip file. If this option is true,")
+	"#attachments will be stored in an encrypted zip file."
+	" If this option is true,")
 	print ("".ljust(space)+
-"#the directory will be also encrypted")
+	"#the directory will be also encrypted")
 	print ("zipattachments=False".ljust(space)+
-"#if True all attachments will be zipped, independent "
-"from the encryption method")
+	"#if True all attachments will be zipped, independent "
+	"from the encryption method")
+
 	print ("")
 	print ("[daemon]")
 	print ("host = 127.0.0.1".ljust(space)+
-"#smtp host")
+	"#smtp host")
 	print ("port = 10025".ljust(space)+
-"#smtp port")
+	"#smtp port")
 	print ("smtps = False".ljust(space)+
 	"#use smtps encryption")
 	print ("starttls = False".ljust(space)+
@@ -300,10 +310,16 @@ def print_exampleconfig():
 	"#comma separated list of admins, that can use the admin console")
 	print ("statistics=1".ljust(space)+
 	"#how often per day should statistical data be logged (0=none) max is 24")
+
 	print ("")
 	print ("[virus]")
 	print ("checkviruses=False".ljust(space)+
 	"#if true,e-mails will be checked for viruses before being encrypted")
+	print ("quarantinelifetime=2419200".ljust(space)+
+	"#how longan infected e-mail exists in the quarantine (in seconds)")
+	print ("".ljust(space)+
+	"#(default is 4 weeks). 0 deactivates automatic deletion")
+
 	print ("")
 	print ("[spam]")
 	print ("checkspam=False".ljust(space)+
@@ -314,7 +330,6 @@ def print_exampleconfig():
 	"#port of the spamassassin server")
 	print ("maxsize=500000".ljust(space)+
 	"#maximum size of e-mail,that will be checked if it is spam")
-
 	print ("spamlevel=6.1".ljust(space)+
 	"#threshold for spam, values higher than that means the mail is spam")
 	print ("spamsuspectlevel=2.0".ljust(space)+
@@ -616,27 +631,26 @@ class _virus_check(_gmechild):
 	#######################
 
 	def _search_archivemanager(self):
-		_archivemanager={}
+		#_archivemanager={}
 
 		for m in archivemanagers.get_managerlist():
 			mngr=archivemanagers.get_archivemanager(m,self.parent)
 
 			if mngr!=None and len(mngr.cmd)>0:
 				self.unpacker[m]=mngr
-				_archivemanager[m]=self.unpacker[m].unpackingformats()
+				archiveformats=self.unpacker[m].unpackingformats()
 	
-		for a in _archivemanager:
-			archiveformats=_archivemanager[a]
-			self.log("Archivemanager %s registered: Filetypes: %s"
-							%(a,archiveformats))
+				#archiveformats=_archivemanager[m]
+				self.log("Archivemanager %s registered: Filetypes: %s"
+							%(m,archiveformats))
 
-			for f in archiveformats:
-				ff=f.upper()
+				for f in archiveformats:
+					ff=f.upper()
 
-				try:
-					self.archivemap[ff]
-				except:
-					self.archivemap[ff]=a
+					try:
+						self.archivemap[ff]
+					except:
+						self.archivemap[ff]=m
 
 	##################
 	#_print_archivemap
@@ -2605,6 +2619,7 @@ class gme:
 		self._ZIPATTACHMENTS=False
 		self._ADMINS=[]
 		self._VIRUSCHECK=False
+		self._VIRUSLIFETIME=60 #2419200 #4 weeks
 		self._SPAMCHECK=False
 		self._SPAMHOST="localhost"
 		self._SPAMPORT=783
@@ -3023,11 +3038,18 @@ class gme:
 			"w")
 
 		if _cfg.has_section('virus'):
+
 			try:
 				self._VIRUSCHECK=_cfg.getboolean('virus','checkviruses')
 				self.set_check_viruses(self._VIRUSCHECK)
 			except:
 				pass
+				
+			try:
+				self._VIRUSLIFETIME=_cfg.getint('virus','quarantinelifetime')
+			except:
+				pass
+				
 
 		s=self.smime_factory()
 		self._smimeuser.update(s.create_keylist(self._SMIMEKEYHOME))
@@ -4053,14 +4075,12 @@ class gme:
 
 			for l in f:
 				mail=l.split("|")
-
 				try:
 					mail[3]=float(mail[3])
 				except:
 					mail[3]=-1
 					self.log("load_viruslist, id could not be converted"
 							" to float","e")
-
 				self._virus_queue.append(mail)
 
 			f.close()
@@ -4539,6 +4559,7 @@ class gme:
 
 			with open(res[0]) as f:
 				mail=f.read()
+
 			m=email.message_from_string(mail)
 			del m["To"]
 			m["To"]=to_addr
@@ -4551,6 +4572,55 @@ class gme:
 
 		return self.quarantine_remove(v_id)				
 
+	#####################
+	#del_old_virusmails
+	#####################
+ 
+	@_dbg
+	def del_old_virusmails(self):
+		delmail=[]
+
+		if self._VIRUSLIFETIME<=0:
+			return
+			
+		for mail in self._virus_queue:
+
+			try:
+				date=float(mail[3])
+
+				if date>0 and (date + self._VIRUSLIFETIME < time.time()):
+					delmail.append(mail)
+
+			except:
+				self.log_traceback()
+
+		for mail in delmail:
+
+			try:
+
+				if self.quarantine_remove(float(mail[3])):
+					self.debug("Old virus mail '%s' deleted"%mail)
+
+			except:
+				self.log_traceback()
+
+	#############################
+	#set_virusquarantine_lifetime
+	#############################
+
+	def set_virusquarantine_lifetime(self,lifetime):
+		"""sets the lifetime of infected mails in the quarantine in second
+		0 deactivates automatic deletion
+		"""
+		self._VIRUSLIFETIME=lifetime
+
+	#############################
+	#get_virusquarantine_lifetime
+	#############################
+
+	def get_virusquarantine_lifetime(self):
+		"returns the quarantine lifetime of infected mails"
+		return self._VIRUSLIFETIME
 
 	###############
 	#set_check_spam
@@ -6381,9 +6451,11 @@ class gme:
 	@_dbg
 	def daemonmode(self):
 		"starts the smtpd daemon"
+
 		#####################
 		#_deferredlisthandler
 		#####################
+
 		def _deferredlisthandler():
 			self.check_deferred_list()
 			self.store_deferred_list()
@@ -6401,7 +6473,9 @@ class gme:
 					self._log_statistics() #log statistics every 24 hours
 
 			self.del_old_pdfpasswords(self._PDFPASSWORDLIFETIME)
+			self.del_old_virusmails()
 		#####################
+
 		self._RUNMODE=self.m_daemon
 		self._daemonstarttime=datetime.datetime.now()
 		alarm=_mytimer()

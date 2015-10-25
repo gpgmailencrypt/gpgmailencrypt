@@ -1170,17 +1170,36 @@ def get_archivemanager(manager, parent):
 	return None
 
 def get_managerlist():
-	return [	"AR","ARC","ARJ","BZIP2","CAB","CPIO",
-				"FREEZE","GZIP","KGB","LHA","LZIP",
-				"LRZIP","LZO","RAR","RIPOLE","RZIP",
-				"TAR","TNEF","XZ","ZIP","ZOO","ZPAQ"]
+	return [	"AR",
+				"ARC",
+				"ARJ",
+				"BZIP2",
+				"CAB",
+				"CPIO",
+				"FREEZE",
+				"GZIP",
+				"KGB",
+				"LHA",
+				"LZIP",
+				"LRZIP",
+				"LZO",
+				"RAR",
+				"RIPOLE",
+				"RZIP",
+				"TAR",
+				"TNEF",
+				"XZ",
+				"ZIP",
+				"ZOO",
+				"ZPAQ",
+			]
 
 def get_archivetype(filename,filetype):
 	maintype,subtype=filetype.lower().split("/")
 	fname, extension = os.path.splitext(filename)
 	archivetype=None
 	subtypes={
-		"java-archive":					"ZIP",
+		"java-archive":					"JAR",
 		"ms-tnef":						"TNEF",
 		"vnd.ms-cab-compressed":		"CAB",
 		"vnd.android.package-archive":	"ZIP",
@@ -1217,12 +1236,12 @@ def get_archivetype(filename,filetype):
 				"cab":	"CAB",
 				"cpio":	"CPIO",
 				"deb":	"AR",
-				"ear":	"ZIP",
+				"ear":	"JAR",
 				"exe":	"EXE",
 				"f":	"FREEZE",
 				"gz":	"GZIP",
 				"iso":	"ISO",
-				"jar":	"ZIP",
+				"jar":	"JAR",
 				"kgb":	"KGB",
 				"lz":	"LZIP",
 				"lha":	"LHA",
@@ -1247,7 +1266,8 @@ def get_archivetype(filename,filetype):
 				"zip":	"ZIP",
 				"zipx":	"ZIP",
 				"zoo":	"ZOO",
-				"zpaq":	"ZPAQ"}
+				"zpaq":	"ZPAQ",
+				}
 
 	if maintype in ["application","other"]:
 		fname=os.path.split(filename)[1].lower()
