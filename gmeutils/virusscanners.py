@@ -227,8 +227,7 @@ class _SOPHOS(_basevirusscanner):
 ################################################################################
 
 def get_virusscannerlist():
-	#return ["AVAST","BITDEFENDER","CLAMAV","FPROT","SOPHOS"]
-	return ["AVAST"]
+	return ["AVAST","BITDEFENDER","CLAMAV","FPROT","SOPHOS"]
 
 def get_virusscanner(scanner,parent):
 	scanner=scanner.upper().strip()
