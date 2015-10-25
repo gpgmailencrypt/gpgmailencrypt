@@ -1117,7 +1117,6 @@ class _ZPAQ(_baseunpacker):
 				">/dev/null"]
 		return cmd
 
-
 ################################################################################
 
 def get_archivemanager(manager, parent):
@@ -1201,7 +1200,6 @@ def get_archivetype(filename,filetype):
 		"x-lzip":						"LZIP",
 		"x-lzma":						"LZMA",
 		"x-lzop":						"LZO",
-		"x-lzx":						None,
 		"x-tar":						"TAR",
 		"x-rar-compressed":				"RAR",
 		"x-xz":							"XZ",
@@ -1232,7 +1230,6 @@ def get_archivetype(filename,filetype):
 				"lzh":	"LHA",
 				"lzma":	"LZMA",
 				"lzo":	"LZO",
-				"lzx":  None,
 				"mar":	"BZIP2",
 				"rar":	"RAR",
 				"rz":	"RZIP",
