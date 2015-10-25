@@ -47,7 +47,6 @@ class _AVAST(_basevirusscanner):
 		cmd=[self.cmd,"-u",directory]
 		result=False
 		information=[]
-		skip_header=2
 		
 		try:
 			p = subprocess.Popen(   cmd, 
@@ -167,7 +166,6 @@ class _FPROT(_basevirusscanner):
 		cmd=[self.cmd,"--report","--mount","--adware",directory]
 		result=False
 		information=[]
-		skip_header=2
 		
 		try:
 			p = subprocess.Popen(   cmd, 
@@ -205,7 +203,6 @@ class _SOPHOS(_basevirusscanner):
 		
 		result=False
 		information=[]
-		skip_header=2
 		
 		try:
 			p = subprocess.Popen(   cmd, 
@@ -230,7 +227,8 @@ class _SOPHOS(_basevirusscanner):
 ################################################################################
 
 def get_virusscannerlist():
-	return ["AVAST","BITDEFENDER","CLAMAV","FPROT","SOPHOS"]
+	#return ["AVAST","BITDEFENDER","CLAMAV","FPROT","SOPHOS"]
+	return ["AVAST"]
 
 def get_virusscanner(scanner,parent):
 	scanner=scanner.upper().strip()
