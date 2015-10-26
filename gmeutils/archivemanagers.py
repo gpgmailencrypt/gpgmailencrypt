@@ -4,14 +4,16 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from .child import _gmechild 
 
 ####################
 #CLASS _baseunpacker
 ####################
 
-class _baseunpacker():
+class _baseunpacker(_gmechild):
 
 	def __init__(self,parent,chdir=False):
+		_gmechild.__init__(self,parent)
 		self.cmd=""
 		self.chdir=chdir
 		self.parent=parent
@@ -26,24 +28,6 @@ class _baseunpacker():
 
 	def keep_for_viruscheck(self):
 		return False
-
-	def log(self,
-			msg,
-			infotype="m",
-			ln=-1):
-
-		if self.parent:
-			self.parent.log(msg,infotype,ln)
-
-	def log_traceback(self):
-		if self.parent:
-			self.parent.log_traceback()
-
-	def debug(  self,
-				msg,
-				lineno=0):
-		if self.parent:
-			self.parent.debug(msg,lineno)
 
 	################
 	#uncompress_file

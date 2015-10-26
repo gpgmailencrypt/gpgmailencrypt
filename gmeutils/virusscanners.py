@@ -3,36 +3,17 @@ import os
 import re
 import shutil
 import subprocess
+from .child import _gmechild 
 
 ##################
 #_basevirusscanner
 ##################
 
-class _basevirusscanner:
-	def __init__(self,parent):
-		self.parent=parent
+class _basevirusscanner(_gmechild):
 
 	def has_virus(self,directory):
 		raise NotImplementedError
-	
-	def log(self,
-			msg,
-			infotype="m",
-			ln=-1):
 
-		if self.parent:
-			self.parent.log(msg,infotype,ln)
-
-	def log_traceback(self):
-		if self.parent:
-			self.parent.log_traceback()
-
-	def debug(  self,
-				msg,
-				lineno=0):
-		if self.parent:
-			self.parent.debug(msg,lineno)
-	
 #######
 #_AVAST
 #######
