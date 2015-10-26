@@ -45,6 +45,7 @@ import getopt
 import getpass
 import gmeutils.archivemanagers as archivemanagers
 import gmeutils.virusscanners 	as virusscanners
+import gmeutils.spamscanners 	as spamscanners
 from gmeutils.child import _gmechild 
 import hashlib
 import html.parser
@@ -2392,6 +2393,7 @@ class gme:
 		self._LOGGING=self.l_none
 		self._level=0
 		self._virus_checker=None
+		self._spam_checker=None
 		self.reset_statistics()
 		self._DEBUG=False
 		self._GPGkeys=list()
@@ -2518,6 +2520,7 @@ class gme:
 		self._viruslist=os.path.expanduser("~/viruslist.txt")
 		self._quarantinedir=os.path.expanduser("~/gmequarantine")
 		self._spam_cmd=shutil.which("spamc")
+		self._spam_leveldict={}
 
 		if not os.path.exists(self._deferdir):
 			os.makedirs(self._deferdir)
@@ -2998,6 +3001,19 @@ class gme:
 			self._SPAMSUSPECTLEVEL=self._SPAMLEVEL-0.5
 			self.log("Spamsuspectlevel >=Spamlevel, automatically corrected",
 			"w")
+
+		self._spam_leveldict["SPAMASSASSIN"]=[	self._SPAMLEVEL,
+												self._SPAMSUSPECTLEVEL,
+												self._SPAMHOST,
+												self._SPAMPORT,
+												self._SPAMMAXSIZE]
+		self._spam_checker=spamscanners.get_spamscanner("SPAMASSASSIN",
+														self,
+														self._spam_leveldict)
+		if self._spam_checker!=None:
+			self.log("SPAMCHECKER SPAMASSASSIN activated")
+		else:
+			self.log("NOSPAMCHECKER")
 
 		if _cfg.has_section('virus'):
 
@@ -6066,7 +6082,7 @@ class gme:
 								mailtext,
 								from_addr,
 								to_addr,
-								is_spam=False):
+								is_spam=spamscanners.S_NOSPAM):
 		_pgpmime=False
 		_prefer_gpg=True
 		_prefer_pdf=False
@@ -6098,7 +6114,7 @@ class gme:
 				for i in info:
 					self.log("Virusinfo: %s"% i,"w")
 
-		if is_spam:
+		if is_spam!=spamscanners.S_NOSPAM:
 			m="Email is SPAM"
 			self.debug(m)
 			self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
@@ -6272,27 +6288,11 @@ class gme:
 												self._SMIMEKEYEXTRACTDIR)
 				self._del_tempfile(f.name)
 
-			if self._SPAMCHECK and self._spam_cmd!=None:
+			if self._SPAMCHECK and self._spam_checker!=None:
 				self.debug("Spamcheck")
-				p=subprocess.Popen([self._spam_cmd,
-									"-s",str(self._SPAMMAXSIZE),
-									"-d",self._SPAMHOST,
-									"-R",
-									"-p",str(self._SPAMPORT)],
-									stdin=subprocess.PIPE,
-									stdout=subprocess.PIPE,
-									stderr=subprocess.PIPE)
-				result=p.communicate(input=mailtext.encode("UTF-8",
-											_unicodeerror))[0].decode("UTF-8",
-											_unicodeerror)
-				scoretext=result[:result.find("\n")].split("/")[0]
-
-				try:
-					score=float(scoretext)
-				except:
-					self.log("Could not convert score to float","e")
-
-				is_spam=(score>=self._SPAMLEVEL)
+				spamlevel,score=self._spam_checker.is_spam(mailtext)
+				scoretext=str(score)
+				is_spam=(spamlevel==spamscanners.S_SPAM)
 
 				if self._SPAMADDHEADER:
 					spamheader=(
@@ -6356,7 +6356,7 @@ class gme:
 											mailtext,
 											from_addr,
 											to_addr,
-											is_spam)
+											spamlevel)
 		except:
 			self._count_deferredmails+=1
 			self.log_traceback()
