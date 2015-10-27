@@ -326,17 +326,19 @@ def print_exampleconfig():
 	print ("[spam]")
 	print ("checkspam=False".ljust(space)+
 	"#if true, e-mails will be checked if they are spam")
-	print ("host=localhost".ljust(space)+
+	print ("sa_host=localhost".ljust(space)+
 	"#server where spamassassin is running")
-	print ("port=783".ljust(space)+
+	print ("sa_port=783".ljust(space)+
 	"#port of the spamassassin server")
+	print ("sa_spamlevel=6.1".ljust(space)+
+	"#spamassassin threshold for spam, "
+	"values higher than that means the mail is spam")
+	print ("sa_spamsuspectlevel=3.0".ljust(space)+
+	"#spamassassin threshold for spam, values higher "
+	"than that means the mail might be spam")
+	print("".ljust(space)+"#(value must be smaller than 'spamlevel')")
 	print ("maxsize=500000".ljust(space)+
 	"#maximum size of e-mail,that will be checked if it is spam")
-	print ("spamlevel=6.1".ljust(space)+
-	"#threshold for spam, values higher than that means the mail is spam")
-	print ("spamsuspectlevel=2.0".ljust(space)+
-	"#threshold for spam, values higher than that means the mail might be spam")
-	print("".ljust(space)+"#(value must be smaller than 'spamlevel')")
 	print ("add_spamheader=False".ljust(space)+
 	"#if True the e-mail gets spam headers")
 	print ("change_subject=False".ljust(space)+
@@ -2586,11 +2588,12 @@ class gme:
 		self._VIRUSCHECK=False
 		self._VIRUSLIFETIME=60 #2419200 #4 weeks
 		self._SPAMCHECK=False
-		self._SPAMHOST="localhost"
-		self._SPAMPORT=783
+		self._SPAMSCANNER="BOGOFILTER"
+		self._SA_SPAMHOST="localhost"
+		self._SA_SPAMPORT=783
+		self._SA_SPAMLEVEL=6.2
+		self._SA_SPAMSUSPECTLEVEL=3.0
 		self._SPAMMAXSIZE=500000
-		self._SPAMLEVEL=6.2
-		self._SPAMSUSPECTLEVEL=2.0
 		self._SPAMCHANGESUBJECT=True
 		self._SPAMSUBJECT="***SPAM***"
 		self._SPAMSUSPECTSUBJECT="***SPAMSUSPICION***"
@@ -2961,15 +2964,21 @@ class gme:
 			except:
 				pass
 			try:
+				s=_cfg.get('spam','spamscanner').upper().trim()
+				if s in spamscanners.get_spamscannerlist():
+					self._SPAMSCANNER=s
+			except:
+				pass
+			try:
 				self._SPAMADDHEADER==_cfg.getboolean('spam','add_spamheader')
 			except:
 				pass
 			try:
-				self._SPAMHOST=_cfg.get('spam','host')
+				self._SA_SPAMHOST=_cfg.get('spam','sa_host')
 			except:
 				pass
 			try:
-				self._SPAMPORT=_cfg.getint('spam','port')
+				self._SA_SPAMPORT=_cfg.getint('spam','sa_port')
 			except:
 				pass
 			try:
@@ -2977,11 +2986,11 @@ class gme:
 			except:
 				pass
 			try:
-				self._SPAMLEVEL=_cfg.getfloat('spam','spamlevel')
+				self._SA_SPAMLEVEL=_cfg.getfloat('spam','sa_spamlevel')
 			except:
 				pass
 			try:
-				self._SPAMSUSPECTLEVEL=_cfg.getfloat('spam','spamsuspectlevel')
+				self._SA_SPAMSUSPECTLEVEL=_cfg.getfloat('spam','sa_spamsuspectlevel')
 			except:
 				pass
 			try:
@@ -2997,21 +3006,21 @@ class gme:
 			except:
 				pass
 
-		if self._SPAMSUSPECTLEVEL >=self._SPAMLEVEL:
-			self._SPAMSUSPECTLEVEL=self._SPAMLEVEL-0.5
+		if self._SA_SPAMSUSPECTLEVEL >=self._SA_SPAMLEVEL:
+			self._SA_SPAMSUSPECTLEVEL=self._SA_SPAMLEVEL-0.5
 			self.log("Spamsuspectlevel >=Spamlevel, automatically corrected",
 			"w")
 
-		self._spam_leveldict["SPAMASSASSIN"]=[	self._SPAMLEVEL,
-												self._SPAMSUSPECTLEVEL,
-												self._SPAMHOST,
-												self._SPAMPORT,
+		self._spam_leveldict["SPAMASSASSIN"]=[	self._SA_SPAMLEVEL,
+												self._SA_SPAMSUSPECTLEVEL,
+												self._SA_SPAMHOST,
+												self._SA_SPAMPORT,
 												self._SPAMMAXSIZE]
-		self._spam_checker=spamscanners.get_spamscanner("SPAMASSASSIN",
+		self._spam_checker=spamscanners.get_spamscanner(self._SPAMSCANNER,
 														self,
 														self._spam_leveldict)
 		if self._spam_checker!=None:
-			self.log("SPAMCHECKER SPAMASSASSIN activated")
+			self.log("SPAMCHECKER '%s' activated"%self._SPAMSCANNER)
 		else:
 			self.log("NOSPAMCHECKER")
 
@@ -6326,12 +6335,11 @@ class gme:
 				if self._SPAMCHANGESUBJECT:
 					subject=self._decode_header(raw_message["Subject"])
 
-					if score>self._SPAMSUSPECTLEVEL:
 
-						if score<self._SPAMLEVEL:
+					if score==spamscanners.S_SPAM:
 							subject="%s %s"%(	self._SPAMSUSPECTSUBJECT,
 												subject)
-						else:
+					if score==spamscanners.S_MAYBESPAM:
 							subject="%s %s"%(	self._SPAMSUBJECT,
 												subject)
 						
