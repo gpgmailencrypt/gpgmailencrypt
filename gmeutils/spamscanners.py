@@ -42,13 +42,6 @@ class _SPAMASSASSIN(_basespamchecker):
 		self._SPAMMAXSIZE=5000000
 		self.cmd=shutil.which("spamc")
 		self.set_leveldict(leveldict)
-
-	def is_available(self):
-
-		if self._spam_cmd!= None and len(self._spam_cmd)>0:
-			return True
-		else:
-			return False
 		
 	def set_leveldict(self,leveldict):
 		self.spamlevel=5.0
@@ -66,7 +59,7 @@ class _SPAMASSASSIN(_basespamchecker):
 	def is_spam(self,mail):
 			self.debug("Spamcheck")
 			spamlevel=S_NOSPAM
-			p=subprocess.Popen([self._spam_cmd,
+			p=subprocess.Popen([self.cmd,
 								"-s",str(self._SPAMMAXSIZE),
 								"-d",self._SPAMHOST,
 								"-R",
