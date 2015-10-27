@@ -76,7 +76,6 @@ class _SPAMASSASSIN(_basespamchecker):
 				score=float(scoretext)
 			except:
 				self.log("Could not convert score to float","e")
-			score=7.3
 
 			if score >self.spammaybelevel:
 				if score >self.spamlevel:
