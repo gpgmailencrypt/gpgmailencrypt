@@ -23,8 +23,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.3.0alpha"
-DATE="25.10.2015"
+VERSION="2.3.0beta"
+DATE="27.10.2015"
 import asynchat
 import asyncore
 import atexit
@@ -2420,6 +2420,8 @@ class gme:
 		self._count_pgpinlinemails=0
 		self._count_pdfmails=0
 		self._count_viruses=0
+		self._count_spam=0
+		self._count_maybespam=0
 
 	###################
 	#reset_pdfpasswords
@@ -2588,7 +2590,7 @@ class gme:
 		self._VIRUSCHECK=False
 		self._VIRUSLIFETIME=60 #2419200 #4 weeks
 		self._SPAMCHECK=False
-		self._SPAMSCANNER="BOGOFILTER"
+		self._SPAMSCANNER="SPAMASSASSIN"
 		self._SA_SPAMHOST="localhost"
 		self._SA_SPAMPORT=783
 		self._SA_SPAMLEVEL=6.2
@@ -4271,6 +4273,9 @@ class gme:
 				self._systemerrors,
 				self._systemwarnings))
 		self.log("Virus infected mails: %i" %self._count_viruses)
+		self.log("Spam mails: %i, maybe spam: %i" %(
+				self._count_spam,
+				self._count_maybespam))
 
 	##############
 	#_new_tempfile
@@ -4669,6 +4674,8 @@ class gme:
 			"systemerrors":self._systemerrors,
 			"systemwarnings":self._systemwarnings,
 			"virus infected mails":self._count_viruses,
+			"spam mails":self._count_spam,
+			"spam mails maybe":self._count_maybespam,
 			}
 
 	###########
@@ -6302,6 +6309,12 @@ class gme:
 				spamlevel,score=self._spam_checker.is_spam(mailtext)
 				scoretext=str(score)
 				is_spam=(spamlevel==spamscanners.S_SPAM)
+
+				if spamlevel==spamscanners.S_SPAM:
+					self._count_spam+=1
+
+				if spamlevel==spamscanners.S_MAYBESPAM:
+					self._count_maybespam+=1
 
 				if self._SPAMADDHEADER:
 					spamheader=(
