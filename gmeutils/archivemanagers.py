@@ -1103,6 +1103,10 @@ class _ZPAQ(_baseunpacker):
 
 ################################################################################
 
+###################
+#get_archivemanager
+###################
+
 def get_archivemanager(manager, parent):
 	manager=manager.upper().strip()
 
@@ -1153,6 +1157,10 @@ def get_archivemanager(manager, parent):
 	
 	return None
 
+################
+#get_managerlist
+################
+
 def get_managerlist():
 	return [	"AR",
 				"ARC",
@@ -1177,6 +1185,10 @@ def get_managerlist():
 				"ZOO",
 				"ZPAQ",
 			]
+
+################
+#get_archivetype
+################
 
 def get_archivetype(filename,filetype):
 	maintype,subtype=filetype.lower().split("/")
