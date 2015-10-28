@@ -23,8 +23,8 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.3.0beta"
-DATE="27.10.2015"
+VERSION="2.3.0gamma"
+DATE="28.10.2015"
 import asynchat
 import asyncore
 import atexit
@@ -7360,9 +7360,11 @@ def _sigtermhandler(signum, frame):
 def main():
 	"main routine which will be called when gpgmailencrypt "
 	"is started as a script, not as a module"
+
 	with gme() as g:
 		recipient=g._parse_commandline()
 		g._set_logmode()
+
 		if g._RUNMODE==g.m_daemon:
 			g.daemonmode()
 		else:

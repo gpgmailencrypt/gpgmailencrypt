@@ -10,6 +10,10 @@ S_SPAM=2
 
 _unicodeerror="replace"
 
+#################
+#_basespamchecker
+#################
+
 class _basespamchecker(_gmechild):
 
 	def __init__(self,parent,leveldict):
@@ -45,16 +49,17 @@ class _SPAMASSASSIN(_basespamchecker):
 		
 	def set_leveldict(self,leveldict):
 		self.spamlevel=5.0
-		self.spammaybelevel=2.0
+		self.spammaybelevel=2.5
 
 		try:
-			self.spamlevel,
+			(self.spamlevel,
 			self.spammaybelevel,
 			self._SPAMHOST,
 			self._SPAMPORT,
-			self._SPAMMAXSIZE=leveldict["SPAMASSASSIN"]
+			self._SPAMMAXSIZE)=leveldict["SPAMASSASSIN"]
 		except:
 			self.log_traceback()
+			raise
 						
 	def is_spam(self,mail):
 			self.debug("Spamcheck")
@@ -125,11 +130,18 @@ class _BOGOFILTER(_basespamchecker):
 
 			return spamlevel,score
 
-
 ################################################################################
+
+####################
+#get_spamscannerlist
+####################
 
 def get_spamscannerlist(void):
 	return ["BOGOFILTER","SPAMASSASSIN"]
+
+################
+#get_spamscanner
+################
 
 def get_spamscanner(scanner,parent,leveldict):
 
