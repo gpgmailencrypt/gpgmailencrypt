@@ -5646,7 +5646,7 @@ class gme:
 		self._remove_mail_from_queue(queue_id)
 		#now send infomail
 		faddr= email.utils.parseaddr(from_addr)[1].split('@')
-		toaddr= email.utils.parseaddr(from_addr)[1].split('@')
+		taddr= email.utils.parseaddr(from_addr)[1].split('@')
 		new_toaddr=None
 
 		if len(faddr)==2:

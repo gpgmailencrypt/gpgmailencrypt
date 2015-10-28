@@ -70,7 +70,7 @@ class _virus_check(_gmechild):
 		for m in archivemanagers.get_managerlist():
 			mngr=archivemanagers.get_archivemanager(m,self.parent)
 
-			if mngr!=None and len(mngr.cmd)>0:
+			if mngr != None and mngr.cmd!=None and len(mngr.cmd)>0:
 				self.unpacker[m]=mngr
 				archiveformats=self.unpacker[m].unpackingformats()
 				self.log("Archivemanager %s registered: Filetypes: %s"
