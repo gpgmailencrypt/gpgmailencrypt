@@ -164,8 +164,10 @@ def show_usage():
 	print ("                    email will be sent via smtp")
 	print ("-o p --output p:    valid values for p are 'mail' or 'stdout',")
 	print ("                    alternatively set an outputfile with -m")
+	print ("--spamcheck=true:   if true, check if the e-mail is span")
 	print ("-x --example:       print example config file")
 	print ("-v --verbose:       print debugging information into _logfile")
+	print ("--viruscheck=true:  if true, check if the e-mail contains a virus")
 	print ("-z --zip:           zip attachments")
 	print ("")
 
