@@ -135,6 +135,45 @@ except:
 	clamavscan_available=False
 
 #######
+#_DRWEB
+#######
+
+class _DRWEB(_basevirusscanner):
+
+	def __init__(self,parent):
+		self.cmd=shutil.which("drweb")
+		_basevirusscanner.__init__(self,parent)
+
+	def has_virus(self,directory):
+		cmd=[self.cmd,"-lng=en_scanner.dwl","-sd","-al","-ha",directory]
+		result=False
+		information=[]
+		
+		try:
+			p = subprocess.Popen(   cmd, 
+									stdin=None, 
+									stdout=subprocess.PIPE, 
+									stderr=subprocess.PIPE )
+			p.wait()
+			
+			for line in p.stdout.readlines():
+				_l=line.decode("UTF-8")
+
+				if _l.startswith("/"):
+					found=_l.split(" infected with ")
+
+					if len(found)==2:
+						virusinfo=found[1][:-1]
+						filename=os.path.split(found[0])[1]
+						information.append(["DRWEB",filename,virusinfo])
+						result=True
+
+		except:
+			self.log_traceback()
+		
+		return result,information
+
+#######
 #_FPROT
 #######
 
@@ -207,8 +246,16 @@ class _SOPHOS(_basevirusscanner):
 
 ################################################################################
 
+#####################
+#get_virusscannerlist
+#####################
+
 def get_virusscannerlist():
-	return ["AVAST","BITDEFENDER","CLAMAV","FPROT","SOPHOS"]
+	return ["AVAST","BITDEFENDER","CLAMAV","DRWEB","FPROT","SOPHOS"]
+
+#################
+#get_virusscanner
+#################
 
 def get_virusscanner(scanner,parent):
 	scanner=scanner.upper().strip()
@@ -223,6 +270,11 @@ def get_virusscanner(scanner,parent):
 	
 	if scanner=="BITDEFENDER":
 		s= _BITDEFENDER(parent=parent)
+		if  s.cmd and len(s.cmd)>0:
+			return s
+
+	if scanner=="DRWEB":
+		s= _DRWEB(parent=parent)
 		if  s.cmd and len(s.cmd)>0:
 			return s
 
