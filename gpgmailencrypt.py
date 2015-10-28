@@ -5879,7 +5879,7 @@ class gme:
 		if isinstance(recipient,str):
 			recipient=[recipient]
 
-		is_spam=False
+		spamlevel=spamscanners.S_NOSPAM
 		score=0
 
 		try:
