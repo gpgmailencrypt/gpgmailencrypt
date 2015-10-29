@@ -655,6 +655,35 @@ class _RZIP(_basedeleteunpacker):
 				sourcefile,
 				">/dev/null"]
 		return cmd
+######
+#_SHAR
+######
+
+class _SHAR(_baseunpacker):
+
+	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent,chdir=True)
+		self.cmd=shutil.which("unshar")
+
+	#################
+	#unpackingformats
+	#################
+
+	def unpackingformats(self):
+		return ["SHAR"]
+ 
+	##################
+	#uncompresscommand
+	##################
+
+	def uncompresscommand(  self,
+							sourcefile,
+							directory):
+		cmd=[   self.cmd, 
+				sourcefile,
+				">/dev/null"]
+		return cmd
+
 
 #####
 #_TAR
@@ -1180,6 +1209,8 @@ def get_archivemanager(manager, parent):
 		return _RPM(parent=parent)
 	elif manager=="RZIP":
 		return _RZIP(parent=parent)
+	elif manager=="SHAR":
+		return _SHAR(parent=parent)
 	elif manager=="TAR":
 		return _TAR(parent=parent)
 	elif manager=="TNEF":
@@ -1217,6 +1248,7 @@ def get_managerlist():
 				"RIPOLE",
 				"RPM",
 				"RZIP",
+				"SHAR",
 				"TAR",
 				"TNEF",
 				"XZ",
@@ -1254,6 +1286,7 @@ def get_archivetype(filename,filetype):
 		"x-lzip":						"LZIP",
 		"x-lzma":						"LZMA",
 		"x-lzop":						"LZO",
+		"x-shar":						"SHAR",
 		"x-tar":						"TAR",
 		"x-rar-compressed":				"RAR",
 		"x-xz":							"XZ",
@@ -1289,6 +1322,7 @@ def get_archivetype(filename,filetype):
 				"rpm":	"RPM",
 				"rz":	"RZIP",
 				"s7z":	"7Z",
+				"shar":	"SHAR",
 				"tar":	"TAR",
 				"tbz2":	"TARBZ2",
 				"tgz":	"TARGZ",
