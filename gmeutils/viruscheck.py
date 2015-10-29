@@ -112,8 +112,8 @@ class _virus_check(_gmechild):
 				except:
 					pass
 			
-				#self.debug("\nFile %s, is archive %s of type %s,unpacker %s"
-				#			%(f,isarchive,archivetype,_unpacker))
+				#self.debug("\nFile %s, archive type %s,unpacker %s"
+				#			%(f,archivetype,_unpacker))
 
 				if archivetype!=None and _unpacker!=None:
 					_u=None
@@ -129,11 +129,13 @@ class _virus_check(_gmechild):
 					self.debug("   new dir is %s"%newdir)
 					_u.uncompress_file(pathf,directory=newdir)
 
-					try:
-						self.debug("_remove_mail_from_queue file '%s'"%pathf)
-						os.remove(pathf)
-					except:
-						pass
+					if not _u.keep_for_viruscheck():
+
+						try:
+							self.debug("delete archive'%s'"%pathf)
+							os.remove(pathf)
+						except:
+							self.debug("keep archive %s"%pathf)
 
 					self.check_directory_for_archives(newdir)
 
@@ -178,12 +180,12 @@ class _virus_check(_gmechild):
 				self.check_directory_for_archives(newdir)
 
 				if not _u.keep_for_viruscheck():
+
 					try:
-						self.debug("_remove_mail_from_queue file '%s'"%fname)
+						self.debug("delete archive '%s'"%fname)
 						os.remove(fname)
 					except:
 						self.debug("keep archive %s"%fname)
-						pass
 		
 	#############
 	#unpack_email
@@ -260,6 +262,9 @@ class _virus_check(_gmechild):
 		try:
 			if not self.parent._DEBUG:
 				shutil.rmtree(directory)
+			else:
+				self.debug("keep directory %s for debugging reasons"%directory)
+
 		except:
 			pass
 	

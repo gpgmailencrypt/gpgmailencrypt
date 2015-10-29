@@ -45,8 +45,10 @@ class _baseunpacker(_gmechild):
 		if self.chdir:
 			os.chdir(directory)
 			_origdir=os.getcwd()
+			self.debug("os.chdir(%s)"%_origdir)
 
 		uncompresscmd=' '.join(self.uncompresscommand(filename,directory))
+		self.debug("uncompresscommand:'%s'"%uncompresscmd)
 		_result = subprocess.call(uncompresscmd, shell=True) 
 
 		if self.chdir:
@@ -83,10 +85,12 @@ class _basedeleteunpacker(_baseunpacker):
 		targetname=os.path.join(directory,fname)
 		shutil.move(filename,targetname)
 		uncompresscmd=' '.join(self.uncompresscommand(targetname,directory))
+		self.debug("uncompresscommand:'%s'"%uncompresscmd)
 		_result = subprocess.call(uncompresscmd, shell=True) 
 
 		if self.chdir:
 			os.chdir(_origdir)
+			self.debug("os.chdir(%s)"%_origdir)
 
 		if _result !=0:
 		  return result,None
@@ -589,6 +593,38 @@ class _RIPOLE(_baseunpacker):
 	def keep_for_viruscheck(self):
 		return True
 
+#####
+#_RPM
+#####R
+
+class _RPM(_baseunpacker):
+
+	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent,chdir=True)
+		self.cmd=shutil.which("rpm2cpio")
+		self.cmdcpio=shutil.which("cpio")
+
+		if self.cmdcpio==None or len(self.cmdcpio)==0:
+			self.cmd=None
+
+	#################
+	#unpackingformats
+	#################
+
+	def unpackingformats(self):
+		return ["RPM"]
+ 
+	##################
+	#uncompresscommand
+	##################
+
+	def uncompresscommand(  self,
+							sourcefile,
+							directory):
+		cmd=[   self.cmd, 
+				sourcefile,
+				"| %s -dium"%self.cmdcpio]
+		return cmd
 
 ######
 #_RZIP
@@ -1140,6 +1176,8 @@ def get_archivemanager(manager, parent):
 		return _RAR(parent=parent)
 	elif manager=="RIPOLE":
 		return _RIPOLE(parent=parent)
+	elif manager=="RPM":
+		return _RPM(parent=parent)
 	elif manager=="RZIP":
 		return _RZIP(parent=parent)
 	elif manager=="TAR":
@@ -1177,6 +1215,7 @@ def get_managerlist():
 				"LZO",
 				"RAR",
 				"RIPOLE",
+				"RPM",
 				"RZIP",
 				"TAR",
 				"TNEF",
@@ -1247,6 +1286,7 @@ def get_archivetype(filename,filetype):
 				"lzo":	"LZO",
 				"mar":	"BZIP2",
 				"rar":	"RAR",
+				"rpm":	"RPM",
 				"rz":	"RZIP",
 				"s7z":	"7Z",
 				"tar":	"TAR",
