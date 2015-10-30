@@ -2,10 +2,22 @@ import asynchat
 import asyncore
 import datetime
 import os
+import select
 import smtpd
+import socket
 import ssl
 from .child import _gmechild 
-import select
+
+
+
+
+##############################################
+#Definition of general functions and variables
+##############################################
+
+_unicodeerror="replace"
+
+
 
 ######################
 #_gpgmailencryptserver
@@ -89,6 +101,9 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 			self.parent.log("SSL connection not possible. Cert- and/or key "
 							"file couldn't be opened","e")
 
+	def start(self):
+		asyncore.loop()
+		
 	#####################
 	#create_sslconnection
 	#####################

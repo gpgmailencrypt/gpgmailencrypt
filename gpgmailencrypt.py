@@ -394,7 +394,6 @@ def replace_variables(  text,
 			result+=dictionary[key]
 		except:
 			result+=startdelimiter+key+enddelimiter
-			raise
 
 		begin+=found.end()
 
@@ -6099,7 +6098,7 @@ class gme:
 			exit(1)
 
 		try:
-			asyncore.loop()
+			server.start()
 			print("nach asyncore.loop")
 		except SystemExit as m:
 			exit(0)
