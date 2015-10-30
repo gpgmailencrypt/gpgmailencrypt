@@ -43,9 +43,8 @@ from   email.mime.text	  	import MIMEText
 from   functools			import wraps
 import getopt
 import getpass
-import gmeutils.archivemanagers as archivemanagers
-import gmeutils.virusscanners 	as virusscanners
 import gmeutils.spamscanners 	as spamscanners
+import gmeutils.archivemanagers as archivemanagers
 from   gmeutils.child       import _gmechild 
 from   gmeutils.mytimer     import _mytimer
 from   gmeutils.viruscheck  import  _virus_check
@@ -189,8 +188,9 @@ def print_exampleconfig():
 	print ("".ljust(space)+
 	"#that should be encrypted, empty is all")
 	print ("homedomains=localhost".ljust(space)+
-	"#a comma separated list of domains, for which this server is working"
-	"and users might receive system mail and can use pdf encrypt")
+	"#a comma separated list of domains, for which this server is working ")
+	print ("".ljust(space)+"#and users might receive system mail "
+	"and can use pdf encrypt")
 	print ("output=mail".ljust(space)+
 	"#valid values are 'mail'or 'stdout'")
 	print ("locale=en".ljust(space)+
@@ -322,7 +322,7 @@ def print_exampleconfig():
 	print ("checkviruses=False".ljust(space)+
 	"#if true,e-mails will be checked for viruses before being encrypted")
 	print ("quarantinelifetime=2419200".ljust(space)+
-	"#how longan infected e-mail exists in the quarantine (in seconds)")
+	"#how long an infected e-mail exists in the quarantine (in seconds)")
 	print ("".ljust(space)+
 	"#(default is 4 weeks). 0 deactivates automatic deletion")
 
@@ -2618,13 +2618,6 @@ class gme:
 												self._SA_SPAMHOST,
 												self._SA_SPAMPORT,
 												self._SPAMMAXSIZE]
-		self._spam_checker=spamscanners.get_spamscanner(self._SPAMSCANNER,
-														self,
-														self._spam_leveldict)
-		if self._spam_checker!=None:
-			self.log("SPAMCHECKER '%s' activated"%self._SPAMSCANNER)
-		else:
-			self.log("NOSPAMCHECKER")
 
 		if _cfg.has_section('virus'):
 
@@ -4043,9 +4036,7 @@ class gme:
 
 	def set_check_viruses(self,c):
 		self._VIRUSCHECK=c
-
-		if 	(self._VIRUSCHECK==True and self._virus_checker==None):
-			self._virus_checker=_virus_check(parent=self)
+		self._virus_checker=None
 			
 	##################
 	#get_check_viruses
@@ -5884,6 +5875,16 @@ class gme:
 		spamlevel=spamscanners.S_NOSPAM
 		score=0
 
+		if self._SPAMCHECK and self._spam_checker==None:
+			self._spam_checker=spamscanners.get_spamscanner(self._SPAMSCANNER,
+														self,
+														self._spam_leveldict)
+
+			if self._spam_checker!=None:
+				self.log("SPAMCHECKER '%s' activated"%self._SPAMSCANNER)
+			else:
+				self.log("NOSPAMCHECKER")
+
 		try:
 
 			if self._debug_keepmail(mailtext): #DEBUG
@@ -5920,11 +5921,19 @@ class gme:
 					spamheader=(
 					"X-Spam-Score: %(score)s\r\n"
 					"X-Spam-Level: %(level)s\r\n"
-					"X-Spam-Flag: %(flag)s\r\n")%{
-							"score":scoretext,
+					"X-Spam-Flag: %(flag)s\r\n"
+					"X-Spam-Maybe: %(maybe)s\r\n"
+					)%{		"score":scoretext,
 							"flag":is_spam,
+							"maybe":(spamlevel==spamscanners.S_MAYBESPAM),
 							"level":"*"*int(score)}
 					mailtext=spamheader+mailtext
+
+			raw_message = email.message_from_string( mailtext )
+			from_addr = raw_message['From']
+
+			if 	(self._VIRUSCHECK==True and self._virus_checker==None):
+				self._virus_checker=_virus_check(parent=self)
 
 			for to_addr in recipient:
 				self.debug("encrypt_mail for user '%s'"%to_addr)
@@ -5932,18 +5941,6 @@ class gme:
 				if self._RUNMODE==self.m_daemon:
 					fname=self._store_temporaryfile(mailtext,
 													spooldir=True)
-
-				try:
-					raw_message = email.message_from_string( mailtext )
-				except:
-					self._store_temporaryfile(  mailtext,
-												add_deferred=True,
-												fromaddr="UNKNOWN",
-												toaddr=to_addr)
-					self.log_traceback()
-					return
-
-				from_addr = raw_message['From']
 
 				if self._SPAMCHANGESUBJECT:
 					subject=self._decode_header(raw_message["Subject"])
