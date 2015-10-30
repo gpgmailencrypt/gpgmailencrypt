@@ -700,7 +700,7 @@ class _TAR(_baseunpacker):
 	#################
 
 	def unpackingformats(self):
-		return ["TAR","TARBZ2","TARBZ","TARGZ","TARLZMA","TARXZ"]
+		return ["TAR","TARBZ2","TARBZ","TARGZ","TARLZMA","TARLZO","TARXZ"]
 
 	##################
 	#uncompresscommand
@@ -727,7 +727,8 @@ class _TAR(_baseunpacker):
 
 		if extension in ["lzma","tlz"]:
 			cmd.insert(2,"--lzma")
-
+		elif extension in ["lzo","tlzo","lzop","tlzop"]:
+			cmd.insert(2,"--lzop")
 		return cmd
 
 ######
@@ -1144,7 +1145,12 @@ class _ZPAQ(_baseunpacker):
 
 	def __init__(self,parent):
 		_baseunpacker.__init__(self,parent,chdir=True)
+		self.use_zpaqcmd=False
 		self.cmd=shutil.which("zp")
+
+		if self.cmd==None:
+			self.cmd=self.shutil.which("zpaq")
+			self.use_zpaqcmd=True
 
 	#################
 	#unpackingformats
@@ -1160,8 +1166,14 @@ class _ZPAQ(_baseunpacker):
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
+
+		if self.use_zpaqcmd:
+			 extract="x"
+		else:
+			 extract="e"
+
 		cmd=[   self.cmd, 
-				"e",
+				extract,
 				sourcefile,
 				">/dev/null"]
 		return cmd
@@ -1352,6 +1364,8 @@ def get_archivetype(filename,filetype):
 				archivetype="TARGZ"
 			elif extension =="lzma":
 				archivetype="TARLZMA"
+			elif extension in ["lzo","lzop"]:
+				archivetype="TARLZO"
 			elif extension =="xz":
 				archivetype="TARXZ"
 
