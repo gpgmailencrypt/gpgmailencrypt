@@ -40,7 +40,6 @@ from   email.generator	  	import Generator
 from   email.mime.base	  	import MIMEBase
 from   email.mime.multipart import MIMEMultipart
 from   email.mime.text	  	import MIMEText
-from   functools			import wraps
 import getopt
 import getpass
 import gmeutils.spamscanners 	as spamscanners
@@ -49,6 +48,7 @@ from   gmeutils.child       import _gmechild
 from   gmeutils.mytimer     import _mytimer
 from   gmeutils.viruscheck  import  _virus_check
 from   gmeutils.gpgmailserver import _gpgmailencryptserver,file_auth,_get_hash
+from   gmeutils._dbg import _dbg
 import hashlib
 import html.parser
 import inspect
@@ -91,43 +91,6 @@ import uu
 
 _unicodeerror="replace"
 
-#####
-#_dbg
-#####
-
-def _dbg(func):
-	@wraps(func)
-	def wrapper(*args, **kwargs):
-		parent=None
-
-		if args:
-			if isinstance(args[0],gme):
-				parent=args[0]
-
-		if not parent:
-			return func(*args,**kwargs)
-
-		lineno=0
-		endlineno=0
-
-		try:
-			source=inspect.getsourcelines(func)
-			lineno=source[1]
-			endlineno=lineno+len(source[0])
-		except:
-			pass
-
-		parent._level+=1
-		parent.debug("START %s"%func.__name__,lineno)
-		result=func(*args,**kwargs)
-		parent.debug("END %s"%func.__name__,endlineno)
-		parent._level-=1
-
-		if parent._level<0:
-			parent._level=0
-		return result
-
-	return wrapper
 
 ###########
 #show_usage
@@ -884,7 +847,7 @@ class _SMIME(_gmechild):
 	Don't call this class directly, use gme.smime_factory() instead!
 	"""
 
-	@_dbg
+
 	def __init__(   self,
 					parent, 
 					keyhome=None):
@@ -5877,8 +5840,8 @@ class gme:
 
 		if self._SPAMCHECK and self._spam_checker==None:
 			self._spam_checker=spamscanners.get_spamscanner(self._SPAMSCANNER,
-														self,
-														self._spam_leveldict)
+														parent=self,
+														leveldict=self._spam_leveldict)
 
 			if self._spam_checker!=None:
 				self.log("SPAMCHECKER '%s' activated"%self._SPAMSCANNER)
@@ -5906,7 +5869,7 @@ class gme:
 				self._del_tempfile(f.name)
 
 			if self._SPAMCHECK and self._spam_checker!=None:
-				self.debug("Spamcheck")
+				self.debug("Spamcheck is_spam")
 				spamlevel,score=self._spam_checker.is_spam(mailtext)
 				scoretext=str(score)
 				is_spam=(spamlevel==spamscanners.S_SPAM)
