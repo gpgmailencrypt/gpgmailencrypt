@@ -4078,13 +4078,12 @@ class gme:
 			if self._SPAMCHANGESUBJECT:
 				subject=self._decode_header(raw_message["Subject"])
 
-				if score==spamscanners.S_SPAM:
+				if spamlevel==spamscanners.S_MAYBESPAM:
 						subject="%s %s"%(	self._SPAMSUSPECTSUBJECT,
 											subject)
-				elif score==spamscanners.S_MAYBESPAM:
+				elif spamlevel==spamscanners.S_SPAM:
 						subject="%s %s"%(	self._SPAMSUBJECT,
 												subject)
-						
 				del raw_message["Subject"]
 				raw_message["Subject"]=subject
 				mailtext=raw_message.as_string()
