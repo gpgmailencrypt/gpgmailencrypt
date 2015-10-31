@@ -59,6 +59,7 @@ import locale
 import mimetypes
 import os
 import quopri
+import random
 import re
 
 try:
@@ -77,7 +78,6 @@ import syslog
 import tempfile
 import time
 import traceback
-import uu
 
 ####
 #gme
