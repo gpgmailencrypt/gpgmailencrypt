@@ -1,11 +1,14 @@
 import asynchat
 import asyncore
+import binascii
 import datetime
+import hashlib
 import os
 import select
 import smtpd
 import socket
 import ssl
+import sys
 from	.child 			import _gmechild 
 from   .version			import *
 
@@ -811,7 +814,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		if r:
 
 			if self.write_smtpdpasswordfile:
-				self.write_smtpdpasswordfile(self.parent._SMTPD_PASSWORDFILE)
+				self.write_smtpdpasswordfile()
 
 			self.push("250 OK")
 		else:
@@ -870,11 +873,10 @@ def file_auth(  parent,
 				password):
 	"checks user authentication against a password file"
 	parent.debug("_gpgmailencryptserver: file_auth")
-
 	try:
 		pw=parent._smtpd_passwords[user]
 
-		if pw==_get_hash(password):
+		if pw==get_hash(password):
 			parent.debug("_gpgmailencryptserver: User '%s' authenticated"%user)
 			return True
 		else:
@@ -883,14 +885,13 @@ def file_auth(  parent,
 
 	except:
 		parent.debug("_gpgmailencryptserver: No such user '%s'"%user)
-
 	return False
 
 ##########
-#_get_hash
+#get_hash
 ##########
 
-def _get_hash(txt):
+def get_hash(txt):
 	i=0
 	r=txt
 

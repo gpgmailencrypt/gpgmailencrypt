@@ -44,7 +44,7 @@ import gmeutils.archivemanagers as archivemanagers
 from   gmeutils.child         	import _gmechild 
 from   gmeutils._dbg 		  	import _dbg
 from   gmeutils.gpgclass 		import _GPG,_GPGEncryptedAttachment
-from   gmeutils.gpgmailserver 	import _gpgmailencryptserver,file_auth
+from   gmeutils.gpgmailserver 	import _gpgmailencryptserver,file_auth,get_hash
 from   gmeutils.helpers			import *
 from   gmeutils.pdfclass 		import _PDF
 from   gmeutils.mytimer       	import _mytimer
@@ -52,7 +52,6 @@ from   gmeutils.smimeclass 		import _SMIME
 from   gmeutils.usage       	import show_usage,print_exampleconfig
 from   gmeutils.viruscheck    	import _virus_check
 from   gmeutils.version			import *
-import hashlib
 import html
 import inspect
 from   io					  	import TextIOWrapper 
@@ -4280,11 +4279,12 @@ class gme:
 		"adds a user, if the user already exists it changes the password"
 
 		try:
-			self._smtpd_passwords[user]=_get_hash(password)
+			self._smtpd_passwords[user]=get_hash(password)
 			return True
 		except:
 			self.log("User could not be added","e")
 			self.log_traceback()
+			raise
 			return False
 
 		return True
@@ -4336,18 +4336,18 @@ class gme:
 	########################
  
 	@_dbg
-	def write_smtpdpasswordfile(self, pwfile):
+	def write_smtpdpasswordfile(self):
 		"writes the users to the password file"
 
 		try:
-			pwfile=os.path.expanduser(pwfile)
-			fileexists=os.path.exists(pwfile)
+			pwfile=os.path.expanduser(self._SMTPD_PASSWORDFILE)
+			fileexists=os.path.exists(self._SMTPD_PASSWORDFILE)
 			f=open(pwfile,"w")
 
 			if not fileexists:
-				os.chmod(pwfile,0o600)
+				os.chmod(self._SMTPD_PASSWORDFILE,0o600)
 				self.debug("new pwfile chmod")
-				f=open(pwfile,"w")
+				f=open(self._SMTPD_PASSWORDFILE,"w")
 
 		except:
 			self.log("_gpgmailencryptserver: Config file could not be written",
