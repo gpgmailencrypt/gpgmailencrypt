@@ -130,9 +130,9 @@ try:
 			
 			return result,information
 	
-	clamavscan_available=True
+	_clamavscan_available=True
 except:
-	clamavscan_available=False
+	_clamavscan_available=False
 
 #######
 #_DRWEB
@@ -265,7 +265,7 @@ def get_virusscanner(scanner,parent):
 		if  s.cmd and len(s.cmd)>0:
 			return s
 
-	if scanner=="CLAMAV" and clamavscan_available:
+	if scanner=="CLAMAV" and _clamavscan_available:
 		return _CLAMAV(parent=parent)
 	
 	if scanner=="BITDEFENDER":
