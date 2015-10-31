@@ -59,7 +59,6 @@ import locale
 import mimetypes
 import os
 import quopri
-import random
 import re
 
 try:

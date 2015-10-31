@@ -6,6 +6,8 @@ import html.parser
 from   io					  	import BytesIO
 from   io					  	import StringIO
 import re
+import quopri
+import uu
 
 from .child 			import _gmechild 
 from   ._dbg 			import _dbg
