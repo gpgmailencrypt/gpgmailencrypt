@@ -340,6 +340,7 @@ def guess_fileextension(ct):
 			return "ico"
 		elif subtype=="vnd.djvu":
 			return "dvju"
+
 		return subtype
 
 	if maintype=="audio":
@@ -490,13 +491,16 @@ def decodetxt( text,
 		except binascii.Error:
 
 			for i in 0, 1, 2, 3:
+
 				try:
 					result= base64.b64decode(bytetext+b'='*i, validate=False)
 					break
 				except binascii.Error:
 					pass
+
 			else:
 				raise AssertionError("unexpected binascii.Error")
+
 	elif cte=="QUOTED-PRINTABLE":
 		result=quopri.decodestring(bytetext)
 	elif cte in ('X-UUENCODE', 'UUENCODE', 'UUE', 'X-UUE'):

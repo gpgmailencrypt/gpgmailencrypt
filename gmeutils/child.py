@@ -22,6 +22,7 @@ class _gmechild:
 			pass
 
 	def log_traceback(self):
+
 		try:
 			self.parent.log_traceback()
 		except:

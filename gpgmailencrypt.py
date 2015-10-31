@@ -135,8 +135,6 @@ class gme:
 		self._RUNMODE=None
 		self._LOGGING=self.l_none
 		self._level=0
-		self._virus_checker=None
-		self._spam_checker=None
 		self.reset_statistics()
 		self._DEBUG=False
 		self._GPGkeys=list()
@@ -256,6 +254,8 @@ class gme:
 		self._encryptgpgcomment="Encrypted by gpgmailencrypt version %s"%VERSION
 		self._smtpd_passwords=dict()
 		self._encoding = locale.getdefaultlocale()[1]
+		self._virus_checker=None
+		self._spam_checker=None
 
 		if self._encoding==None:
 			self._encoding="UTF-8"

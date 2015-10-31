@@ -49,6 +49,7 @@ class _GPG(_gmechild):
 	@_dbg
 	def set_filename(self, fname):
 		"sets the filename of the file, which content has to be encrypted"
+
 		if isinstance(fname,str):
 			self._filename=fname.strip()
 		else:
@@ -61,6 +62,7 @@ class _GPG(_gmechild):
 	@_dbg
 	def set_keyhome(self,keyhome):
 		"sets the directory where the gpg keyring is stored"
+
 		if isinstance(keyhome,str):
 			self._keyhome=os.path.expanduser(keyhome.strip())
 		else:
@@ -73,6 +75,7 @@ class _GPG(_gmechild):
 	@_dbg
 	def set_recipient(self, recipient):
 		"set the recipient e-mail address, for which the data will be encrypted"
+
 		if isinstance(recipient, str):
 			self._recipient=recipient
 			self.parent._GPGkeys = list()
@@ -93,6 +96,7 @@ class _GPG(_gmechild):
 	@_dbg
 	def public_keys(self):
 		"returns a list of all available public keys"
+
 		if len(self.parent._GPGkeys)==0:
 			self._get_public_keys()
 
@@ -105,6 +109,7 @@ class _GPG(_gmechild):
 	@_dbg
 	def private_keys(self):
 		"returns a list of all available private keys"
+
 		if len(self.parent._GPGprivatekeys)==0:
 			self._get_private_keys()
 
@@ -158,6 +163,7 @@ class _GPG(_gmechild):
 
 			for line in p.stdout.readlines():
 				res=line.decode(self.parent._encoding,unicodeerror).split(":")
+
 				if (res[0]=="pub" 
 				or res[0]=="uid"):
 					email=res[9]
@@ -238,6 +244,7 @@ class _GPG(_gmechild):
 						if (len(email)>0 
 						and self.parent._GPGprivatekeys.count(email) == 0):
 							self.parent._GPGprivatekeys.append(email)
+
 		except:
 			self.log("Error opening keyring (Perhaps wrong "
 							"directory '%s'?)"%self._keyhome,"e")
@@ -448,6 +455,7 @@ class _GPGEncryptedAttachment(email.message.Message,_gmechild):
 	#############
 
 	def get_filename(self):
+
 		if self._filename != None:
 			return self._filename
 		else:

@@ -321,6 +321,7 @@ class _SMIME(_gmechild):
 				pass
 
 		found=re.search("(?<=email:)(.*)",cert) # get alias names
+
 		if found != None:
 
 			try:
@@ -377,6 +378,7 @@ class _SMIME(_gmechild):
 
 		if isinstance(mail,email.message.Message):
 			mail=mail.as_string()
+
 		cmd=[   self.parent._SMIMECMD,
 				"smime",
 				"-in", mail,

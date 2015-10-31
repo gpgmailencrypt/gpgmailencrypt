@@ -34,6 +34,7 @@ class _virus_check(_gmechild):
 	#######
 
 	def _chmod(self,directory):
+
 		for root, directories, files in os.walk(directory):  
 
 			for d in directories:  
@@ -90,6 +91,7 @@ class _virus_check(_gmechild):
 	##################
 
 	def _print_archivemap(self):
+
 			for f in self.archivemap:
 				print(("Format %s"%f).ljust(20)+
 					"Unpacker %s"%self.archivemap[f]) 
@@ -103,6 +105,7 @@ class _virus_check(_gmechild):
 		self.debug("check_directory_for_archives '%s'"%directory)
 		
 		for root, directories, files in os.walk(directory):  
+
 			for f in files:
 				pathf=os.path.join(root,f)
 				self.debug("check file %s"%f)
@@ -263,6 +266,7 @@ class _virus_check(_gmechild):
 				self.debug("... %s: no virus found"%scanner)
 
 		try:
+
 			if not self.parent._DEBUG:
 				shutil.rmtree(directory)
 			else:
