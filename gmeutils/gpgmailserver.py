@@ -6,18 +6,8 @@ import select
 import smtpd
 import socket
 import ssl
-from .child import _gmechild 
-
-
-
-
-##############################################
-#Definition of general functions and variables
-##############################################
-
-_unicodeerror="replace"
-
-
+from	.child 			import _gmechild 
+from   .version			import *
 
 ######################
 #_gpgmailencryptserver
@@ -53,6 +43,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 			read_smtpdpasswordfile=None,
 			data_size_limit=smtpd.DATA_SIZE_DEFAULT):
 
+
 		try:
 			smtpd.SMTPServer.__init__(  self, 
 										localaddr, 
@@ -62,6 +53,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 			self.parent.log("_gpgmailencryptserver: error",e)
 			exit(5)
 	
+		smtpd.__version__="gpgmailencrypt smtp server %s"%VERSION
 		self.parent=parent
 		self.sslcertfile=os.path.expanduser(sslcertfile)
 		self.sslkeyfile=os.path.expanduser(sslkeyfile)
@@ -285,7 +277,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				pass
 
 		if encodeddata==None:
-			encodeddata=data.decode("UTF-8",_unicodeerror)
+			encodeddata=data.decode("UTF-8",unicodeerror)
 
 		self.received_lines.append(encodeddata)
 
@@ -314,7 +306,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 
 				if self.in_loginauth==1:
 					self.user=binascii.a2b_base64(
-										line).decode("UTF-8",_unicodeerror)
+										line).decode("UTF-8",unicodeerror)
 					self.in_loginauth=2
 					self.push('334 %s'%binascii.b2a_base64(
 								"Password:".encode("UTF8")).decode("UTF8")[:-1])
@@ -322,7 +314,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 					return
 				elif self.in_loginauth==2:
 					self.password=binascii.a2b_base64(
-										line).decode("UTF-8",_unicodeerror)
+										line).decode("UTF-8",unicodeerror)
 
 					if (self.authenticate_function
 					and self.authenticate_function( self.parent,
@@ -492,7 +484,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 
 					if len(res)>1:
 						self.username=binascii.a2b_base64(
-										res[1]).decode("UTF-8",_unicodeerror)
+										res[1]).decode("UTF-8",unicodeerror)
 						self.in_loginauth=2
 					else:   
 						 self.push('334 %s'%binascii.b2a_base64(
@@ -512,7 +504,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			try:
 				d=binascii.a2b_base64(encoded).decode(
 								"UTF-8",
-								_unicodeerror).split('\x00')
+								unicodeerror).split('\x00')
 			except:
 				self.parent.debug(
 							"_gpgmailencryptserver: error decode base64 '%s'"%
@@ -903,7 +895,7 @@ def _get_hash(txt):
 	r=txt
 
 	while i<=1000:
-		r=hashlib.sha512(r.encode("UTF-8",_unicodeerror)).hexdigest()
+		r=hashlib.sha512(r.encode("UTF-8",unicodeerror)).hexdigest()
 		i+=1
 
 	return r

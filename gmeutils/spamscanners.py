@@ -3,12 +3,12 @@ import re
 import shutil
 import subprocess
 from .child import _gmechild 
-
+from   ._dbg import _dbg
+from .version import *
 S_NOSPAM=0
 S_MAYBESPAM=1
 S_SPAM=2
 
-_unicodeerror="replace"
 
 #################
 #_basespamchecker
@@ -17,12 +17,14 @@ _unicodeerror="replace"
 class _basespamchecker(_gmechild):
 
 	def __init__(self,parent,leveldict):
-		_gmechild.__init__(self,parent)
+		_gmechild.__init__(self,parent=parent)
 		self.cmd=None
 	
+	@_dbg
 	def is_spam(self,mail):
 		raise NotImplementedError
 
+	@_dbg
 	def set_leveldict(self,leveldict):
 		raise NotImplementedError
 	
@@ -41,6 +43,7 @@ class _SPAMASSASSIN(_basespamchecker):
 
 	def __init__(self,parent,leveldict):
 		_basespamchecker(parent,leveldict)
+		self.parent=parent
 		self._SPAMHOST="localhost"
 		self._SPAMPORT=783
 		self._SPAMMAXSIZE=5000000
@@ -60,9 +63,9 @@ class _SPAMASSASSIN(_basespamchecker):
 		except:
 			self.log_traceback()
 			raise
-						
+	@_dbg					
 	def is_spam(self,mail):
-			self.debug("Spamcheck")
+			self.debug("is_spam spamassassin")
 			spamlevel=S_NOSPAM
 			p=subprocess.Popen([self.cmd,
 								"-s",str(self._SPAMMAXSIZE),
@@ -73,8 +76,8 @@ class _SPAMASSASSIN(_basespamchecker):
 								stdout=subprocess.PIPE,
 								stderr=subprocess.PIPE)
 			result=p.communicate(input=mail.encode("UTF-8",
-										_unicodeerror))[0].decode("UTF-8",
-										_unicodeerror)
+										unicodeerror))[0].decode("UTF-8",
+										unicodeerror)
 			scoretext=result[:result.find("\n")].split("/")[0]
 
 			try:
@@ -98,6 +101,7 @@ class _BOGOFILTER(_basespamchecker):
 
 	def __init__(self,parent,leveldict):
 		_basespamchecker(parent,leveldict)
+		self.parent=parent
 		self.cmd=shutil.which("bogofilter")
 		self.set_leveldict(leveldict)
 
@@ -106,7 +110,7 @@ class _BOGOFILTER(_basespamchecker):
 		pass
 
 	def is_spam(self,mail):
-			self.debug("Spamcheck")
+			self.debug("Spamcheck bogofilter")
 			spamlevel=S_NOSPAM
 			p=subprocess.Popen([self.cmd,
 								"-T"],
@@ -114,8 +118,8 @@ class _BOGOFILTER(_basespamchecker):
 								stdout=subprocess.PIPE,
 								stderr=subprocess.PIPE)
 			result=p.communicate(input=mail.encode("UTF-8",
-										_unicodeerror))[0].decode("UTF-8",
-										_unicodeerror)
+										unicodeerror))[0].decode("UTF-8",
+										unicodeerror)
 			level,scoretext=result[:result.find("\n")].split(" ")
 
 			try:

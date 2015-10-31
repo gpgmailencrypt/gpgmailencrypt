@@ -7,6 +7,7 @@ class _gmechild:
 	
 	def __init__(self,parent):
 		self.parent=parent
+		self._level=0
 
 	def log(self,
 			msg,
@@ -14,8 +15,9 @@ class _gmechild:
 			ln=-1):
 
 		try:
-			self.parent.log(msg,infotype,ln)
+			self.parent.log(msg=msg,infotype=infotype,ln=ln)
 		except:
+			raise
 			pass
 
 	def log_traceback(self):
@@ -27,8 +29,9 @@ class _gmechild:
 	def debug(  self,
 				msg,
 				lineno=0):
+
 		try:
-			self.parent.debug(msg,lineno)
+			self.parent.debug(msg=msg,lineno=lineno)
 		except:
 			pass
 

@@ -23,8 +23,6 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-VERSION="2.3.0gamma"
-DATE="30.10.2015"
 import asynchat
 import asyncore
 import atexit
@@ -36,25 +34,30 @@ import email
 import email.message
 import email.mime
 import email.utils 
-from   email.generator	  	import Generator
-from   email.mime.base	  	import MIMEBase
-from   email.mime.multipart import MIMEMultipart
-from   email.mime.text	  	import MIMEText
+from   email.generator	  		import Generator
+from   email.mime.base	  		import MIMEBase
+from   email.mime.multipart 	import MIMEMultipart
+from   email.mime.text	  		import MIMEText
 import getopt
 import getpass
 import gmeutils.spamscanners 	as spamscanners
 import gmeutils.archivemanagers as archivemanagers
-from   gmeutils.child       import _gmechild 
-from   gmeutils.mytimer     import _mytimer
-from   gmeutils.viruscheck  import  _virus_check
-from   gmeutils.gpgmailserver import _gpgmailencryptserver,file_auth,_get_hash
-from   gmeutils._dbg import _dbg
+from   gmeutils.child         	import _gmechild 
+from   gmeutils._dbg 		  	import _dbg
+from   gmeutils.gpgclass 		import _GPG,_GPGEncryptedAttachment
+from   gmeutils.gpgmailserver 	import _gpgmailencryptserver,file_auth
+from   gmeutils.pdfclass 		import _PDF
+from   gmeutils.mytimer       	import _mytimer
+from   gmeutils.smimeclass 		import _SMIME
+from   gmeutils.usage       	import show_usage,print_exampleconfig
+from   gmeutils.viruscheck    	import _virus_check
+from   gmeutils.version			import *
 import hashlib
 import html.parser
 import inspect
-from io					 	import BytesIO
-from io					 	import StringIO
-from io					 	import TextIOWrapper 
+from   io					  	import BytesIO
+from   io					  	import StringIO
+from   io					  	import TextIOWrapper 
 import locale
 import mimetypes
 import os
@@ -72,15 +75,12 @@ import shutil
 import signal
 import smtpd
 import smtplib
-import socket
-import ssl
 import stat
 import string
 import subprocess
 import sys
 import syslog
 import tempfile
-import threading
 import time
 import traceback
 import uu
@@ -88,233 +88,6 @@ import uu
 ##############################################
 #Definition of general functions and variables
 ##############################################
-
-_unicodeerror="replace"
-
-
-###########
-#show_usage
-###########
-
-def show_usage():
-	"shows the command line options to stdout"
-	print ("gpgmailencrypt")
-	print ("===============")
-	print ("based on gpg-mailgate")
-	print ("License: GPL 3")
-	print ("Author:  Horst Knorr <gpgmailencrypt@gmx.de>")
-	print ("Version: %s from %s"%(VERSION,DATE))
-	print ("\nUsage:\n")
-	print ("gme.py [options] recipient@email.address < Inputfile_from_stdin")
-	print ("or")
-	print ("gme.py -f inputfile.eml [options] recipient@email.address")
-	print ("\nOptions:\n")
-	print ("-a --addheader:     adds %s header to the mail"%gme._encryptheader)
-	print ("-c f --config f:    use configfile 'f'. Default is")
-	print ("                    /etc/gpgmailencrypt.conf")
-	print ("-d --daemon :       start gpgmailencrypt as smtpserver")
-	print ("-e pgpinline :      preferred encryption method, either ")
-	print ("                    'pgpinline','pgpmime' or 'smime'")
-	print ("-f mail :           reads email file 'mail', otherwise from stdin")
-	print ("-h --help :         print this help")
-	print ("-k f --keyhome f:   sets gpg key directory to 'f'")
-	print ("-l t --log t:       print information into _logfile, with valid")
-	print ("                    types 't' 'none','stderr','syslog','file'")
-	print ("-n domainnames:     sets the used domain names (comma separated")
-	print ("                    lists, no space), which should be encrypted,")
-	print ("                    empty is all")
-	print ("-m mailfile :       write email file to 'mailfile', otherwise")
-	print ("                    email will be sent via smtp")
-	print ("-o p --output p:    valid values for p are 'mail' or 'stdout',")
-	print ("                    alternatively set an outputfile with -m")
-	print ("--spamcheck=true:   if true, check if the e-mail is span")
-	print ("-x --example:       print example config file")
-	print ("-v --verbose:       print debugging information into _logfile")
-	print ("--viruscheck=true:  if true, check if the e-mail contains a virus")
-	print ("-z --zip:           zip attachments")
-	print ("")
-
-####################
-#print_exampleconfig
-####################
-
-def print_exampleconfig():
-	"prints an example config file to stdout"
-	space=56
-
-	print ("[default]")
-	print ("prefered_encryption = pgpinline".ljust(space)+
-	"#valid values are 'pgpinline','pgpmime' or 'smime'")
-	print ("add_header = no".ljust(space)+
-	"#adds a %s header to the mail"%gme._encryptheader)
-	print ("domains =".ljust(space)+
-	"#comma separated list of domain names,") 
-	print ("".ljust(space)+
-	"#that should be encrypted, empty is all")
-	print ("homedomains=localhost".ljust(space)+
-	"#a comma separated list of domains, for which this server is working ")
-	print ("".ljust(space)+"#and users might receive system mail "
-	"and can use pdf encrypt")
-	print ("output=mail".ljust(space)+
-	"#valid values are 'mail'or 'stdout'")
-	print ("locale=en".ljust(space)+
-	"#DA|DE|EN|ES|FI|FR|IT|NL|NO|PL|PT|RU|SV")
-	print ("mailtemplatedir=/usr/share/gpgmailencrypt"
-			"/mailtemplates".ljust(space)+
-	"#directory where mail templates are stored")
-	print ("systemmailfrom=gpgmailencrypt@localhost".ljust(space)+
-	"#e-mail address used when sending system mails")
-	print ("alwaysencrypt=False".ljust(space)+
-	"#if True e-mails will be sent encrypted, even if there is no key")
-	print ("".ljust(space)+
-	"#Fallback encryption is encrypted pdf")
-
-	print ("")
-	print ("[gpg]")
-	print ("keyhome = /var/lib/gpgmailencrypt/.gnupg".ljust(space)+
-	"#home directory of public  gpgkeyring")
-	print ("gpgcommand = /usr/bin/gpg2")
-	print ("allowgpgcomment = yes".ljust(space)+
-	"#allow a comment string in the GPG file")
-
-	print ("")
-	print ("[logging]")
-	print ("log=none".ljust(space)+
-	"#valid values are 'none', 'syslog', 'file' or 'stderr'")
-	print ("file = /tmp/gpgmailencrypt.log")
-	print ("debug = no")
-
-	print ("")
-	print ("[mailserver]")
-	print ("host = 127.0.0.1".ljust(space)+"#smtp host")
-	print ("port = 25".ljust(space)+"#smtp port")
-	print ("authenticate = False".ljust(space)+
-	"#user must authenticate")
-	print ("smtpcredential =/etc/gpgmailencrypt.cfg".ljust(space)+
-	"#file that keeps user and password information")    
-	print("".ljust(space)+
-	"#file format 'user=password'")
-
-	print ("")
-	print ("[encryptionmap]")
-	print ("user@domain.com = PGPMIME".ljust(space)+
-	"#PGPMIME|PGPINLINE|SMIME|PDF[:zipencryptionmethod]|NONE")
-	print ("")
-	print ("[usermap]")
-	print (""
-	"#user_nokey@domain.com = user_key@otherdomain.com")
-
-	print ("")
-	print ("[smime]")
-	print ("keyhome = ~/.smime".ljust(space)+
-	"#home directory of S/MIME public key files")
-	print ("opensslcommand = /usr/bin/openssl")
-	print ("defaultcipher = DES3".ljust(space)+
-	"#DES3|AES128|AES192|AES256")
-	print ("extractkey= no".ljust(space)+
-	"#automatically scan emails and extract smime public keys to "
-	"'keyextractdir'")
-	print ("keyextractdir=~/.smime/extract")
-
-	print ("")
-	print ("[smimeuser]")
-	print ("smime.user@domain.com = user.pem[,cipher]".ljust(space)+
-	"#public S/MIME key file [,used cipher, see defaultcipher "
-	"in the smime section]")
-
-	print ("")
-	print ("[pdf]")
-	print ("email2pdfcommand=/usr/bin/email2pdf".ljust(space)+
-	"#path where to find email2pdf (needed for creating pdfs,")
-	print ("".ljust(space)+
-	"#see https://github.com/andrewferrier/email2pdf)")
-	print ("pdftkcommand=/usr/bin/pdftk".ljust(space)+
-	"#path where to find pdftk (needed for encrypting pdf files")
-	print ("passwordlength=10".ljust(space)+
-	"#Length of the automatic created password")
-	print ("passwordlifetime=172800".ljust(space)+
-	"#lifetime for autocreated passwords in seconds. Default is 48 hours")
-	print ("pdfpasswords=/etc/gpgpdfpasswords.pw".ljust(space)+
-	"#file that includes users and passwords for permanent pdf passwords")
-
-	print ("")
-	print ("[zip]")
-	print ("7zipcommand=/usr/bin7za".ljust(space)+
-	"#path where to find 7za")
-	print ("defaultcipher=ZipCrypto".ljust(space)+
-	"#ZipCrypto|AES128||AES192|AES256")
-	print ("compressionlevel=5".ljust(space)+
-	"#1,3,5,7,9  with 1:lowest compression, but very fast, 9 is ")
-	print ("".ljust(space)+
-	"#highest compression, but very slow, default is 5")
-	print ("securezipcontainer=False".ljust(space)+
-	"#attachments will be stored in an encrypted zip file."
-	" If this option is true,")
-	print ("".ljust(space)+
-	"#the directory will be also encrypted")
-	print ("zipattachments=False".ljust(space)+
-	"#if True all attachments will be zipped, independent "
-	"from the encryption method")
-
-	print ("")
-	print ("[daemon]")
-	print ("host = 127.0.0.1".ljust(space)+
-	"#smtp host")
-	print ("port = 10025".ljust(space)+
-	"#smtp port")
-	print ("smtps = False".ljust(space)+
-	"#use smtps encryption")
-	print ("starttls = False".ljust(space)+
-	"#use starttls encryption")
-	print ("forcetls = False".ljust(space)+
-	"#communication (e.g. authentication) will be only possible after STARTTLS")
-	print ("sslkeyfile = /etc/gpgsmtp.key".ljust(space)+
-	"#the x509 certificate key file")
-	print ("sslcertfile = /etc/gpgsmtp.crt".ljust(space)+
-	"#the x509 certificate cert file")
-	print ("authenticate = False".ljust(space)+
-	"#users must authenticate")
-	print ("smtppasswords = /etc/gpgmailencrypt.pw".ljust(space)+
-	"#file that includes users and passwords")
-	print ("admins=admin1,admin2".ljust(space)+
-	"#comma separated list of admins, that can use the admin console")
-	print ("statistics=1".ljust(space)+
-	"#how often per day should statistical data be logged (0=none) max is 24")
-
-	print ("")
-	print ("[virus]")
-	print ("checkviruses=False".ljust(space)+
-	"#if true,e-mails will be checked for viruses before being encrypted")
-	print ("quarantinelifetime=2419200".ljust(space)+
-	"#how long an infected e-mail exists in the quarantine (in seconds)")
-	print ("".ljust(space)+
-	"#(default is 4 weeks). 0 deactivates automatic deletion")
-
-	print ("")
-	print ("[spam]")
-	print ("checkspam=False".ljust(space)+
-	"#if true, e-mails will be checked if they are spam")
-	print ("sa_host=localhost".ljust(space)+
-	"#server where spamassassin is running")
-	print ("sa_port=783".ljust(space)+
-	"#port of the spamassassin server")
-	print ("sa_spamlevel=6.1".ljust(space)+
-	"#spamassassin threshold for spam, "
-	"values higher than that means the mail is spam")
-	print ("sa_spamsuspectlevel=3.0".ljust(space)+
-	"#spamassassin threshold for spam, values higher "
-	"than that means the mail might be spam")
-	print("".ljust(space)+"#(value must be smaller than 'spamlevel')")
-	print ("maxsize=500000".ljust(space)+
-	"#maximum size of e-mail,that will be checked if it is spam")
-	print ("add_spamheader=False".ljust(space)+
-	"#if True the e-mail gets spam headers")
-	print ("change_subject=False".ljust(space)+
-	"#if True, the subject of the mail will get a prefix")
-	print ("spam_subject=***SPAM***".ljust(space)+
-	"#subject prefix for spam")
-	print ("spamsuspect_subject=***SPAMSUSPICION***".ljust(space)+
-	"#subject prefix for suspected spam")
 
 #############
 #_splitstring
@@ -325,9 +98,9 @@ def _splitstring(txt,length=80):
 		return (string[0+i:length+i] for i in range(0, len(string), length))
 	return list(chunkstring(txt,length))
 
-###################
+##################
 #replace_variables
-###################
+##################
 
 def replace_variables(  text,
 						dictionary,
@@ -365,1100 +138,13 @@ def replace_variables(  text,
 #Definition of encryption functions
 ###################################
 
-###########
-#CLASS _GPG
-###########
 
-class _GPG(_gmechild):
-	"""class to encrypt and decrypt files via gpg
-	Don't call this class directly, use gme.gpg_factory() instead!
-	"""
-	@_dbg
-	def __init__(   self, 
-					parent,
-					keyhome=None):
-		_gmechild.__init__(self,parent)
-		self._recipient = ''
-		self._filename=''	
-		self.count=0
-		self.debug("_GPG.__init__")
-		self.set_recipient(None)
-
-		if isinstance(keyhome,str):
-			self._keyhome = os.path.expanduser(keyhome)
-		elif self.parent and self.parent._GPGKEYHOME:
-			self._keyhome=os.path.expanduser(self.parent._GPGKEYHOME)
-		else:
-			self._keyhome=os.path.expanduser('~/.gnupg')
-
-		self.debug("_GPG.__init__ end")
-
-	#############
-	#_set_counter
-	#############
-
-	@_dbg
-	def _set_counter(self,counter):
-		self.count=counter
-
-	############
-	#set_filname
-	############
-
-	@_dbg
-	def set_filename(self, fname):
-		"sets the filename of the file, which content has to be encrypted"
-		if isinstance(fname,str):
-			self._filename=fname.strip()
-		else:
-			self._filename=''
-
-	############
-	#set_keyhome
-	############
-
-	@_dbg
-	def set_keyhome(self,keyhome):
-		"sets the directory where the gpg keyring is stored"
-		if isinstance(keyhome,str):
-			self._keyhome=os.path.expanduser(keyhome.strip())
-		else:
-			self._keyhome=''
- 
- 	##############
- 	#set_recipient
- 	##############
-
-	@_dbg
-	def set_recipient(self, recipient):
-		"set the recipient e-mail address, for which the data will be encrypted"
-		if isinstance(recipient, str):
-			self._recipient=recipient
-			self.parent._GPGkeys = list()
- 
-	##########
-	#recipient
-	##########
-
-	@_dbg
-	def recipient(self):
-		"returns the recipient address"
-		return self._recipient	
-
-	############
-	#public_keys
-	############ 
-
-	@_dbg
-	def public_keys(self):
-		"returns a list of all available public keys"
-		if len(self.parent._GPGkeys)==0:
-			self._get_public_keys()
-
-		return self.parent._GPGkeys
- 
-	#############
-	#private_keys
-	#############
-
-	@_dbg
-	def private_keys(self):
-		"returns a list of all available private keys"
-		if len(self.parent._GPGprivatekeys)==0:
-			self._get_private_keys()
-
-		return self.parent._GPGprivatekeys
- 
-	###############
-	#has_public_key
-	###############
-
-	@_dbg
-	def has_public_key(self,key):
-		"""returns True if a public key for e-mail address 'key' exists,
-			else False
-		"""
-		self.debug("gpg.has_public_key '%s'"%key)
-
-		if len(self.parent._GPGkeys)==0:
-			self._get_public_keys()
-
-		if not isinstance(key,str):
-			self.debug("has_public_key, key not of type str")
-			return False
-
-		if key in self.parent._GPGkeys:	
-			return True
-		else:
-			self.debug("has_publickey, key not in _GPGkeys")
-			self.debug("_GPGkeys '%s'"%str(self.parent._GPGkeys))
-			return False
- 
-	#################
-	#_get_public_keys
-	#################
-
-	@_dbg
-	def _get_public_keys( self ):
-		self.debug("_GPG._get_public_keys")
-		self.parent._GPGkeys = list()
-		cmd = '%s --homedir %s --list-keys --with-colons' % (
-					self.parent._GPGCMD, 
-					self._keyhome.replace("%user",
-					self._recipient))
-		self.debug("_GPG.public_keys command: '%s'"%cmd)
-
-		try:
-			p = subprocess.Popen(   cmd.split(' '), 
-									stdin=None, 
-									stdout=subprocess.PIPE, 
-									stderr=subprocess.PIPE )
-			p.wait()
-
-			for line in p.stdout.readlines():
-				res=line.decode(self.parent._encoding,_unicodeerror).split(":")
-				if (res[0]=="pub" 
-				or res[0]=="uid"):
-					email=res[9]
-					mail_id=res[4]
-
-					try:
-					   found=re.search(
-					   "[-a-zA-Z0-9_%\+\.]+@[-_0-9a-zA-Z\.]+\.[-_0-9a-zA-Z\.]+",
-					   email)
-					except:
-						self.log_traceback()
-
-					if found != None:
-
-						try:
-							email=email[found.start():found.end()]
-						except:
-							self.log("splitting email address (%s) "
-											"didn't work"%email,"w")
-							email=""
-
-						email=email.lower()
-
-						if (len(email)>0 
-							and self.parent._GPGkeys.count(email) == 0):
-							self.parent._GPGkeys.append(email)
-		except:
-			self.log("Error opening keyring (Perhaps wrong "
-							"directory '%s'?)"%self._keyhome,"e")
-			self.log_traceback()
- 
-	##################
-	#_get_private_keys
-	##################
-
-	@_dbg
-	def _get_private_keys( self ):
-		self.debug("_GPG._get_private_keys")
-		self.parent._GPGprivatekeys = list()
-		cmd = '%s --homedir %s --list-secret-keys --with-colons' % (
-					self.parent._GPGCMD, 
-					self._keyhome.replace("%user",self._recipient))
-		self.debug("_GPG.private_keys command: '%s'"%cmd)
-
-		try:
-			p = subprocess.Popen(   cmd.split(' '), 
-									stdin=None, 
-									stdout=subprocess.PIPE, 
-									stderr=subprocess.PIPE )
-			p.wait()
-
-			for line in p.stdout.readlines():
-				res=line.decode(self.parent._encoding,_unicodeerror).split(":")
-
-				if res[0]=="pub" or res[0]=="uid":
-					email=res[9]
-					mail_id=res[4]
-
-					try:
-						found=re.search(
-						"[-a-zA-Z0-9_%\+\.]+@[-_0-9a-zA-Z\.]+"
-						"\.[-_0-9a-zA-Z\.]+",
-						email)
-					except:
-						self.log_traceback()
-
-					if found != None:
-
-						try:
-							email=email[found.start():found.end()]
-						except:
-							self.log("splitting email address (%s) "
-											"didn't work"%email,"w")
-							email=""
-
-						email=email.lower()
-
-						if (len(email)>0 
-						and self.parent._GPGprivatekeys.count(email) == 0):
-							self.parent._GPGprivatekeys.append(email)
-		except:
-			self.log("Error opening keyring (Perhaps wrong "
-							"directory '%s'?)"%self._keyhome,"e")
-			self.log_traceback()
- 
-	#############
-	#encrypt_file
-	#############
-
-	@_dbg
-	def encrypt_file(   self,
-						filename=None,
-						binary=False, 
-						recipient=None):
-		"""
-		encrypts the content of a file.
-		
-		return values:
-		result: True if success, else False
-		encdata: If 'result' is True, a (binary) string with the encrypted data
-				 else None
-		"""
-		result=False
-
-		if filename:
-			self.set_filename(filename)
-
-		if len(self._filename) == 0:
-			self.log( 'Error: GPGEncrypt: filename not set',"e")
-			return result,None
-
-		if recipient:
-			self.set_recipient(recipient)
-
-		if len(self._recipient)==0:
-			self.log("GPG encrypt file: No recipient set!","e")
-			return result,None
-
-		f=self.parent._new_tempfile()
-		self.debug("_GPG.encrypt_file _new_tempfile %s"%f.name)
-		f.close()
-		_result = subprocess.call( 
-					' '.join(self._encryptcommand_fromfile(f.name,binary)),
-					shell=True ) 
-		self.debug("Encryption command: '%s'" %
-					' '.join(self._encryptcommand_fromfile(f.name,binary)))
-
-		if _result != 0:
-			self.log("Error executing command (Error code %d)"%_result,
-							"e")
-			return result,None
-		else:
-			result=True
-
-		if binary:
-			res=open(f.name,mode="br")
-			self.debug("GPG.encrypt_file binary open")
-		else:
-			res=open(f.name)
-			self.debug("GPG.encrypt_file text open")
-
-		encdata=res.read()
-		res.close()
-		self.parent._del_tempfile(f.name)
-		return result,encdata
- 
-	#########################
-	#_encryptcommand_fromfile
-	#########################
-
-	@_dbg
-	def _encryptcommand_fromfile(   self,
-									sourcefile,
-									binary):
-		cmd=[self.parent._GPGCMD, 
-								"--trust-model", "always", 
-								"-r",self._recipient,
-								"--homedir", 
-								self._keyhome.replace("%user",self._recipient), 
-								"--batch", 
-								"--yes", 
-								"--pgp7", 
-								"-q",
-								"--no-secmem-warning",
-								"--output",sourcefile, "-e",self._filename ]
-
-		if self.parent._ALLOWGPGCOMMENT==True:
-			cmd.insert(1,"'%s'"%self.parent._encryptgpgcomment)
-			cmd.insert(1,"--comment")
-
-		if not binary:
-			cmd.insert(1,"-a")
-
-		return cmd
- 
-	#############
-	#decrypt_file
-	#############
-
-	@_dbg
-	def decrypt_file(   self,
-						filename=None,
-						binary=False,
-						recipient=None):
-		"""
-		decrypts the content of a file.
-		
-		return values:
-		result: True if success, else False
-		encdata: If 'result' is True, a (binary) string with the decrypted data
-				 else None
-		"""
-		result=False
-
-		if recipient:
-			self.set_recipient(recipient)
-
-		if filename:
-			self.set_filename(filename)
-
-		if len(self._filename) == 0:
-			self.log( 'Error: GPGDecrypt: filename not set',"e")
-			return result,None
-
-		f=self.parent._new_tempfile()
-		self.debug("_GPG.decrypt_file _new_tempfile %s"%f.name)
-		f.close()
-		_result = subprocess.call( 
-			' '.join(self._decryptcommand_fromfile(f.name,binary)),shell=True ) 
-		self.debug("Encryption command: '%s'" %
-			' '.join(self._decryptcommand_fromfile(f.name,binary)))
-
-		if _result != 0:
-			self.log("Error executing command (Error code %d)"%_result,
-							"e")
-		else:
-			result=True
-
-		if binary:
-			res=open(f.name,mode="br")
-			self.debug("GPG.decrypt_file binary open")
-		else:
-			res=open(f.name)
-			self.debug("GPG.decrypt_file text open")
-
-		encdata=res.read()
-		res.close()
-		self.parent._del_tempfile(f.name)
-		return result,encdata
- 
-	#########################
-	#_decryptcommand_fromfile
-	#########################
-
-	@_dbg
-	def _decryptcommand_fromfile(   self,
-									sourcefile,
-									binary):
-		cmd=[self.parent._GPGCMD, 
-					"--trust-model", "always", 
-					"-q",
-					"-r",self._recipient,
-					"--homedir", self._keyhome.replace("%user",self._recipient),
-					"--batch", 
-					"--yes", 
-					"--pgp7", 
-					"--no-secmem-warning", 
-					"--output",sourcefile, 
-					"-d",self._filename ]
-
-		if not binary:
-			cmd.insert(1,"-a")
-
-		return cmd
-
-#############################
-#CLASS GPGENCRYPTEDATTACHMENT
-#############################
-
-class _GPGEncryptedAttachment(email.message.Message,_gmechild):
-
-	def  __init__(self,parent=None):
-		email.message.Message. __init__(self)
-		_gmechild.__init__(self,parent)
-		self._masterboundary=None
-		self._filename=None
-		self.set_type("text/plain")
-
-	##########
-	#as_string
-	##########
-
-	def as_string(self, unixfrom=False):
-		fp = StringIO()
-		g = Generator(fp)
-		g.flatten(self, unixfrom=unixfrom)
-		return fp.getvalue()
-
-	#############
-	#set_filename
-	#############
-
-	def set_filename(self,f):
-		self._filename=f
-
-	#############
-	#get_filename
-	#############
-
-	def get_filename(self):
-		if self._filename != None:
-			return self._filename
-		else:
-			return email.message.Message.get_filename(self)
-
-	###################
-	#set_masterboundary
-	###################
-
-	def set_masterboundary(self,b):
-		self._masterboundary=b
-
-	###############
-	#_write_headers
-	###############
-
-	def _write_headers(self,g):
-		print ("Content-Type: application/pgp-encrypted",file=g._fp)
-		print ("Content-Description: PGP/MIME version identification\n"
-				"\nVersion: 1\n",file=g._fp)
-		print ("--%s"%self._masterboundary,file=g._fp)
-		fname=self.get_filename()
-
-		if fname == None:
-			fname="encrypted.asc"
-
-		print ('Content-Type: application/octet-stream; name="%s"'%fname,
-																file=g._fp)
-		print ('Content-Description: OpenPGP encrypted message',file=g._fp)
-		print ('Content-Disposition: inline; filename="%s"\n'%fname,file=g._fp)
-
-#############
-#CLASS _SMIME
-#############
-
-class _SMIME(_gmechild):
-	"""class to encrypt and decrypt files for SMIME via openssl
-	Don't call this class directly, use gme.smime_factory() instead!
-	"""
-
-
-	def __init__(   self,
-					parent, 
-					keyhome=None):
-		_gmechild.__init__(self,parent)
-		self.debug("_SMIME.__init__ %s"%self.parent._SMIMEKEYHOME)
-
-		if type(keyhome)==str:
-			self._keyhome = os.path.expanduser(keyhome)
-		else:
-			self._keyhome=os.path.expanduser(self.parent._SMIMEKEYHOME)
-
-		self._recipient = ''
-		self._filename=''	
-		self._recipient=None
-		self.debug("_SMIME.__init__ end")
- 
-	############
-	#public_keys
-	############ 
-
-	@_dbg
-	def public_keys(self):
-		"returns a list of all available public keys"
-		result=list()
-
-		for user in self.parent._smimeuser:
-			result.append(user)
-
-		return result
- 
-	#############
-	#private_keys
-	############# 
-
-	@_dbg
-	def private_keys(self):
-		"returns a list of all available private keys"
-		result=list()
-
-		for user in self.parent._smimeuser:
-
-			if self.parent._smimeuser[user][2]!=None:
-				result.append(user)
-
-		return result
- 
-	#############
-	#set_filename
-	############# 
-
-	@_dbg
-	def set_filename(self, fname):
-		"sets the filename of the file, which content has to be encrypted"
-
-		if isinstance(fname,str):
-			self._filename=fname.strip()
-		else:
-			self._filename=''
- 
-	############
-	#set_keyhome
-	############ 
-
-	@_dbg
-	def set_keyhome(self,keyhome):
-		"sets the directory where the smime keys are stored"
-
-		if isinstance(keyhome,str):
-			self._keyhome=os.path.expanduser(keyhome.strip())
-		else:
-			self._keyhome=''
-
- 	##############
-	#set_recipient
-	############## 
-
-	@_dbg
-	def set_recipient(self, recipient):
-		"set the recipient e-mail address, for which the data will be encrypted"
-
-		if isinstance(recipient, str):
-			self._recipient=recipient
- 
-	##########
-	#recipient
-	########## 
-
-	@_dbg
-	def recipient(self):
-		"returns the recipient address"
-		return self._recipient	
- 
-	###############
-	#has_public_key
-	############### 
-
-	@_dbg
-	def has_public_key(self,key):
-		"""returns True if a public key for e-mail address 'key' exists,
-			else False
-		"""
-		if not isinstance(key,str):
-			self.debug("smime has_public_key, key not of type str")
-			return False
-
-		try:
-			_u=self.parent._smimeuser[key]
-		except:
-		   self.debug("smime has_public_key, key not found for '%s'"%key)
-		   return False
-
-		return True
- 
-	#############
-	#encrypt_file
-	############# 
-
-	@_dbg
-	def encrypt_file(   self,
-						filename=None,
-						binary=False, 
-						recipient=None):
-		"""
-		encrypts the content of a file.
-		
-		return values:
-		result: True if success, else False
-		encdata: If 'result' is True, a (binary) string with the encrypted data
-				 else None
-		"""
-		result=False
-
-		if filename:
-			self.set_filename(filename)
-
-		if len(self._filename) == 0:
-			self.log( 'Error: _SMIME: filename not set',"m")
-			return result,''
-
-		if recipient:
-			self.set_recipient(recipient)
-
-		if len(self._recipient)==0:
-			self.log("SMIME encrypt file: No recipient set!","e")
-			return result,None
-
-		f=self.parent._new_tempfile()
-		self.debug("_SMIME.encrypt_file _new_tempfile %s"%f.name)
-		f.close()
-		_result = subprocess.call( 
-				' '.join(self._command_encrypt_fromfile( f.name,
-														 binary))
-			   ,shell=True ) 
-		self.debug("Encryption command: '%s'" %
-						' '.join(self._command_encrypt_fromfile(f.name,binary)))
-
-		if _result != 0:
-		  self.log("Error executing command (Error code %d)"%_result,"e")
-		  return result,None
-		else:
-			result=True
-
-		res=open(f.name,encoding="UTF-8")
-		encdata=res.read()
-		res.close()
-		self.parent._del_tempfile(f.name)
-		m=email.message_from_string(encdata)
-		return result,m.get_payload()
- 
-	##########################
-	#_command_encrypt_fromfile
-	########################## 
-
-	@_dbg
-	def _command_encrypt_fromfile(  self,
-									sourcefile,
-									binary):
-		_recipient=self.parent._smimeuser[self._recipient]
-		encrypt="des3" # RFC 3583
-
-		if _recipient[1]=="AES256":
-			encrypt="aes-256-cbc"
-		elif _recipient[1]=="AES128":
-			encrypt="aes-128-cbc"
-		elif _recipient[1]=="AES192":
-			encrypt="aes-192-cbc"
-
-		cmd=[   self.parent._SMIMECMD, 
-				"smime", 
-				"-%s" %encrypt,
-				"-encrypt", 
-				"-in",self._filename,
-				"-out", sourcefile,  
-				_recipient[0] ]
-		return cmd
-
-	#############
-	#decrypt_file
-	############# 
-
-	@_dbg
-	def decrypt_file(   self,
-						filename=None,
-						binary=False,
-						recipient=None):
-		"""
-		decrypts the content of a file.
-		
-		return values:
-		result: True if success, else False
-		encdata: If 'result' is True, a (binary) string with the decrypted data
-				 else None
-		"""
-		result=False
-
-		if filename:
-			self.set_filename(filename)
-
-		if len(self._filename) == 0:
-			self.log( 'Error: _SMIME: filename not set',"m")
-			return result,''
-
-		if recipient:
-			self.set_recipient(recipient)
-
-		f=self.parent._new_tempfile()
-		self.debug("_SMIME.decrypt_file _new_tempfile %s"%f.name)
-		f.close()
-		_result = subprocess.call( 
-				' '.join(self._command_decrypt_fromfile(f.name,
-														binary))
-				,shell=True ) 
-		self.debug("Decryption command: '%s'" %
-				' '.join(self._command_decrypt_fromfile(f.name,binary)))
-
-		if _result != 0:
-			self.log("Error executing command (Error code %d)"%
-						_result,"e")
-		else:
-			result=True
-
-		res=open(f.name,encoding="UTF-8")
-		encdata=res.read()
-		res.close()
-		self.parent._del_tempfile(f.name)
-		m=email.message_from_string(encdata)
-		return result,m.get_payload()
- 
-	###########################
-	#_command_decrypt_from_file
-	###########################
-
-	@_dbg
-	def _command_decrypt_fromfile(  self,
-									sourcefile,
-									binary):
-		_recipient=self.parent._smimeuser[self._recipient]
-		cmd=[self.parent._SMIMECMD, 
-				"smime",
-				"-decrypt", 
-				"-in",self._filename,
-				"-out", sourcefile,
-				"-inkey" , _recipient[2] ]
-		return cmd
- 
-	############
-	#_opensslcmd
-	############ 
-
-	@_dbg
-	def _opensslcmd(self,cmd):
-		result=""
-		p = subprocess.Popen(   cmd.split(" "), 
-								stdin=None, 
-								stdout=subprocess.PIPE, 
-								stderr=subprocess.PIPE )
-		result=p.stdout.read()
-		return result, p.returncode
- 
-	#######################
-	#get_certemailaddresses
-	#######################
-
-	@_dbg
-	def get_certemailaddresses(self,certfile):
-		"""returns a list of all e-mail addresses the 'certfile' for which 
-		is valid."""
-		cmd=[   self.parent._SMIMECMD,
-				"x509",
-				"-in",certfile,
-				"-text",
-				"-noout"]
-		cert,returncode=self._opensslcmd(" ".join(cmd))
-		cert=cert.decode("utf-8",_unicodeerror)
-		email=[]
-		found=re.search("(?<=emailAddress=)(.*)",cert)
-
-		if found != None:
-			try:
-				email.append(cert[found.start():found.end()])
-			except:
-				pass
-
-		found=re.search("(?<=email:)(.*)",cert) # get alias names
-		if found != None:
-
-			try:
-				n=cert[found.start():found.end()]
-				if n not in email:
-					email.append(n)
-			except:
-				pass
-
-		return email
- 
-	####################
-	#get_certfingerprint
-	####################
-
-	@_dbg
-	def get_certfingerprint(self,cert):
-		"""
-		returns the fingerprint of a cert file
-		"""
-		cmd=[self.parent._SMIMECMD,
-				"x509",
-				"-fingerprint",
-				"-in",cert,
-				"-noout"]
-		fingerprint,returncode=self._opensslcmd(" ".join(cmd))
-		found= re.search(   "(?<=SHA1 Fingerprint=)(.*)",
-							fingerprint.decode("UTF-8",_unicodeerror))
-
-		if found != None:
-			try:
-				fingerprint=fingerprint[found.start():found.end()]
-			except:
-				pass
-
-		return fingerprint
- 
-	############################
-	#extract_publickey_from_mail
-	############################
-
-	@_dbg
-	def extract_publickey_from_mail(self,
-									mail,
-									targetdir):
-		"""
-		smime messages usually contain the public key of the sender address.
-		This function extracts the key and stores it in the directory 
-		'targetdir'.
-		"""
-		self.debug("extract_publickey_from_mail to '%s'"%targetdir)
-		f=tempfile.NamedTemporaryFile(mode='wb',delete=False,prefix='mail-')
-		fname=f.name
-
-		if isinstance(mail,email.message.Message):
-			mail=mail.as_string()
-		cmd=[   self.parent._SMIMECMD,
-				"smime",
-				"-in", mail,
-				"-pk7out",
-				"2>/dev/null","|",
-				
-				self.parent._SMIMECMD,
-				"pkcs7",
-				"-print_certs",
-				"-out",f.name,
-				"2>/dev/null"]
-		self.debug("extractcmd :'%s'"%" ".join(cmd))
-		_result = subprocess.call( " ".join(cmd) ,shell=True) 
-		f.close()
-		size=os.path.getsize(fname)
-
-		if size==0:
-			os.remove(fname)
-			return None
-
-		fp=self.get_certfingerprint(fname)
-		targetname=os.path.join(targetdir,"%s.pem"%fp)
-		self._copyfile(fname,targetname)
-		os.remove(fname)
-		return targetname
- 
-	###############
-	#create_keylist
-	###############
-
-	@_dbg
-	def create_keylist(self,directory):
-		"""
-		returns a dictonary of e-mail addresses with its key, automatically
-		created from the files in 'directory' 
-		"""
-		result={}
-		directory=os.path.expanduser(directory)
-
-		try:
-			_udir=os.listdir(directory)
-		except:
-			self.log("class _SMIME.create_keylist, "
-			"couldn't read directory '%s'"%directory)
-			return result
-
-		_match="^(.*?).pem"
-
-		for _i in _udir:
-
-			  if re.match(_match,_i):
-				  f=os.path.join(directory,_i)
-				  emailaddress=self.get_certemailaddresses(f)
-
-				  if len(emailaddress)>0:
-
-					  for e in emailaddress:
-						  result[e] = [f,self.parent._SMIMECIPHER]
-
-		return result
- 
-	###################
-	#verify_certificate
-	###################
-
-	@_dbg
-	def verify_certificate(self,cert):
-		"""
-		returns True if the certificate  in the file 'cert' is valid,
-		else False
-		"""
-		cmd=[   self._SMIMECMD,
-				"verify",cert,"&>/dev/null"]
-		_result = subprocess.call( " ".join(cmd) ,shell=True) 
-		return _result==0
- 
-	##########
-	#_copyfile
-	##########
-
-	@_dbg
-	def _copyfile(self,src, dst):
-		length=16*1024
-
-		try:
-			with open(os.path.expanduser(src), 'rb') as fsrc:
-				with open(os.path.expanduser(dst), 'wb') as fdst:
-						while 1:
-							buf = fsrc.read(length)
-							if not buf:
-									break
-							fdst.write(buf)
-		except:
-			self.log("Class smime._copyfile: Couldn't copy file!","e")
-			self.log_traceback()
-
-###########
-#CLASS _PDF
-###########
-
-class _PDF(_gmechild):
-	"""
-	class to create encrypted PDF files out of E-mail files.
-	Don't call this class directly, use gme.pdf_factory() instead!
-	"""
-	@_dbg
-	def __init__(   self, 
-					parent,
-					counter=0):
-		_gmechild.__init__(self,parent)
-		self._recipient = ''
-		self._filename=''	
-		self.count=counter
- 
-	#############
-	#set_filename
-	#############
-
-	@_dbg
-	def set_filename(self, fname):
-		"sets the filename of the file, which content has to be encrypted"
-
-		if isinstance(fname,str):
-			self._filename=fname.strip()
-		else:
-			self._filename=''
- 
-	###############
-	#create_pdffile
-	###############
-
-	@_dbg
-	def create_pdffile( self,
-						password,
-						filename=None):
-		"""
-		creates a PDF file out of the content of a file and encrypts it.
-		
-		return values:
-		result: True if success, else False
-		encdata: If 'result' is True, a (binary) string with the encrypted data
-				 else None
-		"""
-		result=False
-
-		if filename:
-			self.set_filename(filename)
-
-		if len(self._filename) == 0:
-			self.log( 'Error: create_pdffile: filename not set',"e")
-			return result,None
-
-		f=self.parent._new_tempfile(delete=True)
-		self.debug("_PDF.create_file _new_tempfile %s"%f.name)
-		f.close()
-
-		try:
-			os.remove(f.name)
-		except:
-			pass
-
-		self.debug("PDF creation command: '%s'" %
-						' '.join(self._createpdfcommand_fromfile(f.name)))
-		_result = subprocess.call( 
-						' '.join(self._createpdfcommand_fromfile(f.name)),
-						shell=True ) 
-
-		if _result !=0:
-		  self.log("Error executing command (Error code %d)"%_result,"e")
-		  return result,None
-		else:
-			result=True
-		_res,encryptedfile=self._encrypt_pdffile(f.name,password)
-
-		if _res==False:
-		  self.log("Error encrypting pdf file (Error code %d)"%_res,"e")
-		  return False,None
-
-		res=open(encryptedfile,mode="br")
-		self.debug("PDF.encrypt_file binary open")
-		encdata=res.read()
-		res.close()
-		self.parent._del_tempfile(f.name)
-		self.parent._del_tempfile(encryptedfile)
-		return result,encdata
- 
-	###########################
-	#_createpdfcommand_fromfile
-	###########################
-
-	@_dbg
-	def _createpdfcommand_fromfile(self,resultfile):
-		cmd=[   self.parent._PDFCREATECMD, 
-				"-i",self._filename, 
-				"-o",resultfile,
-				"--headers",
-				"--overwrite",
-				"--no-attachments",
-				"--mostly-hide-warning"]
-		return cmd
- 
-	#################
-	#_encrypt_pdffile
-	#################
-
-	@_dbg
-	def _encrypt_pdffile(   self,
-							inputfilename,
-							password):
-		result=False
-		f=self.parent._new_tempfile()
-		self.debug("_PDF.encrypt_file _new_tempfile %s"%f.name)
-		self.debug("Encryption command: '%s'" %
-			' '.join(self._encryptcommand_fromfile( inputfilename,
-													f.name,password)))
-		_result = subprocess.call( 
-				' '.join(self._encryptcommand_fromfile(  inputfilename,
-														 f.name,password))
-				 ,shell=True ) 
-
-		if _result != 0:
-			self.log("Error executing command "
-							"(Error code %d)"%_result,"e")
-			return result,None
-		else:
-			result=True
-
-		return result,f.name
- 
-	#########################
-	#_encryptcommand_fromfile
-	#########################
-
-	@_dbg
-	def _encryptcommand_fromfile(
-							self,
-							fromfile,
-							tofile,
-							password):
-		cmd=[   self.parent._PDFENCRYPTCMD,
-				fromfile, 
-				"output",tofile,
-				"user_pw","\"%s\""%password]
-		return cmd
 
 
 #############
 #_decode_html
 ############# 
 
-@_dbg
 def _decode_html(parent,msg):
 	h=_htmldecode(parent)
 	h.feed(msg)
@@ -1699,7 +385,6 @@ class _htmldecode(html.parser.HTMLParser,_gmechild):
 #guess_fileextension
 #################### 
 
-@_dbg
 def guess_fileextension(ct):
 	"returns a filetype based on its contenttype/mimetype 'ct'"
 
@@ -1844,19 +529,18 @@ def guess_fileextension(ct):
 #_encodefilename
 ################ 
 
-@_dbg
 def _encodefilename(name):
 	n1=(email.utils.encode_rfc2231(name,"UTF-8"))
 	n2="?UTF-8?B?%s"%base64.encodebytes(
-						name.encode("UTF-8",_unicodeerror)
-						).decode("UTF-8",_unicodeerror)[0:-1]
+						name.encode("UTF-8",unicodeerror)
+						).decode("UTF-8",unicodeerror)[0:-1]
 	return n1,n2
 
 ###########
 #_decodetxt
 ########### 
 
-@_dbg
+
 def _decodetxt( text,
 				encoding,
 				charset):
@@ -1867,7 +551,7 @@ def _decodetxt( text,
 	if not encoding:
 		encoding="8bit"
 
-	bytetext=text.encode(charset,_unicodeerror)
+	bytetext=text.encode(charset,unicodeerror)
 	result=bytetext
 	cte=encoding.upper()
 
@@ -1903,7 +587,7 @@ def _decodetxt( text,
 		except uu.Error:
 			pass
 
-	return result.decode(charset,_unicodeerror)
+	return result.decode(charset,unicodeerror)
 
 class gme:
 	"""
@@ -3146,7 +1830,7 @@ class gme:
 											delete=False,
 											prefix='mail-',
 											dir=tmpdir)
-			f.write(message.encode("UTF-8",_unicodeerror))
+			f.write(message.encode("UTF-8",unicodeerror))
 			f.close()
 
 			if add_deferred:
@@ -3325,7 +2009,7 @@ class gme:
 											charset)	
 					m.del_param("charset")	
 					m.set_param("charset",charset)
-					raw_payload=raw_payload.encode(charset,_unicodeerror)
+					raw_payload=raw_payload.encode(charset,unicodeerror)
 
 				fp=open(os.path.join(tempdir,filename),"wb")
 
@@ -3792,7 +2476,7 @@ class gme:
 				f=open(mail[0],"rb")
 				m=f.read()
 				f.close()
-				mailtext=m.decode("UTF-8",_unicodeerror)
+				mailtext=m.decode("UTF-8",unicodeerror)
 				self.encrypt_single_mail(-1,mailtext,mail[1],mail[2])	
 				del self._email_queue[qid]
 			except:
@@ -4639,7 +3323,7 @@ class gme:
 
 		if contenttype=="text/html":
 			res,htmlheader,htmlbody,htmlfooter=self._split_html(raw_payload)
-			fp.write(htmlbody.encode(charset,_unicodeerror))
+			fp.write(htmlbody.encode(charset,unicodeerror))
 		else:
 
 			if is_text:
@@ -4649,7 +3333,7 @@ class gme:
 				except:
 					tencoding="8bit"
 
-				raw_payload=raw_payload.encode(charset,_unicodeerror)
+				raw_payload=raw_payload.encode(charset,unicodeerror)
 	
 			fp.write(raw_payload)
 
@@ -5031,7 +3715,7 @@ class gme:
 
 			body=bodymsg.as_string()	
 
-		fp.write(body.encode("UTF-8",_unicodeerror))
+		fp.write(body.encode("UTF-8",unicodeerror))
 		fp.close()
 		gpg.set_filename( fp.name )
 		attachment=_GPGEncryptedAttachment()
@@ -5308,7 +3992,7 @@ class gme:
 
 			body=bodymsg.as_string()	
 
-		fp.write(body.encode("UTF-8",_unicodeerror))
+		fp.write(body.encode("UTF-8",unicodeerror))
 		fp.close()
 		smime.set_filename(fp.name)
 		result,pl=smime.encrypt_file()
@@ -5404,7 +4088,7 @@ class gme:
 
 		pdf=self.pdf_factory()
 		fp=self._new_tempfile()
-		fp.write(message.encode("UTF-8",_unicodeerror))
+		fp.write(message.encode("UTF-8",unicodeerror))
 		fp.close()
 		pdf.set_filename(fp.name)
 		pw=self.get_pdfpassword(pdfuser)
@@ -5821,7 +4505,7 @@ class gme:
 	@_dbg
 	def encrypt_mails(  self,
 						mailtext,
-						recipient):
+						recipients):
 		"""
 		Main function of this library: 
 			mailtext is the mail as a string
@@ -5832,16 +4516,16 @@ class gme:
 		encrypt_mails(myemailtext,['agentj@mib','agentk@mib'])
 		"""
 
-		if isinstance(recipient,str):
-			recipient=[recipient]
+		if isinstance(recipients,str):
+			recipients=[recipients]
 
 		spamlevel=spamscanners.S_NOSPAM
 		score=0
 
 		if self._SPAMCHECK and self._spam_checker==None:
 			self._spam_checker=spamscanners.get_spamscanner(self._SPAMSCANNER,
-														parent=self,
-														leveldict=self._spam_leveldict)
+												parent=self,
+												leveldict=self._spam_leveldict)
 
 			if self._spam_checker!=None:
 				self.log("SPAMCHECKER '%s' activated"%self._SPAMSCANNER)
@@ -5861,7 +4545,7 @@ class gme:
 			if self._SMIMEAUTOMATICEXTRACTKEYS:
 				self.debug("_SMIMEAUTOMATICEXTRACTKEYS")
 				f=self._new_tempfile()
-				f.write(mailtext.encode("UTF-8",_unicodeerror))
+				f.write(mailtext.encode("UTF-8",unicodeerror))
 				f.close()
 				s=self.smime_factory()
 				s.extract_publickey_from_mail(  f.name,
@@ -5891,34 +4575,35 @@ class gme:
 							"maybe":(spamlevel==spamscanners.S_MAYBESPAM),
 							"level":"*"*int(score)}
 					mailtext=spamheader+mailtext
-
+				self.debug("Spamresult: spamlevel %i, score %f"%(spamlevel,
+																score))
 			raw_message = email.message_from_string( mailtext )
 			from_addr = raw_message['From']
+
+			if self._SPAMCHANGESUBJECT:
+				subject=self._decode_header(raw_message["Subject"])
+
+				if score==spamscanners.S_SPAM:
+						subject="%s %s"%(	self._SPAMSUSPECTSUBJECT,
+											subject)
+				elif score==spamscanners.S_MAYBESPAM:
+						subject="%s %s"%(	self._SPAMSUBJECT,
+												subject)
+						
+				del raw_message["Subject"]
+				raw_message["Subject"]=subject
+				mailtext=raw_message.as_string()
 
 			if 	(self._VIRUSCHECK==True and self._virus_checker==None):
 				self._virus_checker=_virus_check(parent=self)
 
-			for to_addr in recipient:
+			for to_addr in recipients:
 				self.debug("encrypt_mail for user '%s'"%to_addr)
 
 				if self._RUNMODE==self.m_daemon:
 					fname=self._store_temporaryfile(mailtext,
 													spooldir=True)
 
-				if self._SPAMCHANGESUBJECT:
-					subject=self._decode_header(raw_message["Subject"])
-
-
-					if score==spamscanners.S_SPAM:
-							subject="%s %s"%(	self._SPAMSUSPECTSUBJECT,
-												subject)
-					if score==spamscanners.S_MAYBESPAM:
-							subject="%s %s"%(	self._SPAMSUBJECT,
-												subject)
-						
-					del raw_message["Subject"]
-					raw_message["Subject"]=subject
-					mailtext=raw_message.as_string()
 
 				if self._RUNMODE==self.m_daemon:
 					self._email_queue[self._queue_id]=[ fname,
@@ -5972,7 +4657,7 @@ class gme:
 			else:
 				sys.stdin = TextIOWrapper(sys.stdin.buffer,
 										  encoding='UTF-8',
-										  errors=_unicodeerror)
+										  errors=unicodeerror)
 				raw = sys.stdin.read()
 
 			#do the magic
@@ -6032,7 +4717,6 @@ class gme:
 		signal.signal(signal.SIGTERM, _sigtermhandler)
 		self.load_deferred_list()
 		self.load_virus_list()
-		smtpd.__version__="gpgmailencrypt smtp server %s"%VERSION
 		_deferredlisthandler()
 		self.log("gpgmailencrypt %s starts as daemon on %s:%s"%(
 					VERSION,
@@ -6189,7 +4873,6 @@ class gme:
 #start_adminconsole
 ################### 
 
-@_dbg
 def start_adminconsole(host,port):
 	"starts the admin console"
 	class gmeadmin(_gmechild):
