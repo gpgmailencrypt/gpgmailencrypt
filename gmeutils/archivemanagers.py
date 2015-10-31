@@ -299,6 +299,50 @@ class _CPIO(_baseunpacker):
 				">/dev/null"]
 		return cmd
 
+#####
+#_DAR
+#####
+
+class _DAR(_baseunpacker):
+
+	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent=parent,chdir=True)
+		self.cmd=shutil.which("dar")
+
+	#################
+	#unpackingformats
+	#################
+
+	def unpackingformats(self):
+		return ["DAR"]
+ 
+	##################
+	#uncompresscommand
+	##################
+
+	def uncompresscommand(  self,
+							sourcefile,
+							directory):
+		f,ext=os.path.splitext(sourcefile)
+
+		if ext==".dar":
+			f,ext=os.path.splitext(f)
+
+			try:
+				int(ext[1:])
+				sourcefile=f
+			except:
+				pass
+
+		cmd=[   self.cmd, 
+				"-O",
+				"-q",
+				"-wa",
+				"-x",
+				sourcefile,
+				">/dev/null"]
+		return cmd
+
 ########
 #_FREEZE
 ########
@@ -1204,6 +1248,8 @@ def get_archivemanager(manager, parent):
 		return _CAB(parent=parent)
 	elif manager=="CPIO":
 		return _CPIO(parent=parent)
+	elif manager=="DAR":
+		return _DAR(parent=parent)
 	elif manager=="FREEZE":
 		return _FREEZE(parent=parent)
 	elif manager=="GZIP":
@@ -1254,6 +1300,7 @@ def get_managerlist():
 				"BZIP2",
 				"CAB",
 				"CPIO",
+				"DAR",
 				"FREEZE",
 				"GZIP",
 				"KGB",
@@ -1290,13 +1337,11 @@ def get_archivetype(filename,filetype):
 		"vnd.ms-tnef":					"TNEF",
 		"x-7z-compressed":				"7Z",
 		"x-arj":						"ARJ",
-		"x-b1":							None,
 		"x-bzip":						"BZIP",
 		"x-bzip2":						"BZIP2",
 		"x-compressed":					"GZIP",
 		"x-compress":					"GZIP",
-		"x-dar":						None,
-		"x-dgc-compressed":				None,
+		"x-dar":						"DAR",
 		"x-gtar":						"TGZ",
 		"x-gzip":						"GZIP",
 		"x-lzh":						"LHA",
@@ -1320,6 +1365,7 @@ def get_archivetype(filename,filetype):
 				"bz2":	"BZIP2",
 				"cab":	"CAB",
 				"cpio":	"CPIO",
+				"dar":	"DAR",
 				"deb":	"AR",
 				"ear":	"JAR",
 				"exe":	"EXE",
