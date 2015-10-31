@@ -5,6 +5,7 @@ import subprocess
 from .child 			import _gmechild 
 from   ._dbg 			import _dbg
 from .version 			import *
+
 S_NOSPAM=0
 S_MAYBESPAM=1
 S_SPAM=2
@@ -62,7 +63,7 @@ class _SPAMASSASSIN(_basespamchecker):
 			self._SPAMMAXSIZE)=leveldict["SPAMASSASSIN"]
 		except:
 			self.log_traceback()
-			raise
+
 	@_dbg					
 	def is_spam(self,mail):
 			self.debug("is_spam spamassassin")
