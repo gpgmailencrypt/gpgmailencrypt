@@ -15,9 +15,10 @@ class _gmechild:
 			ln=-1):
 
 		try:
+			self.parent._level+=self._level
 			self.parent.log(msg=msg,infotype=infotype,ln=ln)
+			self.parent._level-=self._level
 		except:
-			raise
 			pass
 
 	def log_traceback(self):
@@ -31,7 +32,9 @@ class _gmechild:
 				lineno=0):
 
 		try:
+			self.parent._level+=self._level
 			self.parent.debug(msg=msg,lineno=lineno)
+			self.parent._level-=self._level
 		except:
 			pass
 

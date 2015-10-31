@@ -25,18 +25,19 @@ def _dbg(func):
 		except:
 			pass
 
+		parent.debug("START %s"%func.__name__,lineno)
 		if hasattr(parent,"_level"):
 			parent._level+=1
 	
-		parent.debug("START %s"%func.__name__,lineno)
 		result=func(*args,**kwargs)
-		parent.debug("END %s"%func.__name__,endlineno)
-	
 		if hasattr(parent,"_level"):
 			parent._level-=1
 
 			if parent._level<0:
 				parent._level=0
+
+		parent.debug("END %s"%func.__name__,endlineno)
+	
 
 		return result
 

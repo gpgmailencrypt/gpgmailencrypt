@@ -1,5 +1,6 @@
 import base64
 import binascii
+import email
 import html
 import html.parser
 from   io					  	import BytesIO

@@ -4241,7 +4241,6 @@ class gme:
 
 		try:
 			server.start()
-			print("nach asyncore.loop")
 		except SystemExit as m:
 			exit(0)
 

@@ -4,7 +4,9 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from .child import _gmechild 
+from .child 			import _gmechild 
+from .version 			import *
+from   ._dbg 			import _dbg
 
 ####################
 #CLASS _baseunpacker
@@ -13,7 +15,7 @@ from .child import _gmechild
 class _baseunpacker(_gmechild):
 
 	def __init__(self,parent,chdir=False):
-		_gmechild.__init__(self,parent)
+		_gmechild.__init__(self,parent=parent)
 		self.cmd=""
 		self.chdir=chdir
 		self.parent=parent
@@ -33,6 +35,7 @@ class _baseunpacker(_gmechild):
 	#uncompress_file
 	################
 
+	@_dbg
 	def uncompress_file(self, filename,directory=None):
 		result=False
 		
@@ -71,6 +74,7 @@ class _basedeleteunpacker(_baseunpacker):
 	#uncompress_file
 	################
 
+	@_dbg
 	def uncompress_file(self, filename,directory=None):
 		result=False
 
@@ -106,7 +110,7 @@ class _basedeleteunpacker(_baseunpacker):
 class _AR(_baseunpacker):
 
 	def __init__(self,parent):
-		_baseunpacker.__init__(self,parent,chdir=True)
+		_baseunpacker.__init__(self,parent=parent,chdir=True)
 		self.cmd=shutil.which("ar")
 
 	#################
@@ -136,7 +140,7 @@ class _AR(_baseunpacker):
 class _ARC(_baseunpacker):
 
 	def __init__(self,parent):
-		_baseunpacker.__init__(self,parent,chdir=True)
+		_baseunpacker.__init__(self,parent=parent,chdir=True)
 		self.cmd=shutil.which("arc")
 
 	#################
@@ -166,7 +170,7 @@ class _ARC(_baseunpacker):
 class _ARJ(_baseunpacker):
 
 	def __init__(self,parent):
-		_baseunpacker.__init__(self,parent)
+		_baseunpacker.__init__(self,parent=parent)
 		self.cmd=shutil.which("arj")
 
 	#################
@@ -999,6 +1003,7 @@ class _ZIP(_baseunpacker):
 	#uncompress_file
 	################
 
+	@_dbg
 	def uncompress_file( self,
 					zipfile,
 					directory=None

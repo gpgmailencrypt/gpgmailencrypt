@@ -1,6 +1,7 @@
-from .child import _gmechild
-from . import virusscanners
-from . import archivemanagers
+from .child 			import _gmechild
+from . 					import virusscanners
+from . 					import archivemanagers
+from   ._dbg 			import _dbg
 import email
 import tempfile
 import os
@@ -12,8 +13,9 @@ import os
 class _virus_check(_gmechild):
 	
 	def __init__(self,parent):
-		_gmechild.__init__(self,parent)
+		_gmechild.__init__(self,parent=parent)
 		self.debug("viruscheck __init__")
+		self.parent=parent
 		self.archivemap={}
 		self.unpacker={}
 		self.virusscanner={}
@@ -49,7 +51,6 @@ class _virus_check(_gmechild):
 	#####################
 
 	def _search_virusscanner(self):
-
 		
 		for s in virusscanners.get_virusscannerlist():
 			vscanner=virusscanners.get_virusscanner(scanner=s,parent=self)
@@ -96,7 +97,8 @@ class _virus_check(_gmechild):
 	#############################
 	#check_directory_for_archives
 	#############################
-
+	
+	@_dbg
 	def check_directory_for_archives(self,directory):
 		self.debug("check_directory_for_archives '%s'"%directory)
 		
@@ -126,7 +128,7 @@ class _virus_check(_gmechild):
 					self.debug("unpack archive %s"%f)
 					subdir=self._mktempdir(directory=directory)
 					newdir=os.path.join(directory,subdir)
-					self.debug("   new dir is %s"%newdir)
+					self.debug("new dir is %s"%newdir)
 					_u.uncompress_file(pathf,directory=newdir)
 
 					if not _u.keep_for_viruscheck():
@@ -191,6 +193,7 @@ class _virus_check(_gmechild):
 	#unpack_email
 	#############
 
+	_dbg
 	def unpack_email(self, mail):
 
 		if isinstance(mail,str):
@@ -232,7 +235,7 @@ class _virus_check(_gmechild):
 	##########
 	#has_virus
 	##########
-
+	_dbg
 	def has_virus(self,mail):
 		self.debug("viruscheck has_virus")
 		description=[]

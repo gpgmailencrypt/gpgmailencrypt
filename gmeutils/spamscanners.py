@@ -42,8 +42,8 @@ class _basespamchecker(_gmechild):
 class _SPAMASSASSIN(_basespamchecker):
 
 	def __init__(self,parent,leveldict):
-		_basespamchecker(parent,leveldict)
-		self.parent=parent
+		_basespamchecker(parent=parent,leveldict=leveldict)
+		#self.parent=parent
 		self._SPAMHOST="localhost"
 		self._SPAMPORT=783
 		self._SPAMMAXSIZE=5000000
@@ -100,8 +100,7 @@ class _SPAMASSASSIN(_basespamchecker):
 class _BOGOFILTER(_basespamchecker):
 
 	def __init__(self,parent,leveldict):
-		_basespamchecker(parent,leveldict)
-		self.parent=parent
+		_basespamchecker(parent=parent,leveldict=leveldict)
 		self.cmd=shutil.which("bogofilter")
 		self.set_leveldict(leveldict)
 
