@@ -3837,6 +3837,7 @@ class gme:
 		_prefer_pdf=False
 		_prefer_smime=False
 		mresult=None
+		self._count_totalmails+=1
 
 		if self.is_encrypted(mailtext):
 			m="Email already encrypted"
@@ -3891,7 +3892,6 @@ class gme:
 		self.debug("GPG encrypt possible %i / %s"%(g_r,to_gpg))
 		self.debug("SMIME encrypt possible %i / %s"%(s_r,to_smime))
 		self.debug("Prefer PDF %i / %s"%(_prefer_pdf,to_pdf))
-		self._count_totalmails+=1
 		domain=''
 		_addr=email.utils.parseaddr(from_addr)[1].split('@')
 
