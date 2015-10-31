@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 import sys,os,os.path,email,smtplib,ssl,subprocess,time
-sys.path.append("..")
+sys.path.insert(1,"..")
 import gpgmailencrypt
 from time import sleep
 TESTTO=["horst.knorr@knorrnet.de"]
