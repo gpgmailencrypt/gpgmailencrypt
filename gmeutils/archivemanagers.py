@@ -306,7 +306,7 @@ class _CPIO(_baseunpacker):
 class _DAR(_baseunpacker):
 
 	def __init__(self,parent):
-		_baseunpacker.__init__(self,parent=parent,chdir=True)
+		_baseunpacker.__init__(self,parent=parent)
 		self.cmd=shutil.which("dar")
 
 	#################
@@ -338,6 +338,7 @@ class _DAR(_baseunpacker):
 				"-O",
 				"-q",
 				"-wa",
+				"-R",directory,
 				"-x",
 				sourcefile,
 				">/dev/null"]
