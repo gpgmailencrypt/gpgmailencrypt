@@ -138,9 +138,6 @@ def replace_variables(  text,
 #Definition of encryption functions
 ###################################
 
-
-
-
 #############
 #_decode_html
 ############# 
