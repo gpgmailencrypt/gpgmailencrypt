@@ -22,8 +22,10 @@ from   .version			import *
 #############
 
 def splitstring(txt,length=80):
+
 	def chunkstring(string, length):
 		return (string[0+i:length+i] for i in range(0, len(string), length))
+
 	return list(chunkstring(txt,length))
 
 ##################
@@ -114,7 +116,7 @@ _htmlname={
 class _htmldecode(html.parser.HTMLParser,_gmechild):
 
 	def __init__(self,parent):
-		_gmechild.__init__(self,parent)
+		_gmechild.__init__(self,parent=parent)
 		html.parser.HTMLParser.__init__(self)
 		self.data=""
 		self.in_throwaway=0
@@ -230,19 +232,23 @@ class _htmldecode(html.parser.HTMLParser,_gmechild):
 			lastchar=""
 
 		if tag=="hr":
+
 			if lastchar!="\n":
 				self.data+="\r\n"
+
 			self.data+="=========================\r\n"
 
 		if starttag:
 			#Starttag
 
 			if tag=="table":
+
 				if lastchar!="\n":
 					self.data+="\r\n"
 
 			if tag=="tr":
 				self.first_td_in_row=True
+
 				if self.dbg:
 					self.debug("tr first_td_in_row=True")
 
@@ -252,9 +258,11 @@ class _htmldecode(html.parser.HTMLParser,_gmechild):
 					self.debug("<td/th> first %s"%self.first_td_in_row)
 
 				if  not self.first_td_in_row:
+
 					if self.dbg:
 						self.debug("	 td/th \\t")
 					self.data+="\t"
+
 				else:
 					self.first_td_in_row=False
 
@@ -279,10 +287,12 @@ class _htmldecode(html.parser.HTMLParser,_gmechild):
 				self.data+="\r\n"
 
 			if tag=="tr":
+
 				if lastchar=="\t":
 					self.data=self.data[0:len(self.data)-1]
 					self.data+="\r\n"
 				else:
+
 					if lastchar not in ("\n","\t"):
 						self.data+="\r\n"
 
