@@ -45,7 +45,7 @@ from   gmeutils.child         	import _gmechild
 from   gmeutils._dbg 		  	import _dbg
 from   gmeutils.gpgclass 		import _GPG,_GPGEncryptedAttachment
 from   gmeutils.gpgmailserver 	import _gpgmailencryptserver,file_auth
-from   gmeutils.helpers			import replace_variables,_splitstring,guess_fileextension,_htmldecode,_decodetxt,_encodefilename
+from   gmeutils.helpers			import *
 from   gmeutils.pdfclass 		import _PDF
 from   gmeutils.mytimer       	import _mytimer
 from   gmeutils.smimeclass 		import _SMIME
@@ -81,19 +81,9 @@ import time
 import traceback
 import uu
 
-###################################
-#Definition of encryption functions
-###################################
-
-#############
-#_decode_html
-############# 
-
-def _decode_html(parent,msg):
-	h=_htmldecode(parent)
-	h.feed(msg)
-	return h.mydata()
-
+####
+#gme
+####
 
 class gme:
 	"""
@@ -1056,7 +1046,7 @@ class gme:
 			if infotype in["w","e"]:
 				self._systemmessages.append([tm[:-1],infotype,msg])
 
-			txt=_splitstring(msg,320)
+			txt=splitstring(msg,320)
 			c=0
 
 			for t in txt:
@@ -1494,7 +1484,7 @@ class gme:
 				filename = m.get_filename()
 				self.debug("zipping file '%s'"%filename)
 				zipFilename = "%s.zip"%filename
-				zipFilenamecD,zipFilenamecT=_encodefilename(zipFilename)
+				zipFilenamecD,zipFilenamecT=encodefilename(zipFilename)
 				self.debug("Content-Type=%s"%contenttype)
 
 				if  isinstance( m.get_payload() , list ):
@@ -1510,7 +1500,7 @@ class gme:
 					raw_payload = m.get_payload(decode=not is_text)
 
 				if is_text:
-					raw_payload=_decodetxt( raw_payload,
+					raw_payload=decodetxt( raw_payload,
 											cte,
 											charset)	
 					m.del_param("charset")	
@@ -2661,7 +2651,7 @@ class gme:
 
 			if isinstance( m.get_payload(), str):
 
-				if self._pgpinlineencrypted(_decodetxt(m.get_payload(),
+				if self._pgpinlineencrypted(decodetxt(m.get_payload(),
 											cte,
 											charset)):
 					return True
@@ -2779,9 +2769,9 @@ class gme:
 
 			if res:
 				footer=body[res.start():]
-				body=_decode_html(self,body[0:res.start()])
+				body=decode_html(self,body[0:res.start()])
 		else:		
-			body=_decode_html(self,_r)
+			body=decode_html(self,_r)
 
 		return result,header,body,footer
 
@@ -2815,7 +2805,7 @@ class gme:
 		raw_payload = payload.get_payload(decode=not is_text)
 
 		if is_text:
-			raw_payload=_decodetxt(raw_payload,cte,charset)	
+			raw_payload=decodetxt(raw_payload,cte,charset)	
 			payload.del_param("charset")	
 			payload.set_param("charset",charset)
 
@@ -2898,7 +2888,7 @@ class gme:
 				pgpFilename=filename
 				
 			self.debug("Filename:'%s'"%filename)
-			pgpFilenamecD,pgpFilenamecT=_encodefilename(pgpFilename)
+			pgpFilenamecD,pgpFilenamecT=encodefilename(pgpFilename)
 			isBinaryattachment=(contentmaintype!="text")
 
 			if addPGPextension:
@@ -3741,7 +3731,7 @@ class gme:
 					self.log("wrong locale '%s'"%self._LOCALE,"w")
 					f=self._LOCALEDB["EN"][3]
 
-				filenamecD,filenamecT=_encodefilename("%s.zip"%f)
+				filenamecD,filenamecT=encodefilename("%s.zip"%f)
 				msg.add_header( 'Content-Disposition', 
 								'attachment; filename*="%s"' % filenamecD)
 				msg.set_param( 'name', filenamecT )

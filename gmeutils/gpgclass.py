@@ -1,4 +1,5 @@
 import email
+from   email.generator	  		import Generator
 import os
 import re
 import subprocess

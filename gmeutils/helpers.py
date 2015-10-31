@@ -15,10 +15,10 @@ from   .version			import *
 ##############################################
 
 #############
-#_splitstring
+#splitstring
 #############
 
-def _splitstring(txt,length=80):
+def splitstring(txt,length=80):
 	def chunkstring(string, length):
 		return (string[0+i:length+i] for i in range(0, len(string), length))
 	return list(chunkstring(txt,length))
@@ -289,6 +289,18 @@ class _htmldecode(html.parser.HTMLParser,_gmechild):
 
 	def mydata(self):
 		return self.data
+###################################
+#Definition of encryption functions
+###################################
+
+#############
+#decode_html
+############# 
+
+def decode_html(parent,msg):
+	h=_htmldecode(parent)
+	h.feed(msg)
+	return h.mydata()
 
 ####################
 #guess_fileextension
@@ -435,10 +447,10 @@ def guess_fileextension(ct):
 		return "bin"
 
 ###########
-#_decodetxt
+#decodetxt
 ########### 
 
-def _decodetxt( text,
+def decodetxt( text,
 				encoding,
 				charset):
 #necessary due to a bug in python 3 email module
@@ -487,10 +499,10 @@ def _decodetxt( text,
 	return result.decode(charset,unicodeerror)
 
 ################
-#_encodefilename
+#encodefilename
 ################ 
 
-def _encodefilename(name):
+def encodefilename(name):
 	n1=(email.utils.encode_rfc2231(name,"UTF-8"))
 	n2="?UTF-8?B?%s"%base64.encodebytes(
 						name.encode("UTF-8",unicodeerror)
