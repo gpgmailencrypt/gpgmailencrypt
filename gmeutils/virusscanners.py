@@ -262,6 +262,7 @@ def get_virusscanner(scanner,parent):
 
 	if scanner=="AVAST":
 		s= _AVAST(parent=parent)
+
 		if  s.cmd and len(s.cmd)>0:
 			return s
 
@@ -270,21 +271,25 @@ def get_virusscanner(scanner,parent):
 	
 	if scanner=="BITDEFENDER":
 		s= _BITDEFENDER(parent=parent)
+
 		if  s.cmd and len(s.cmd)>0:
 			return s
 
 	if scanner=="DRWEB":
 		s= _DRWEB(parent=parent)
+
 		if  s.cmd and len(s.cmd)>0:
 			return s
 
 	if scanner=="FPROT":
 		s= _FPROT(parent=parent)
+
 		if  s.cmd and len(s.cmd)>0:
 			return s
 			
 	if scanner=="SOPHOS":
 		s= _SOPHOS(parent=parent)
+
 		if  s.cmd and len(s.cmd)>0:
 			return s
 			
