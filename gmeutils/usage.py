@@ -201,7 +201,7 @@ def print_exampleconfig():
 	"#server where spamassassin is running")
 	print ("sa_port=783".ljust(space)+
 	"#port of the spamassassin server")
-	print ("sa_spamlevel=6.1".ljust(space)+
+	print ("sa_spamlevel=6.2".ljust(space)+
 	"#spamassassin threshold for spam, "
 	"values higher than that means the mail is spam")
 	print ("sa_spamsuspectlevel=3.0".ljust(space)+

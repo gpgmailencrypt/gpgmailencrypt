@@ -31,7 +31,6 @@ class _gmechild:
 	def debug(  self,
 				msg,
 				lineno=0):
-
 		try:
 			self.parent._level+=self._level
 			self.parent.debug(msg=msg,lineno=lineno)

@@ -17,13 +17,13 @@ class _PDF(_gmechild):
 	class to create encrypted PDF files out of E-mail files.
 	Don't call this class directly, use gme.pdf_factory() instead!
 	"""
-	@_dbg
 	def __init__(   self, 
 					parent,
 					counter=0):
-		_gmechild.__init__(self,parent)
+		_gmechild.__init__(self,parent=parent)
 		self._recipient = ''
 		self._filename=''	
+		self.parent=parent
 		self.count=counter
 		self._pdfencryptcmd=shutil.which("pdftk")
 		self._pdfwkhtml2pdf=shutil.which("wkhtmltopdf")
@@ -189,4 +189,5 @@ class _PDF(_gmechild):
 			
 			return True
 		else:
+			self.log("pdftk and/or wkhtmltopdf not available","e")
 			return False

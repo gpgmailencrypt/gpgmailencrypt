@@ -799,9 +799,11 @@ class gme:
 
 		if self._AUTHENTICATE:
 			self._read_smtpcredentials(self._SMTP_CREDENTIAL)
+
 		pdf=self.pdf_factory()
 		self._use_pdf=pdf.is_available()
-		self.log("PDF available %s"%self._use_pdf)	
+		if not self._use_pdf:
+			self.log("PDF support is not available","e")
 		
 
 	###################
