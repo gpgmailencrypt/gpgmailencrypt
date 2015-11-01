@@ -96,7 +96,7 @@ setup(
 	author='Horst Knorr',
 	author_email='gpgmailencrypt@gmx.de',
 	license='GPL v3',
-	install_requires=["pyclamd"],
+	install_requires=["pyclamd","pypdf2","beautifulsoup4","python-magic"],
 	cmdclass={'install': install},
 	# See https://pypi.python.org/pypi?%3Aaction=list_classifiers
 	classifiers=[
@@ -106,7 +106,6 @@ setup(
 	'Intended Audience :: Information Technology',
 		'Topic :: Software Development :: Build Tools',
 		'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
-		'Programming Language :: Python :: 3',
 		'Programming Language :: Python :: 3.4',
 		'Programming Language :: Python :: 3.5',
 	"Topic :: Communications :: Email :: Mail Transport Agents",
