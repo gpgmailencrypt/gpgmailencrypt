@@ -5,6 +5,7 @@ import subprocess
 from	.child 			import _gmechild 
 from   .version			import *
 from   ._dbg 			import _dbg
+from   .thirdparty		import email2pdf
 ###########
 #CLASS _PDF
 ###########
@@ -72,15 +73,20 @@ class _PDF(_gmechild):
 
 		self.debug("PDF creation command: '%s'" %
 						' '.join(self._createpdfcommand_fromfile(f.name)))
-		_result = subprocess.call( 
-						' '.join(self._createpdfcommand_fromfile(f.name)),
-						shell=True ) 
+		_result=0
+
+		try:
+			email2pdf.main(self._createpdfcommand_fromfile(f.name),None,None)
+		except:
+			_result=1
+			self.log_traceback()
 
 		if _result !=0:
-		  self.log("Error executing command (Error code %d)"%_result,"e")
+		  self.log("Error executing command (Error code )","e")
 		  return result,None
 		else:
 			result=True
+
 		_res,encryptedfile=self._encrypt_pdffile(f.name,password)
 
 		if _res==False:
@@ -101,7 +107,7 @@ class _PDF(_gmechild):
 
 	@_dbg
 	def _createpdfcommand_fromfile(self,resultfile):
-		cmd=[   self.parent._PDFCREATECMD, 
+		cmd=[  	"email2pdf",
 				"-i",self._filename, 
 				"-o",resultfile,
 				"--headers",
