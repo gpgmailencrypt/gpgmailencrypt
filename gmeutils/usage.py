@@ -133,10 +133,6 @@ def print_exampleconfig():
 
 	print ("")
 	print ("[pdf]")
-	print ("email2pdfcommand=/usr/bin/email2pdf".ljust(space)+
-	"#path where to find email2pdf (needed for creating pdfs,")
-	print ("".ljust(space)+
-	"#see https://github.com/andrewferrier/email2pdf)")
 	print ("pdftkcommand=/usr/bin/pdftk".ljust(space)+
 	"#path where to find pdftk (needed for encrypting pdf files")
 	print ("passwordlength=10".ljust(space)+

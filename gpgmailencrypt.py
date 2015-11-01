@@ -317,7 +317,6 @@ class gme:
 		self._SMTPD_SSL_KEYFILE="/etc/gpgsmtpd.key"
 		self._SMTPD_SSL_CERTFILE="/etc/gpgsmtpd.cert"
 		self._USEPDF=False
-		self._PDFCREATECMD="/usr/local/bin/email2pdf"
 		self._PDFENCRYPTCMD="/usr/bin/pdftk"
 		self._PDFSECUREZIPCONTAINER=False
 		self._PDFPASSWORDLENGTH=10
@@ -602,11 +601,6 @@ class gme:
 
 			if not self._USEPDF and self._PREFERRED_ENCRYPTION=="PDF":
 				self._PREFERRED_ENCRYPTION="PGPINLINE"
-
-			try:
-				self._PDFCREATECMD=_cfg.get('pdf','email2pdfcommand')
-			except:
-				pass
 
 			try:
 				self._PDFENCRYPTCMD=_cfg.get('pdf','pdftkcommand')

@@ -18,6 +18,10 @@ import os, sys, shutil
 from distutils.core import setup
 from distutils.command.install import install as _install
 
+############
+#install_dir
+############
+
 def install_dir(fromdir,todir):
 
 	d,b=os.path.split(fromdir)
@@ -50,6 +54,10 @@ def install_dir(fromdir,todir):
 	except:
 		print("Error copying directory '%s'",b)
 
+##############
+#_post_install
+##############
+
 def _post_install(dir):
 	from subprocess import call
 	import pkg_resources
@@ -65,12 +73,17 @@ def _post_install(dir):
 	except:
 		pass
 
+########
+#install
+########
+
 class install(_install):
 	def run(self):
 		_install.run(self)
 		self.execute(_post_install, (self.install_lib,),
 					 msg="Running post install task")
 
+################################################################################
 
 here = path.abspath(path.dirname(__file__))
 
@@ -87,9 +100,13 @@ if result:
 else:
 		raise RuntimeError("Unable to find version string in %s." % (VERSIONFILE))
 
+######
+#setup
+######
+
 setup(
 	name='gpgmailencrypt',
-	description='an e-mail encryption module, gateway and daemon',
+	description='an e-mail encryption, virus- and spam- checking module, gateway and daemon',
 	version=versionstr,
 	long_description=long_description,
 	url='https://github.com/gpgmailencrypt/gpgmailencrypt',
@@ -99,27 +116,29 @@ setup(
 	install_requires=["pyclamd","pypdf2","beautifulsoup4","python-magic"],
 	cmdclass={'install': install},
 	# See https://pypi.python.org/pypi?%3Aaction=list_classifiers
+
 	classifiers=[
-		'Development Status :: 5 - Production/Stable',
-		'Intended Audience :: Developers',
+	'Development Status :: 5 - Production/Stable',
+	'Intended Audience :: Developers',
 	'Intended Audience :: System Administrators',
 	'Intended Audience :: Information Technology',
-		'Topic :: Software Development :: Build Tools',
-		'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
-		'Programming Language :: Python :: 3.4',
-		'Programming Language :: Python :: 3.5',
+	"Environment :: No Input/Output (Daemon)",
+	'Topic :: Software Development :: Build Tools',
+	'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+	'Programming Language :: Python :: 3.4',
+	'Programming Language :: Python :: 3.5',
 	"Topic :: Communications :: Email :: Mail Transport Agents",
 	"Topic :: Communications :: Email",
 	"Topic :: Security :: Cryptography",
 	"Topic :: Software Development :: Libraries :: Python Modules",
 	"Operating System :: OS Independent",
    ],
+
 	#zip_safe=False,
-	keywords='Email encryption daemon gateway',
+	keywords='Email encryption daemon gateway  gpg pgp smime pdf spam spamassassin bogofilter virus clamav drwatson avast f-prot fprot sophos bitdefender',
 	scripts =["scripts/gme_admin.py","scripts/encryptmaildir.py","scripts/gme.py"],
 	packages=["gmeutils","mailtemplates","documentation","misc"],
 	py_modules=["gpgmailencrypt"],
 	package_data={'mailtemplates': ['*/*'],"documentation":["*"],"misc":["*"]},
-	# https://packaging.python.org/en/latest/requirements.html
 )
 
