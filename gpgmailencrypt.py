@@ -266,6 +266,7 @@ class gme:
 		self._quarantinedir=os.path.expanduser("~/gmequarantine")
 		self._spam_cmd=shutil.which("spamc")
 		self._spam_leveldict={}
+		self._usepdf=False
 
 		if not os.path.exists(self._deferdir):
 			os.makedirs(self._deferdir)
@@ -317,7 +318,6 @@ class gme:
 		self._SMTPD_SSL_KEYFILE="/etc/gpgsmtpd.key"
 		self._SMTPD_SSL_CERTFILE="/etc/gpgsmtpd.cert"
 		self._USEPDF=False
-		self._PDFENCRYPTCMD="/usr/bin/pdftk"
 		self._PDFSECUREZIPCONTAINER=False
 		self._PDFPASSWORDLENGTH=10
 		self._PDFPASSWORDLIFETIME=48*60*60
@@ -603,11 +603,6 @@ class gme:
 				self._PREFERRED_ENCRYPTION="PGPINLINE"
 
 			try:
-				self._PDFENCRYPTCMD=_cfg.get('pdf','pdftkcommand')
-			except:
-				pass
-
-			try:
 				self._PDFPASSWORDLENGTH=_cfg.getint('pdf','passwordlength')
 			except:
 				pass
@@ -804,6 +799,9 @@ class gme:
 
 		if self._AUTHENTICATE:
 			self._read_smtpcredentials(self._SMTP_CREDENTIAL)
+		pdf=self.pdf_factory()
+		self._use_pdf=pdf.is_available()
+		self.log("PDF available %s"%self._use_pdf)	
 		
 
 	###################
@@ -3963,7 +3961,8 @@ class gme:
 												from_addr,
 												to_addr)
 
-		if not mresult and (_encrypt_subject or _prefer_pdf):
+		if 	(self._use_pdf  
+			and (not mresult and (_encrypt_subject or _prefer_pdf))):
 
 			if domain in self._HOMEDOMAINS:
 				mresult=self.encrypt_pdf_mail(  mailtext,

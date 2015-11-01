@@ -1,6 +1,7 @@
 import email
 import os
 import re
+import shutil
 import subprocess
 from	.child 			import _gmechild 
 from   .version			import *
@@ -24,6 +25,8 @@ class _PDF(_gmechild):
 		self._recipient = ''
 		self._filename=''	
 		self.count=counter
+		self._pdfencryptcmd=shutil.which("pdftk")
+		self._pdfwkhtml2pdf=shutil.which("wkhtmltopdf")
  
 	#############
 	#set_filename
@@ -155,9 +158,35 @@ class _PDF(_gmechild):
 							fromfile,
 							tofile,
 							password):
-		cmd=[   self.parent._PDFENCRYPTCMD,
+		cmd=[   self._pdfencryptcmd,
 				fromfile, 
 				"output",tofile,
 				"user_pw","\"%s\""%password]
 		return cmd
 
+	@_dbg
+	def is_available(self):
+		try:
+			import bs4
+		except:
+			self.log("beautifulsoup4 not available","e")
+			return False
+
+		try:
+			import PyPDF2
+		except:
+			self.log("pypdf2 not available","e")
+			return False
+
+		try:
+			import magic
+		except:
+			self.log("python-magic not available","e")
+			return False
+		
+		if ( self._pdfencryptcmd and len(self._pdfencryptcmd)>0
+			and self._pdfwkhtml2pdf and len(self._pdfwkhtml2pdf)>0):
+			
+			return True
+		else:
+			return False

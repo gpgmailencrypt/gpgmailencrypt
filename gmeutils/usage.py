@@ -133,8 +133,6 @@ def print_exampleconfig():
 
 	print ("")
 	print ("[pdf]")
-	print ("pdftkcommand=/usr/bin/pdftk".ljust(space)+
-	"#path where to find pdftk (needed for encrypting pdf files")
 	print ("passwordlength=10".ljust(space)+
 	"#Length of the automatic created password")
 	print ("passwordlifetime=172800".ljust(space)+
