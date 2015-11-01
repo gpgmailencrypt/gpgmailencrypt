@@ -74,14 +74,19 @@ class _PDF(_gmechild):
 		self.debug("PDF creation command: '%s'" %
 						' '.join(self._createpdfcommand_fromfile(f.name)))
 		_result=0
-		x=email2pdf.main(self._createpdfcommand_fromfile(f.name),None,None)
-		print("_RESULT",_result)
+
+		try:
+			email2pdf.main(self._createpdfcommand_fromfile(f.name),None,None)
+		except:
+			_result=1
+			self.log_traceback()
+
 		if _result !=0:
 		  self.log("Error executing command (Error code )","e")
 		  return result,None
 		else:
 			result=True
-		print(">>>>>>>>>>> RESULT",result,_result)
+
 		_res,encryptedfile=self._encrypt_pdffile(f.name,password)
 
 		if _res==False:

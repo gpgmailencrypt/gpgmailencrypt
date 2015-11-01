@@ -57,7 +57,6 @@ WKHTMLTOPDF_EXTERNAL_COMMAND = 'wkhtmltopdf'
 
 def main(argv, syslog_handler, syserr_handler):
     logger = logging.getLogger('email2pdf')
-    print(argv)
     warning_count_filter = WarningCountFilter()
     logger.addFilter(warning_count_filter)
 
