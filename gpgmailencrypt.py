@@ -329,7 +329,7 @@ class gme:
 		self._ZIPATTACHMENTS=False
 		self._ADMINS=[]
 		self._VIRUSCHECK=False
-		self._VIRUSLIFETIME=60 #2419200 #4 weeks
+		self._VIRUSLIFETIME=2419200 #4 weeks
 		self._SPAMCHECK=False
 		self._SPAMSCANNER="SPAMASSASSIN"
 		self._SA_SPAMHOST="localhost"
