@@ -81,10 +81,11 @@ setup(
 	"Topic :: Software Development :: Libraries :: Python Modules",
 	"Operating System :: OS Independent",
    ],
-    zip_safe=False,
+    #zip_safe=False,
     keywords='Email encryption daemon gateway',
     scripts =["scripts/gme_admin.py","scripts/encryptmaildir.py","scripts/gme.py"],
-    packages=["","gmeutils","mailtemplates","documentation","misc"],
+    packages=["gmeutils","mailtemplates","documentation","misc"],
+    py_modules=["gpgmailencrypt"],
     package_data={'mailtemplates': ['*/*'],"documentation":["*"],"misc":["*"]},
     # https://packaging.python.org/en/latest/requirements.html
 )
