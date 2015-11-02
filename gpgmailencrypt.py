@@ -79,6 +79,9 @@ import tempfile
 import time
 import traceback
 
+__all__ =["gme","start_adminconsole"]
+
+
 ####
 #gme
 ####
@@ -738,9 +741,9 @@ class gme:
 			except:
 				pass
 
-		if self._SA_SPAMSUSPECTLEVEL >=self._SA_SPAMLEVEL:
-			self._SA_SPAMSUSPECTLEVEL=self._SA_SPAMLEVEL-0.5
-			self.log("Spamsuspectlevel >=Spamlevel, automatically corrected",
+		if (self._SA_SPAMLEVEL - self._SA_SPAMSUSPECTLEVEL) <1.0:
+			self._SA_SPAMSUSPECTLEVEL=self._SA_SPAMLEVEL-1.0
+			self.log("Spamlevel-Spamsuspectlevel<1, automatically corrected",
 			"w")
 
 		self._spam_leveldict["SPAMASSASSIN"]=[	self._SA_SPAMLEVEL,
