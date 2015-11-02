@@ -166,6 +166,7 @@ class _PDF(_gmechild):
 
 	@_dbg
 	def is_available(self):
+
 		try:
 			import bs4
 		except:
@@ -191,3 +192,4 @@ class _PDF(_gmechild):
 		else:
 			self.log("pdftk and/or wkhtmltopdf not available","e")
 			return False
+
