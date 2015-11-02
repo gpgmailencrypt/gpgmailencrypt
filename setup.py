@@ -137,7 +137,7 @@ setup(
 	#zip_safe=False,
 	keywords='Email encryption daemon gateway  gpg pgp smime pdf spam spamassassin bogofilter virus clamav drwatson avast f-prot fprot sophos bitdefender',
 	scripts =["scripts/gme_admin.py","scripts/encryptmaildir.py","scripts/gme.py"],
-	packages=["gmeutils","mailtemplates","documentation","misc"],
+	packages=["gmeutils","mailtemplates","documentation","misc","gmeutils/thirdparty"],
 	py_modules=["gpgmailencrypt"],
 	package_data={'mailtemplates': ['*/*'],"documentation":["*"],"misc":["*"]},
 )
