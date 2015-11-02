@@ -11,9 +11,11 @@ mails=os.listdir(maildir)
 def start_server():
 	process=subprocess.Popen(["/home/horst/gpgmailencrypt3/gpgmailencrypt/g.py", "-d","-l","file"])
 	return process
+
 def stop_server(p):
 	print("stop server")
 	p.terminate()		
+
 def send_singlemail(mail):
 	if "Date" in mail:
 		del mail["Date"]
@@ -29,26 +31,31 @@ def send_singlemail(mail):
 	#	exit()
 
 def send_scripttestmails():
+
 	for m in mails:
 		mailname=os.path.join(maildir,m)
 		f=open(mailname)
 		rawmail=f.read()
 		f.close()
 		mail=email.message_from_string(rawmail)
+
 		for e in ["PGPINLINE","PGPMIME","SMIME"]:
 			print(m,e)
 			g.set_default_preferredencryption(e)
 			send_singlemail(mail)
+
 			if g.get_output()==g.o_mail:
 				sleep(2)
 			
 def send_testmails():
 	send_scripttestmails()
+
 def m2():
 	from multiprocessing import Process
 	p = Process(target=g.daemonmode)
 	p.start()
 	p.terminate()
+
 def moduletests():
 	g.set_output2mail()
 	send_testmails()
