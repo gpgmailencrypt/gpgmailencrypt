@@ -105,6 +105,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 	
 	def create_sslconnection(self,conn):
 		newconn=None
+
 		try:
 			newconn=ssl.wrap_socket(conn,
 				server_side=True,
@@ -127,10 +128,12 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 					self.parent.log("Client did break off STARTTLS","w")
 					self.parent.log_traceback()
 					break
+
 		except:
 			self.parent.log("_gpgmailencryptserver: Exception: Could not"
 							" start SSL connection")
 			self.parent.log_traceback()
+
 		return newconn
 
 	##############
@@ -146,8 +149,10 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 
 			if self.use_smtps:
 					conn=self.create_sslconnection(conn)
+
 					if conn==None:
 						return
+
 			self.parent.debug("_gpgmailencryptserver: Incoming connection "
 								"from %s" % repr(addr))
 			channel = _hksmtpchannel(self, 
@@ -366,6 +371,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 	######
 
 	def _dash(self,count):
+
 		if count>0:
 			return "-"
 		else:
@@ -603,6 +609,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 	def smtp_QUARANTINE(self,arg):
 		syntaxerror=("501 Syntax error: QUARANTINE SHOW|DELETE xxx|RELEASE xxx"
 			"|FORWARD xxx email@tld")
+
 		if not arg:
 			self.push(syntaxerror)
 			return
@@ -885,6 +892,7 @@ def file_auth(  parent,
 
 	except:
 		parent.debug("_gpgmailencryptserver: No such user '%s'"%user)
+
 	return False
 
 ##########

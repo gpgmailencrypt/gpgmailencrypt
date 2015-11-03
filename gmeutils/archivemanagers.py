@@ -593,7 +593,6 @@ class _RAR(_baseunpacker):
 							directory):
 		format=""
 		extension=os.path.splitext(sourcefile)[1].lower()
-
 		cmd=[   self.cmd, 
 				"e",sourcefile,
 				directory,
@@ -627,7 +626,6 @@ class _RIPOLE(_baseunpacker):
 							directory):
 		format=""
 		extension=os.path.splitext(sourcefile)[1].lower()
-
 		cmd=[   self.cmd, 
 				"-i",sourcefile,
 				"-d",directory,
@@ -855,6 +853,7 @@ class _XZ(_baseunpacker):
 
 		if lzma:
 			cmd.insert(3,"--format=lzma")
+
 		return cmd
 
 ###########
@@ -1118,6 +1117,7 @@ class _ZIP(_baseunpacker):
 
 				for s in source:
 					 shutil.move(os.path.join(directory2,s),directory)
+
 		else:
 			source = os.listdir(directory1)
 
@@ -1154,8 +1154,10 @@ class _ZIP(_baseunpacker):
 				"e",sourcefile,
 				"-o%s"%directory,
 				">/dev/null"]
+
 		if password!=None:
 			cmd.insert(4,"-p%s"%password)
+
 		return cmd
 
 #####

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-#based on gpg-mailgate
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 """
@@ -346,6 +345,7 @@ class gme:
 		self._read_configfile()
 
 		if self._DEBUG:
+
 			for a in self._addressmap:
 				self.debug("_addressmap: '%s'='%s'"%(a,self._addressmap[a]))
 
@@ -381,6 +381,7 @@ class gme:
 					self._LOGGING=self.l_stderr
 				else:
 					self._LOGGING=self.l_none
+
 			except:
 				pass
 
@@ -408,6 +409,7 @@ class gme:
 
 				if len(e)>0:
 					self._DEBUGEXCLUDETEXT=e.split(",")
+
 			except:
 				pass
 
@@ -416,8 +418,10 @@ class gme:
 			try:
 				domains=_cfg.get('default','homedomains').split(",")
 				self._HOMEDOMAINS=[]
+
 				for d in domains:
 					self._HOMEDOMAINS.append(d.lower().strip())	
+
 			except:
 				pass
 
@@ -428,6 +432,7 @@ class gme:
 
 			try:
 				o=_cfg.get('default','output').lower().strip()
+
 				if o=="mail":
 					self._OUTPUT=self.o_mail
 				elif o=="stdout":
@@ -436,6 +441,7 @@ class gme:
 					self._OUTPUT=self.o_file
 				else:
 					self._OUTPUT=self.o_stdout
+
 			except:
 				pass
 
@@ -472,6 +478,7 @@ class gme:
 					self._PREFERRED_ENCRYPTION="PDF"
 				else:
 					self._PREFERRED_ENCRYPTION="PGPINLINE"
+
 			except:
 				pass
 
@@ -487,6 +494,7 @@ class gme:
 
 				if k!=None:
 					self._GPGKEYHOME=k.strip()
+
 			except:
 				pass
 
@@ -584,6 +592,7 @@ class gme:
 
 				if self._STATISTICS_PER_DAY >24:
 					self._STATISTICS_PER_DAY=24
+
 			except:
 				pass
 
@@ -592,6 +601,7 @@ class gme:
 
 				for a in admins:
 					self._ADMINS.append(a.strip())
+
 			except:
 				pass
 
@@ -676,6 +686,7 @@ class gme:
 
 				if k!=None:
 					self._SMIMEKEYHOME=k.strip()
+
 			except:
 				pass
 
@@ -690,52 +701,64 @@ class gme:
 
 				if k!=None:
 					self._SMIMEKEYEXTRACTDIR=k.strip()
+
 			except:
 				pass
 
 		if _cfg.has_section('spam'):
+
 			try:
 				self._SPAMCHECK=_cfg.getboolean('spam','checkspam')
 			except:
 				pass
+
 			try:
 				s=_cfg.get('spam','spamscanner').upper().trim()
 				if s in spamscanners.get_spamscannerlist():
 					self._SPAMSCANNER=s
 			except:
 				pass
+
 			try:
 				self._SPAMADDHEADER==_cfg.getboolean('spam','add_spamheader')
 			except:
 				pass
+
 			try:
 				self._SA_SPAMHOST=_cfg.get('spam','sa_host')
 			except:
 				pass
+
 			try:
 				self._SA_SPAMPORT=_cfg.getint('spam','sa_port')
 			except:
 				pass
+
 			try:
 				self._SPAMMAXSIZE=_cfg.getint('spam','maxsize')
 			except:
 				pass
+
 			try:
 				self._SA_SPAMLEVEL=_cfg.getfloat('spam','sa_spamlevel')
 			except:
 				pass
+
 			try:
 				self._SA_SPAMSUSPECTLEVEL=_cfg.getfloat('spam','sa_spamsuspectlevel')
 			except:
 				pass
+
 			try:
 				self._SPAMCHANGESUBJECT=_cfg.getboolean('spam','change_subject')
 			except:
 				pass
+
 			try:
 				self._SPAMSUBJECT=_cfg.get('spam','spam_subject')
 			except:
 				pass
+
 			try:
 				self._SPAMSUSPECTSUBJECT=_cfg.get('spam','spamsuspect_subject')
 			except:
@@ -764,7 +787,6 @@ class gme:
 				self._VIRUSLIFETIME=_cfg.getint('virus','quarantinelifetime')
 			except:
 				pass
-				
 
 		s=self.smime_factory()
 		self._smimeuser.update(s.create_keylist(self._SMIMEKEYHOME))
@@ -805,6 +827,7 @@ class gme:
 
 		pdf=self.pdf_factory()
 		self._use_pdf=pdf.is_available()
+
 		if not self._use_pdf:
 			self.log("PDF support is not available","e")
 		
@@ -992,6 +1015,7 @@ class gme:
 		c=0
 
 		for l in txt.splitlines():
+
 			try:
 				name,passwd=l.split("=",1)
 				self._SMTP_USER=name.strip()
@@ -1284,11 +1308,12 @@ class gme:
  
 	@_dbg
 	def _set_logmode(self):
-		""
 
 		try:
+
 			if self._LOGGING==self.l_file and len(self._LOGFILE)>0:
 				self._logfile = open(self._LOGFILE, 'a')
+
 		except:
 			self._logfile=None
 			self._LOGGING=self.l_stderr
@@ -1310,7 +1335,6 @@ class gme:
 
 		try:
 			tmpdir=None
-
 
 			if add_deferred or spooldir:
 				tmpdir=self._deferdir
@@ -1415,8 +1439,10 @@ class gme:
 	def zip_factory(self):
 		"returns a ZIP class"
 		z= archivemanagers._ZIP(self)
+
 		if len(self._7ZIPCMD)>0:
 			z.cmd=self._7ZIPCMD
+
 		return z
 
 	############
@@ -1558,6 +1584,7 @@ class gme:
 			return False
 
 		if maintype=="image":
+
 			if subtype in ["bmp","x-windows-bmp","svg+xml","tiff",
 					"photoshop","x-photoshop","psd"]:
 				return True
@@ -1572,12 +1599,14 @@ class gme:
 				return False
 
 		if maintype=="audio":
+
 			if subtype in ["x-aiff","x-wav"]:
 				return True
 			else:
 				return False
 
 		if maintype=="application":
+
 			#compressed archives
 			if subtype in ["zip","x-compressed","x-compress","x-gzip",
 						  "x-gtar","x-lzip","x-lzma","x-lzh","x-lzip",
@@ -1655,8 +1684,10 @@ class gme:
 						to_addr):
 		try:
 			message = email.message_from_string( mailtext )
+
 			if self._ADDHEADER and not self._encryptheader in message and msg:
 				message.add_header(self._encryptheader,msg)
+
 			self._send_msg(m_id,message,from_addr,to_addr)
 		except:
 			self.log("_send_rawmsg: exception _send_textmsg")
@@ -1715,6 +1746,7 @@ class gme:
 						self.debug("_send_textmsg starttls")
 						smtp.starttls()
 						smtp.ehlo_or_helo_if_needed()
+
 				except:
 					self.debug("smtp.starttls on server failed")
 
@@ -1934,6 +1966,7 @@ class gme:
 
 					if not self._is_old_deferred_mail(mail):
 						new_list.append(mail)
+
 				else:
 					self.log("Deferred mail successfully sent from %s to %s"%(
 												mail[1],
@@ -2200,6 +2233,7 @@ class gme:
 		for i in self._virus_queue:
 
 			try:
+
 				if float(i[3])==v_id:
 					res=i
 
@@ -2208,6 +2242,7 @@ class gme:
 					except:
 						self.log_traceback()
 					break
+
 			except:
 				self.log("quarantine_remove, could not convert float","w")
 
@@ -2218,7 +2253,9 @@ class gme:
 				self.log("quarantine remove %f"%v_id)
 			except:
 				self.log_traceback()
+
 		self._count_viruses=len(self._virus_queue)
+
 		if res:
 			return True
 		else:
@@ -2233,7 +2270,6 @@ class gme:
 		res=None
 
 		for i in self._virus_queue:
-
 			
 			try:
 
@@ -2265,7 +2301,6 @@ class gme:
 		res=None
 
 		for i in self._virus_queue:
-
 			
 			try:
 
@@ -2393,8 +2428,8 @@ class gme:
 		"returns how many mails were handeled"
 		return {"total":self._count_totalmails,
 			"total encrypt":self._count_encryptedmails,
-			"deferred":self._count_deferredmails,
-			"still deferred":len(self._deferred_emails),
+			"deferred total":self._count_deferredmails,
+			"deferred still":len(self._deferred_emails),
 			"total already encrypted":self._count_alreadyencryptedmails,
 			"total smime":self._count_smimemails,
 			"total pdf":self._count_pdfmails,
@@ -2663,10 +2698,12 @@ class gme:
 
 		if type(msg)==bytes:
 			return False
+
 		m=msg
 
 		if isinstance(msg,email.message.Message):
 			m=msg.as_string()
+
 		find=re.search("^Content-Type: application/pgp-encrypted",
 						m,
 						re.I|re.MULTILINE)
@@ -4017,7 +4054,6 @@ class gme:
 		raw_message = email.message_from_string( mailtext )
 		from_addr = raw_message['From']
 
-
 		if self._SPAMCHECK and self._spam_checker==None:
 			self._spam_checker=spamscanners.get_spamscanner(self._SPAMSCANNER,
 												parent=self,
@@ -4211,6 +4247,7 @@ class gme:
 
 			self.del_old_pdfpasswords(self._PDFPASSWORDLIFETIME)
 			self.del_old_virusmails()
+
 		#####################
 
 		self._RUNMODE=self.m_daemon
@@ -4297,7 +4334,6 @@ class gme:
 		except:
 			self.log("User could not be added","e")
 			self.log_traceback()
-			raise
 			return False
 
 		return True
@@ -4332,6 +4368,7 @@ class gme:
 			self.log("_gpgmailencryptserver: Config file could not be read","e")
 			self.log_traceback()
 			exit(5)
+
 		txt=f.read()
 		f.close()
 		self._smtpd_passwords=dict()
@@ -4384,6 +4421,11 @@ class gme:
 
 def start_adminconsole(host,port):
 	"starts the admin console"
+
+	#########
+	#gmeadmin
+	#########
+	
 	class gmeadmin(_gmechild):
 
 		def __init__(self,parent=None):
@@ -4564,8 +4606,7 @@ def start_adminconsole(host,port):
 				else:
 					self.matches = [s for s in self.options 
 									  if (s 
-									  and s.upper().startswith(text.upper() )
-										 )
+									  and s.upper().startswith(text.upper() ))
 								   ]
 
 			try:
@@ -4613,7 +4654,6 @@ def start_adminconsole(host,port):
 	readline.set_completion_display_matches_hook(completer.display_matches)
 	g=gmeadmin()
 	g.start(host,port)
-
 
 ################
 #_sigtermhandler

@@ -11,7 +11,10 @@ def _dbg(func):
 		parent=None
 
 		if args:
-			if hasattr(args[0],"debug"):
+
+			if hasattr(args[0],"parent"):
+				parent=args[0].parent
+			elif hasattr(args[0],"debug"):
 				parent=args[0]
 
 		if not parent:

@@ -464,12 +464,17 @@ class _SMIME(_gmechild):
 		length=16*1024
 
 		try:
+
 			with open(os.path.expanduser(src), 'rb') as fsrc:
+
 				with open(os.path.expanduser(dst), 'wb') as fdst:
+
 						while 1:
 							buf = fsrc.read(length)
+
 							if not buf:
 									break
+
 							fdst.write(buf)
 		except:
 			self.log("Class smime._copyfile: Couldn't copy file!","e")

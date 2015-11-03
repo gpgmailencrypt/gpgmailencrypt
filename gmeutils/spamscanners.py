@@ -87,6 +87,7 @@ class _SPAMASSASSIN(_basespamchecker):
 				self.log("Could not convert score to float","e")
 
 			if score >self.spammaybelevel:
+
 				if score >self.spamlevel:
 					spamlevel=S_SPAM
 				else:
@@ -151,11 +152,13 @@ def get_spamscanner(scanner,parent,leveldict):
 
 	if scanner=="BOGOFILTER":
 		_s=_BOGOFILTER(parent,leveldict)
+
 		if _s.is_available():
 			return _s
 
 	if scanner=="SPAMASSASSIN":
 		_s=_SPAMASSASSIN(parent,leveldict)
+
 		if _s.is_available():
 			return _s
 

@@ -187,7 +187,6 @@ class _PDF(_gmechild):
 		
 		if ( self._pdfencryptcmd and len(self._pdfencryptcmd)>0
 			and self._pdfwkhtml2pdf and len(self._pdfwkhtml2pdf)>0):
-			
 			return True
 		else:
 			self.log("pdftk and/or wkhtmltopdf not available","e")

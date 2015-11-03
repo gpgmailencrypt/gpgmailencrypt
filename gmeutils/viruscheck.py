@@ -116,9 +116,6 @@ class _virus_check(_gmechild):
 					_unpacker=self.archivemap[archivetype]
 				except:
 					pass
-			
-				#self.debug("\nFile %s, archive type %s,unpacker %s"
-				#			%(f,archivetype,_unpacker))
 
 				if archivetype!=None and _unpacker!=None:
 					_u=None
@@ -154,6 +151,7 @@ class _virus_check(_gmechild):
 			contenttype = payload.get_content_type()
 
 			try:
+
 				with open(fname,"wb") as attachment:
 					attachment.write(payload.get_payload(decode=True))
 			except:

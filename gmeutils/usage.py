@@ -8,7 +8,6 @@ def show_usage():
 	"shows the command line options to stdout"
 	print ("gpgmailencrypt")
 	print ("===============")
-	print ("based on gpg-mailgate")
 	print ("License: GPL 3")
 	print ("Author:  Horst Knorr <gpgmailencrypt@gmx.de>")
 	print ("Version: %s from %s"%(VERSION,DATE))

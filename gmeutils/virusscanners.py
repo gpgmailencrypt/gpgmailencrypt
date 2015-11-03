@@ -196,6 +196,7 @@ class _FPROT(_basevirusscanner):
 			
 			for line in p.stdout.readlines():
 				_l=line.decode("UTF-8")
+
 				if _l.startswith("["):
 					found=(re.search("(?<=\<)(.*)(?=\>)",_l))
 					virusinfo=_l[found.start():found.end()]
