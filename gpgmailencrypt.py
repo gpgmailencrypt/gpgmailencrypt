@@ -92,7 +92,7 @@ class gme:
 	create an instance of gme via 'with gme() as g'
 	example:
 	with gme() as g:
-	  g.encrypt_mails(mailtext,["recipient@mail.com","receiver2@mail.com"])
+	  g.send_mails(mailtext,["recipient@mail.com","receiver2@mail.com"])
 	
 	this will be all to encrypt and send the mails
 	"""
@@ -3618,7 +3618,7 @@ class gme:
 									self._decode_header(newmsg["To"]))
 				msg['To'] = from_addr
 				msg['From'] = self._SYSTEMMAILFROM
-				self.encrypt_mails(msg.as_string(),from_addr)
+				self.send_mails(msg.as_string(),from_addr)
 
 			msgtxt=self._load_mailmaster("02-pdfmail",
 					   "Content of this e-mail is stored in an pdf attachment.")
@@ -3815,7 +3815,7 @@ class gme:
 			msg['Subject'] = 'Virus mail information' 
 			msg['To'] = new_toaddr
 			msg['From'] = self._SYSTEMMAILFROM
-			self.encrypt_mails(msg.as_string(),from_addr)
+			self.send_mails(msg.as_string(),from_addr)
 		
 	####################
 	#encrypt_single_mail
@@ -3827,7 +3827,9 @@ class gme:
 								mailtext,
 								from_addr,
 								to_addr,
-								is_spam=spamscanners.S_NOSPAM):
+								is_spam=spamscanners.S_NOSPAM,
+								has_virus=False,
+								virusinfo=None):
 		_pgpmime=False
 		_prefer_gpg=True
 		_prefer_pdf=False
@@ -3842,17 +3844,14 @@ class gme:
 			self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
 			return
 		
-		if (self._VIRUSCHECK==True and self._virus_checker!=None):
-			result,info=self._virus_checker.has_virus(mailtext)
-
-			if result==True:
-				self._handle_virusmail(	info,
+		if has_virus:
+				self._handle_virusmail(	virusinfo,
 										queue_id,
 										mailtext,
 										from_addr,
 										to_addr)
 				return
-			elif len(info)>0:
+		elif len(virusinfo)>0:
 				self.log(
 				"No virus found, but received the following messages",
 				"w")
@@ -3990,12 +3989,12 @@ class gme:
 								from_addr,
 								to_addr)
 
-	###############
-	# encrypt_mails 
-	###############
+	############
+	# send_mails 
+	############
  
 	@_dbg
-	def encrypt_mails(  self,
+	def send_mails(  self,
 						mailtext,
 						recipients):
 		"""
@@ -4005,7 +4004,7 @@ class gme:
 		The emails will be encrypted if possible and sent as defined  
 		in /etc/gpgmailencrypt.conf
 		example:
-		encrypt_mails(myemailtext,['agentj@mib','agentk@mib'])
+		send_mails(myemailtext,['agentj@mib','agentk@mib'])
 		"""
 
 		if isinstance(recipients,str):
@@ -4013,6 +4012,11 @@ class gme:
 
 		spamlevel=spamscanners.S_NOSPAM
 		score=0
+		has_virus=False
+		virusinfo=None
+		raw_message = email.message_from_string( mailtext )
+		from_addr = raw_message['From']
+
 
 		if self._SPAMCHECK and self._spam_checker==None:
 			self._spam_checker=spamscanners.get_spamscanner(self._SPAMSCANNER,
@@ -4056,21 +4060,31 @@ class gme:
 				if spamlevel==spamscanners.S_MAYBESPAM:
 					self._count_maybespam+=1
 
-				if self._SPAMADDHEADER:
-					spamheader=(
-					"X-Spam-Score: %(score)s\r\n"
-					"X-Spam-Level: %(level)s\r\n"
-					"X-Spam-Flag: %(flag)s\r\n"
-					"X-Spam-Maybe: %(maybe)s\r\n"
-					)%{		"score":scoretext,
-							"flag":is_spam,
-							"maybe":(spamlevel==spamscanners.S_MAYBESPAM),
-							"level":"*"*int(score)}
-					mailtext=spamheader+mailtext
 				self.debug("Spamresult: spamlevel %i, score %f"%(spamlevel,
 																score))
-			raw_message = email.message_from_string( mailtext )
-			from_addr = raw_message['From']
+				if self._SPAMADDHEADER:
+
+					h="X-Spam-Score"
+					if raw_message[h]:
+						del m[h]
+
+					h="X-Spam-Level"
+					if raw_message[h]:
+						del m[h]
+
+					h="X-Spam-Flag"
+					if raw_message[h]:
+						del m[h]
+
+					h="X-Spam-Maybe"
+					if raw_message[h]:
+						del m[h]
+
+					raw_message.add_header("X-Spam-Score",scoretext)
+					raw_message.add_header("X-Spam-Level","*"*int(score))
+					raw_message.add_header("X-Spam-Flag",str(is_spam))
+					raw_message.add_header("X-Spam-Maybe",
+									str(spamlevel==spamscanners.S_MAYBESPAM))
 
 			if self._SPAMCHANGESUBJECT:
 				subject=self._decode_header(raw_message["Subject"])
@@ -4083,18 +4097,20 @@ class gme:
 												subject)
 				del raw_message["Subject"]
 				raw_message["Subject"]=subject
-				mailtext=raw_message.as_string()
+
 
 			if 	(self._VIRUSCHECK==True and self._virus_checker==None):
 				self._virus_checker=_virus_check(parent=self)
+
+			if (self._VIRUSCHECK==True and self._virus_checker!=None):
+				has_virus,virusinfo=self._virus_checker.has_virus(mailtext)
 
 			for to_addr in recipients:
 				self.debug("encrypt_mail for user '%s'"%to_addr)
 
 				if self._RUNMODE==self.m_daemon:
-					fname=self._store_temporaryfile(mailtext,
+					fname=self._store_temporaryfile(raw_message.as_string(),
 													spooldir=True)
-
 
 				if self._RUNMODE==self.m_daemon:
 					self._email_queue[self._queue_id]=[ fname,
@@ -4113,7 +4129,9 @@ class gme:
 											mailtext,
 											from_addr,
 											to_addr,
-											spamlevel)
+											spamlevel,
+											has_virus,
+											virusinfo)
 		except:
 			self._count_deferredmails+=1
 			self.log_traceback()
@@ -4152,7 +4170,7 @@ class gme:
 				raw = sys.stdin.read()
 
 			#do the magic
-			self.encrypt_mails(raw,recipient)
+			self.send_mails(raw,recipient)
 		except SystemExit as m:
 			self.debug("Exitcode:'%s'"%m)
 			exit(int(m.code))

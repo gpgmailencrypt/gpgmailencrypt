@@ -175,9 +175,9 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 							data):
 		self.parent.debug("_gpgmailencryptserver: _gpgmailencryptserver "
 						"from '%s' to '%s'"%(mailfrom,recipient))
-		try:
 
-			self.parent.encrypt_mails(data,recipient)
+		try:
+			self.parent.send_mails(data,recipient)
 		except:
 			self.parent.log("_gpgmailencryptserver: Bug:Exception!")
 			self.parent.log_traceback()
