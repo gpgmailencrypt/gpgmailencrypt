@@ -1,3 +1,5 @@
+#License GPL v3
+#Author Horst Knorr <gpgmailencrypt@gmx.de>
 import email
 from   email.generator	  		import Generator
 import os
