@@ -53,6 +53,7 @@ class _SPAMASSASSIN(_basespamchecker):
 		self.cmd=shutil.which("spamc")
 		self.set_leveldict(leveldict)
 		
+	@_dbg					
 	def set_leveldict(self,leveldict):
 		self.spamlevel=5.0
 		self.spammaybelevel=2.5
@@ -109,9 +110,11 @@ class _BOGOFILTER(_basespamchecker):
 		self.set_leveldict(leveldict)
 
 		
+	@_dbg					
 	def set_leveldict(self,leveldict):
 		pass
 
+	@_dbg					
 	def is_spam(self,mail):
 			self.debug("Spamcheck bogofilter")
 			spamlevel=S_NOSPAM

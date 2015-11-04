@@ -5,7 +5,8 @@ import os
 import re
 import shutil
 import subprocess
-from .child import _gmechild 
+from   .child 			import _gmechild 
+from   ._dbg 			import _dbg
 
 ##################
 #_basevirusscanner
@@ -26,6 +27,7 @@ class _AVAST(_basevirusscanner):
 		self.cmd=shutil.which("scan")
 		_basevirusscanner.__init__(self,parent)
 
+	@_dbg					
 	def has_virus(self,directory):
 		cmd=[self.cmd,"-u",directory]
 		result=False
@@ -62,6 +64,7 @@ class _BITDEFENDER(_basevirusscanner):
 		self.cmd=shutil.which("bdscan")
 		_basevirusscanner.__init__(self,parent)
 
+	@_dbg					
 	def has_virus(self,directory):
 		cmd=[self.cmd,"--no-list","--action=ignore",directory]
 		result=False
@@ -118,6 +121,7 @@ try:
 			self.clamd=pyclamd.ClamdAgnostic()
 			_basevirusscanner.__init__(self,parent)
 
+		@_dbg					
 		def has_virus(self,directory):
 			result=False
 			scanresult=self.clamd.scan_file(directory)
@@ -146,6 +150,7 @@ class _DRWEB(_basevirusscanner):
 		self.cmd=shutil.which("drweb")
 		_basevirusscanner.__init__(self,parent)
 
+	@_dbg					
 	def has_virus(self,directory):
 		cmd=[self.cmd,"-lng=en_scanner.dwl","-sd","-al","-ha",directory]
 		result=False
@@ -184,6 +189,7 @@ class _FPROT(_basevirusscanner):
 		self.cmd=shutil.which("fpscan")
 		_basevirusscanner.__init__(self,parent)
 
+	@_dbg					
 	def has_virus(self,directory):
 		cmd=[self.cmd,"--report","--mount","--adware",directory]
 		result=False
@@ -221,6 +227,7 @@ class _SOPHOS(_basevirusscanner):
 		self.cmd=shutil.which("savscan")
 		_basevirusscanner.__init__(self,parent)
 
+	@_dbg					
 	def has_virus(self,directory):
 		cmd=[self.cmd,"-ss","-nb","-f","-all","-rec","-sc",directory]
 		

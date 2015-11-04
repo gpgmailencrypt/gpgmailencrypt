@@ -28,6 +28,7 @@ class _virus_check(_gmechild):
 	#_mktempdir
 	###########
 
+	@_dbg					
 	def _mktempdir(self,directory=None):
 		return tempfile.mkdtemp(dir=directory)
 
@@ -35,6 +36,7 @@ class _virus_check(_gmechild):
 	#_chmod
 	#######
 
+	@_dbg					
 	def _chmod(self,directory):
 
 		for root, directories, files in os.walk(directory):  
@@ -53,6 +55,7 @@ class _virus_check(_gmechild):
 	#_search_virusscanner
 	#####################
 
+	@_dbg					
 	def _search_virusscanner(self):
 		
 		for s in virusscanners.get_virusscannerlist():
@@ -69,6 +72,7 @@ class _virus_check(_gmechild):
 	#_search_archivemanager
 	#######################
 
+	@_dbg					
 	def _search_archivemanager(self):
 
 		for m in archivemanagers.get_managerlist():
@@ -92,6 +96,7 @@ class _virus_check(_gmechild):
 	#_print_archivemap
 	##################
 
+	@_dbg					
 	def _print_archivemap(self):
 
 			for f in self.archivemap:
@@ -147,6 +152,7 @@ class _virus_check(_gmechild):
 	#unpack_attachment
 	##################
 
+	@_dbg					
 	def unpack_attachment(self,payload,directory):
 			filename = payload.get_filename()
 			fname=os.path.join(directory,filename)
@@ -238,6 +244,7 @@ class _virus_check(_gmechild):
 	##########
 	#has_virus
 	##########
+
 	_dbg
 	def has_virus(self,mail):
 		self.debug("viruscheck has_virus")

@@ -126,6 +126,7 @@ class _AR(_baseunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
@@ -156,6 +157,7 @@ class _ARC(_baseunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
@@ -186,6 +188,7 @@ class _ARJ(_baseunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
@@ -219,6 +222,7 @@ class _BZ2(_baseunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
@@ -261,6 +265,7 @@ class _CAB(_baseunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
@@ -291,6 +296,7 @@ class _CPIO(_baseunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 									sourcefile,
 									directory):
@@ -322,6 +328,7 @@ class _DAR(_baseunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
@@ -367,6 +374,7 @@ class _FREEZE(_basedeleteunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 									sourcefile,
 									directory):
@@ -396,6 +404,7 @@ class _GZIP(_baseunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
@@ -438,6 +447,7 @@ class _KGB(_baseunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
@@ -467,6 +477,7 @@ class _LHA(_baseunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
@@ -498,6 +509,7 @@ class _LRZIP(_baseunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
@@ -528,6 +540,7 @@ class _LZIP(_basedeleteunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 									sourcefile,
 									directory):
@@ -558,6 +571,7 @@ class _LZO(_baseunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
@@ -590,6 +604,7 @@ class _RAR(_baseunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
@@ -623,6 +638,7 @@ class _RIPOLE(_baseunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
@@ -667,6 +683,7 @@ class _RPM(_baseunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
@@ -696,6 +713,7 @@ class _RZIP(_basedeleteunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 									sourcefile,
 									directory):
@@ -725,6 +743,7 @@ class _SHAR(_baseunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
@@ -732,7 +751,6 @@ class _SHAR(_baseunpacker):
 				sourcefile,
 				">/dev/null"]
 		return cmd
-
 
 #####
 #_TAR
@@ -755,6 +773,7 @@ class _TAR(_baseunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
@@ -802,6 +821,7 @@ class _TNEF(_baseunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
@@ -832,6 +852,7 @@ class _XZ(_baseunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
@@ -877,6 +898,7 @@ class _ZIP(_baseunpacker):
 	#set_zipcipher
 	##############
 
+	@_dbg
 	def set_zipcipher(self,cipher):
 		"valid ciphers are ZipCrypto,AES128,AES256"
 		self.zipcipher=cipher.upper()
@@ -885,6 +907,7 @@ class _ZIP(_baseunpacker):
 	#create_zipfile
 	###############
 
+	@_dbg
 	def create_zipfile( self,
 						directory,
 						password=None,
@@ -972,6 +995,7 @@ class _ZIP(_baseunpacker):
 	#_createzipcommand_fromdir
 	##########################
 
+	@_dbg
 	def _createzipcommand_fromdir(  self,
 									resultfile,
 									directory,
@@ -1004,6 +1028,7 @@ class _ZIP(_baseunpacker):
 	#get_zipcontent
 	###############
 
+	@_dbg
 	def get_zipcontent( self,
 						zipfile,
 						password=None,
@@ -1068,6 +1093,7 @@ class _ZIP(_baseunpacker):
 	#unzip_file
 	###########
 
+	@_dbg
 	def unzip_file( self,
 					zipfile,
 					password=None,
@@ -1148,6 +1174,7 @@ class _ZIP(_baseunpacker):
 	#_createunzipcommand_indir
 	##########################
 
+	@_dbg
 	def _createunzipcommand_indir(  self,
 									sourcefile,
 									directory,
@@ -1160,6 +1187,38 @@ class _ZIP(_baseunpacker):
 		if password!=None:
 			cmd.insert(4,"-p%s"%password)
 
+		return cmd
+
+######
+#_ZIP2
+######
+
+class _ZIP2(_baseunpacker):
+
+	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent)
+		self.cmd=shutil.which("unzip")
+
+	#################
+	#unpackingformats
+	#################
+
+	def unpackingformats(self):
+		return ["ZIP"]
+
+	##################
+	#uncompresscommand
+	##################
+
+	@_dbg
+	def uncompresscommand(  self,
+							sourcefile,
+							directory):
+		cmd=[   self.cmd, 
+				sourcefile,
+				"-d",directory,
+				">/dev/null"
+			]
 		return cmd
 
 #####
@@ -1183,6 +1242,7 @@ class _ZOO(_baseunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 									sourcefile,
 									directory):
@@ -1217,6 +1277,7 @@ class _ZPAQ(_baseunpacker):
 	#uncompresscommand
 	##################
 
+	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
@@ -1287,6 +1348,8 @@ def get_archivemanager(manager, parent):
 		return _XZ(parent=parent)
 	elif manager=="ZIP":
 		return _ZIP(parent=parent)
+	elif manager=="ZIP2":
+		return _ZIP2(parent=parent)
 	elif manager=="ZOO":
 		return _ZOO(parent=parent)
 	elif manager=="ZPAQ":
@@ -1322,6 +1385,7 @@ def get_managerlist():
 				"TNEF",
 				"XZ",
 				"ZIP",
+				"ZIP2",
 				"ZOO",
 				"ZPAQ",
 			]
