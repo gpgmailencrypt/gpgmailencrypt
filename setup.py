@@ -139,6 +139,6 @@ setup(
 	scripts =["scripts/gme_admin.py","scripts/encryptmaildir.py","scripts/gme.py"],
 	packages=["gmeutils","mailtemplates","documentation","misc","gmeutils/thirdparty"],
 	py_modules=["gpgmailencrypt"],
-	package_data={'mailtemplates': ['*/*'],"documentation":["*"],"misc":["*"]},
+	package_data={'mailtemplates': ['*/*'],"documentation":["*"],"misc":["*"],'gmeutils/thirdparty':["*.license"]},
 )
 
