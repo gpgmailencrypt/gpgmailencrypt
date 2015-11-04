@@ -55,8 +55,9 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 										None,
 										data_size_limit=data_size_limit)
 		except socket.error as e:
-			self.parent.log("_gpgmailencryptserver: error",e)
-			exit(5)
+			if parent:
+				parent.log("_gpgmailencryptserver: error",e)
+			raise 
 	
 		smtpd.__version__="gpgmailencrypt smtp server %s"%VERSION
 		self.parent=parent
@@ -98,6 +99,10 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 			self.parent.log("SSL connection not possible. Cert- and/or key "
 							"file couldn't be opened","e")
 
+	######
+	#start
+	######
+	
 	def start(self):
 		asyncore.loop()
 		

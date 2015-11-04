@@ -11,7 +11,7 @@ import re
 import quopri
 import uu
 
-from .child 			import _gmechild 
+from 	.child 			import _gmechild
 from   ._dbg 			import _dbg
 from   .version			import *
 

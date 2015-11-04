@@ -2,6 +2,7 @@
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 from   functools			import wraps
 import inspect
+from . import child
 #####
 #_dbg
 #####
@@ -14,19 +15,16 @@ def _dbg(func):
 
 		if args:
 
-			if hasattr(args[0],"parent") and hasattr(args[0].parent,"debug"):
+			if hasattr(args[0],"parent"):
 				parent=args[0].parent
-			elif hasattr(args[0],"debug"):
+			elif isinstance(args[0],child._gmechild):
 				parent=args[0]
+
+		if not parent:
+			return func(*args,**kwargs)
 
 		lineno=0
 		endlineno=0
-
-		if not parent:
-			print(">> START %s"%func.__name__,lineno)
-			result= func(*args,**kwargs)
-			print("<< END   %s"%func.__name__,lineno)
-			return result
 
 		try:
 			source=inspect.getsourcelines(func)
