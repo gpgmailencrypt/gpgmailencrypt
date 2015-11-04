@@ -4102,19 +4102,19 @@ class gme:
 
 					h="X-Spam-Score"
 					if raw_message[h]:
-						del m[h]
+						del raw_message[h]
 
 					h="X-Spam-Level"
 					if raw_message[h]:
-						del m[h]
+						del raw_message[h]
 
 					h="X-Spam-Flag"
 					if raw_message[h]:
-						del m[h]
+						del raw_message[h]
 
 					h="X-Spam-Maybe"
 					if raw_message[h]:
-						del m[h]
+						del raw_message[h]
 
 					raw_message.add_header("X-Spam-Score",scoretext)
 					raw_message.add_header("X-Spam-Level","*"*int(score))
@@ -4162,7 +4162,7 @@ class gme:
 					self._queue_id+=1
 
 				self.encrypt_single_mail(   mailid,
-											mailtext,
+											raw_message.as_string(),
 											from_addr,
 											to_addr,
 											spamlevel,
