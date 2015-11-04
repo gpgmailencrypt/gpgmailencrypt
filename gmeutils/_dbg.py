@@ -3,6 +3,7 @@
 from   functools			import wraps
 import inspect
 from . import child
+
 #####
 #_dbg
 #####
@@ -18,6 +19,8 @@ def _dbg(func):
 			if hasattr(args[0],"parent"):
 				parent=args[0].parent
 			elif isinstance(args[0],child._gmechild):
+				parent=args[0]
+			elif hasattr(args[0],"log") and hasattr(args[0],"debug"):
 				parent=args[0]
 
 		if not parent:

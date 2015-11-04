@@ -4292,7 +4292,6 @@ class gme:
 			exit(5)
 
 		try:
-			print("Starte Server")
 			server.start()
 		except SystemExit as m:
 			exit(0)
