@@ -16,15 +16,18 @@ def _dbg(func):
 
 		if args:
 
-			if hasattr(args[0],"parent"):
-				parent=args[0].parent
-			elif isinstance(args[0],child._gmechild):
+			if isinstance(args[0],child._gmechild):
 				parent=args[0]
 			elif hasattr(args[0],"log") and hasattr(args[0],"debug"):
 				parent=args[0]
+			elif hasattr(args[0],"parent"):
+				parent=args[0].parent
 
 		if not parent:
-			return func(*args,**kwargs)
+			print(">> START %s"%func.__name__,lineno)
+			result=func(*args,**kwargs)
+			print(">> END %s"%func.__name__,lineno)
+			return result
 
 		lineno=0
 		endlineno=0
