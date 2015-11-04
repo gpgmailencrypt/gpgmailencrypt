@@ -4288,9 +4288,11 @@ class gme:
 		except:
 			self.log("Couldn't start mail server")
 			self.log_traceback()
-			exit(1)
+			alarm.stop()
+			exit(5)
 
 		try:
+			print("Starte Server")
 			server.start()
 		except SystemExit as m:
 			exit(0)
