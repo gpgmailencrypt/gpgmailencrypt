@@ -114,9 +114,11 @@ class _virus_check(_gmechild):
 		for root, directories, files in os.walk(directory):  
 
 			for f in files:
+				print("<<<f=",f,root)
 				pathf=os.path.join(root,f)
+				print(">>>>",pathf)
 				self.debug("check file %s"%f)
-				archivetype=archivemanagers.get_archivetype(f,"other/other")
+				archivetype=archivemanagers.get_archivetype(pathf,"other/other")
 				_unpacker=None
 
 				try:
@@ -166,7 +168,7 @@ class _virus_check(_gmechild):
 				self.log("file '%s' could not be stored"%filename)
 				self.log_traceback()
 
-			archivetype=archivemanagers.get_archivetype(filename,contenttype)
+			archivetype=archivemanagers.get_archivetype(fname,contenttype)
 			_unpacker=None
 
 			try:

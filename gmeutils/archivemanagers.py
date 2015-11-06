@@ -10,6 +10,11 @@ from .child 			import _gmechild
 from .version 			import *
 from   ._dbg 			import _dbg
 
+
+_filecmd=shutil.which("file")
+_use_filecmd=(_filecmd!=None and len(_filecmd)>0)
+
+
 ####################
 #CLASS _baseunpacker
 ####################
@@ -1395,6 +1400,22 @@ def get_managerlist():
 ################
 
 def get_archivetype(filename,filetype):
+
+	if _use_filecmd:
+		cmd=[_filecmd,
+							"-b",
+							"--mime-type",
+							filename
+							]
+		p=subprocess.Popen( cmd,
+							stdin=None,
+							stdout=subprocess.PIPE,
+							stderr=subprocess.PIPE)
+		result=p.communicate()[0].decode("UTF-8").lower()
+
+		if result[0]!="application/octet-stream":
+			filetype=result
+
 	maintype,subtype=filetype.lower().split("/")
 	fname, extension = os.path.splitext(filename)
 	archivetype=None
@@ -1426,6 +1447,7 @@ def get_archivetype(filename,filetype):
 		}
 					  
 	extensions={"7z":	"7Z",
+				"aar":	"ZIP",
 				"ar":	"AR",
 				"arc":	"ARC",
 				"arj":	"ARJ",
