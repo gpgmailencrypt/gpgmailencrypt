@@ -4116,11 +4116,13 @@ class gme:
 					if raw_message[h]:
 						del raw_message[h]
 					
-					sc=int(score)
-					if sc>20:
-						sc=20
+					sc_level=int(score)
+
+					if sc_level>50:
+						sc_level=50
+
 					raw_message.add_header("X-Spam-Score",scoretext)
-					raw_message.add_header("X-Spam-Level","*"*sc)
+					raw_message.add_header("X-Spam-Level","*"*sc_level)
 					raw_message.add_header("X-Spam-Flag",str(is_spam))
 					raw_message.add_header("X-Spam-Maybe",
 									str(spamlevel==spamscanners.S_MAYBESPAM))
