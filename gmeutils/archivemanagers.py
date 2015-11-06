@@ -957,7 +957,7 @@ class _ZIP(_baseunpacker):
 			directory=tempdir
 
 			if _result !=0:
-				self.log("Error executing command"
+				self.log("Error executing command1"
 								" (Error code %d)"%_result,"e")
 				self.log("%s"%self._createzipcommand_fromdir(fname,
 															   directory,
@@ -987,7 +987,7 @@ class _ZIP(_baseunpacker):
 			pass
 
 		if _result !=0:
-		  self.log("Error executing command (Error code %d)"%_result,"e")
+		  self.log("Error executing command (Error code %d)2"%_result,"e")
 		  self.log(self._createzipcommand_fromdir( f.name,
 																 directory,
 																 password),
@@ -1135,8 +1135,8 @@ class _ZIP(_baseunpacker):
 		_result = subprocess.call(" ".join(unzipcmd), shell=True) 
 
 		if _result !=0:
-		  self.log("Error executing command (Error code %d)"%_result,"e")
-		  self.log(unzipcmd ,"e")
+		  self.log("Error executing command (Error code %d)3"%_result,"e")
+		  self.log("%s"%unzipcmd)
 		  return result,None
 		else:
 			result=True
@@ -1159,7 +1159,9 @@ class _ZIP(_baseunpacker):
 
 				for s in source:
 					 shutil.move(os.path.join(directory2,s),directory)
-
+			else:
+		  		self.log("Error executing command (Error code %d)4"%_result,"e")
+		  		self.log(unzipcmd,"e")
 		else:
 			source = os.listdir(directory1)
 
@@ -1167,7 +1169,6 @@ class _ZIP(_baseunpacker):
 					 shutil.move(os.path.join(directory1,s),directory)
 			
 		if _result !=0:
-		  self.log("Error executing command (Error code %d)"%_result,"e")
 		  return result,None
 		else:
 			result=True
@@ -1196,6 +1197,7 @@ class _ZIP(_baseunpacker):
 		cmd=[  	self.cmd, 
 				"e",sourcefile,
 				"-o%s"%directory,
+				"-y",
 				">/dev/null"]
 
 		if password!=None:

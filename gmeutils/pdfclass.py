@@ -89,6 +89,7 @@ class _PDF(_gmechild):
 
 		if _result !=0:
 		  self.log("Error executing command (Error code )","e")
+		  self.log(self._createpdfcommand_fromfile(f.name),"e")
 		  return result,None
 		else:
 			result=True
@@ -144,6 +145,9 @@ class _PDF(_gmechild):
 		if _result != 0:
 			self.log("Error executing command "
 							"(Error code %d)"%_result,"e")
+			self.log(' '.join(self._encryptcommand_fromfile(  inputfilename,
+														 f.name,password))
+					,"e")
 			return result,None
 		else:
 			result=True

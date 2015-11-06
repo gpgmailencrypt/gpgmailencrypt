@@ -297,6 +297,7 @@ class _GPG(_gmechild):
 		if _result != 0:
 			self.log("Error executing command (Error code %d)"%_result,
 							"e")
+			self.log(' '.join(self._encryptcommand_fromfile(f.name,binary)),"e")
 			return result,None
 		else:
 			result=True
@@ -382,6 +383,7 @@ class _GPG(_gmechild):
 		if _result != 0:
 			self.log("Error executing command (Error code %d)"%_result,
 							"e")
+			self.log(' '.join(self._decryptcommand_fromfile(f.name,binary)),"e")
 		else:
 			result=True
 
