@@ -129,7 +129,7 @@ class _BOGOFILTER(_basespamchecker):
 			level,scoretext=result[:result.find("\n")].split(" ")
 
 			try:
-				score=float(scoretext)*20
+				score=float(scoretext)*50
 			except:
 				self.log("Could not convert score to float","e")
 
