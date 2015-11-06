@@ -7,6 +7,7 @@ from   ._dbg 			import _dbg
 import email
 import tempfile
 import os
+import shutil
 
 ###########
 #viruscheck
@@ -47,9 +48,11 @@ class _virus_check(_gmechild):
 
 			for f in files:
 				pathf=os.path.join(root,f)
-				os.chmod(pathf,0o640)
+				if not os.path.islink(pathf):
+					os.chmod(pathf,0o640)
 
-			os.chmod(directory,0o770)
+			if not os.path.islink(directory):
+				os.chmod(directory,0o770)
 				
 	#####################
 	#_search_virusscanner
@@ -114,9 +117,7 @@ class _virus_check(_gmechild):
 		for root, directories, files in os.walk(directory):  
 
 			for f in files:
-				print("<<<f=",f,root)
 				pathf=os.path.join(root,f)
-				print(">>>>",pathf)
 				self.debug("check file %s"%f)
 				archivetype=archivemanagers.get_archivetype(pathf,"other/other")
 				_unpacker=None
@@ -282,7 +283,8 @@ class _virus_check(_gmechild):
 				self.debug("keep directory %s for debugging reasons"%directory)
 
 		except:
-			pass
+			self.log("temporary directory '%s' could not be deleted"%directory)
+			self.log_traceback()
 	
 		return result,description
 
