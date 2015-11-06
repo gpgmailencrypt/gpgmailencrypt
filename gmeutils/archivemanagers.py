@@ -53,8 +53,8 @@ class _baseunpacker(_gmechild):
 			directory = tempfile.mkdtemp()
 		
 		if self.chdir:
-			os.chdir(directory)
 			_origdir=os.getcwd()
+			os.chdir(directory)
 			self.debug("os.chdir(%s)"%_origdir)
 
 		uncompresscmd=' '.join(self.uncompresscommand(filename,directory))
@@ -1400,13 +1400,14 @@ def get_managerlist():
 ################
 
 def get_archivetype(filename,filetype):
-
+	fname=os.path.split(filename)[1].lower()
+	
 	if _use_filecmd:
 		cmd=[_filecmd,
-							"-b",
-							"--mime-type",
-							filename
-							]
+			"-b",
+			"--mime-type",
+			filename
+			]
 		p=subprocess.Popen( cmd,
 							stdin=None,
 							stdout=subprocess.PIPE,
@@ -1426,6 +1427,8 @@ def get_archivetype(filename,filetype):
 		"vnd.android.package-archive":	"ZIP",
 		"vnd.ms-tnef":					"TNEF",
 		"x-7z-compressed":				"7Z",
+		"x-arc-compressed":				"ARC",
+		"x-archive":					"AR",
 		"x-arj":						"ARJ",
 		"x-bzip":						"BZIP",
 		"x-bzip2":						"BZIP2",
@@ -1434,6 +1437,7 @@ def get_archivetype(filename,filetype):
 		"x-dar":						"DAR",
 		"x-gtar":						"TGZ",
 		"x-gzip":						"GZIP",
+		"x-lharc":						"LHA",
 		"x-lzh":						"LHA",
 		"x-lzip":						"LZIP",
 		"x-lzma":						"LZMA",
@@ -1455,6 +1459,10 @@ def get_archivetype(filename,filetype):
 				"bz":	"BZIP",
 				"bz2":	"BZIP2",
 				"cab":	"CAB",
+				"cb7":	"7Z",
+				"cbr":	"RAR",
+				"cbt":	"TAR",
+				"cbz":	"ZIP",
 				"cpio":	"CPIO",
 				"dar":	"DAR",
 				"deb":	"AR",
@@ -1478,6 +1486,7 @@ def get_archivetype(filename,filetype):
 				"s7z":	"7Z",
 				"shar":	"SHAR",
 				"tar":	"TAR",
+				"tbz":	"TARBZ",
 				"tbz2":	"TARBZ2",
 				"tgz":	"TARGZ",
 				"tlz":	"TARLZMA",
@@ -1494,13 +1503,14 @@ def get_archivetype(filename,filetype):
 				}
 
 	if maintype in ["application","other"]:
-		fname=os.path.split(filename)[1].lower()
 		extension=extension[1:]
 		tar=(".tar" in fname)
 
 		if tar:
 
-			if extension =="bz2":
+			if extension =="bz":
+				archivetype="TARBZ"
+			elif extension =="bz2":
 				archivetype="TARBZ2"
 			elif extension =="gz":
 				archivetype="TARGZ"
@@ -1525,7 +1535,7 @@ def get_archivetype(filename,filetype):
 		except:
 			pass
 
-		if filename.lower() in ["winmail.dat","win.dat"]:
+		if fname.lower() in ["winmail.dat","win.dat"]:
 			archivetype="TNEF"
 				
 	return archivetype
