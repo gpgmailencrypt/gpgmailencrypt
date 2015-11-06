@@ -46,7 +46,7 @@ class _mytimer(_gmechild):
 	"""
 
 	def __init__(self,parent=None):
-		_gmechild.__init__(self,parent)
+		_gmechild.__init__(self,parent,filename=__file__)
 		self.counter=0
 		self.alarmtime=10
 		self.timer=1

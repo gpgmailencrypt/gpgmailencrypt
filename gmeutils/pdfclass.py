@@ -21,8 +21,9 @@ class _PDF(_gmechild):
 	"""
 	def __init__(   self, 
 					parent,
-					counter=0):
-		_gmechild.__init__(self,parent=parent)
+					counter=0,
+					filename=__file__):
+		_gmechild.__init__(self,parent=parent,filename=__file__)
 		self._recipient = ''
 		self._filename=''	
 		self.parent=parent

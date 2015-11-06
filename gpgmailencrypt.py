@@ -1033,7 +1033,8 @@ class gme:
 	def log(self,
 			msg,
 			infotype="m",
-			ln=-1):
+			ln=-1,
+			filename=""):
 		"prints logging information"
 
 		if self._LOGGING!=self.l_none:
@@ -1045,6 +1046,11 @@ class gme:
 
 			if ln==-1:
 				ln=inspect.currentframe().f_back.f_lineno
+			
+			if filename==None or len(filename)==0:
+				filename=__file__
+
+			filename=os.path.split(filename)[1]
 			_lftmsg=20
 			prefix="Info"
 
@@ -1056,9 +1062,10 @@ class gme:
 				prefix="Error"
 			elif infotype=='d':
 				prefix="Debug"
-
+			
+			prefix=prefix.ljust(7)
 			t=time.localtime(time.time())
-			_lntxt="Line %s:%s"%(str(ln).ljust(4),space)
+			_lntxt="%s Line %s:%s"%(filename.ljust(18),str(ln).ljust(4),space)
 			tm=("%02d.%02d.%04d %02d:%02d:%02d:" % (t[2],t[1],t[0],t[3],
 													t[4],t[5])).ljust(_lftmsg)
 			
@@ -1121,7 +1128,8 @@ class gme:
  
 	def debug(  self,
 				msg,
-				lineno=0):
+				lineno=0,
+				filename=""):
 		"prints debugging information"
 
 		if self._DEBUG:
@@ -1131,7 +1139,7 @@ class gme:
 			else:
 				ln=lineno
 
-			self.log(msg,"d",ln)
+			self.log(msg,"d",ln,filename=filename)
 
 	################
 	#_debug_keepmail

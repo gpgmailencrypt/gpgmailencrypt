@@ -20,7 +20,7 @@ S_SPAM=2
 class _basespamchecker(_gmechild):
 
 	def __init__(self,parent,leveldict):
-		_gmechild.__init__(self,parent=parent)
+		_gmechild.__init__(self,parent=parent,filename=__file__)
 		self.cmd=None
 	
 	@_dbg

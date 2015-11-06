@@ -220,7 +220,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				sslversion=None):
 		smtpd.SMTPChannel.__init__(self, smtp_server, newsocket, fromaddr)
 		asynchat.async_chat.__init__(self, newsocket)
-		_gmechild.__init__(self,parent)
+		_gmechild.__init__(self,parent,filename=__file__)
 		self.parent=parent
 		self.sslcertfile=sslcertfile
 		self.sslkeyfile=sslkeyfile

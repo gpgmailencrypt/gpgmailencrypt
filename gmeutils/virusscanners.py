@@ -13,7 +13,8 @@ from   ._dbg 			import _dbg
 ##################
 
 class _basevirusscanner(_gmechild):
-
+	def __init__(self,parent,filename=__file__):
+		_gmechild.__init__(self,parent=parent,filename=filename)
 	def has_virus(self,directory):
 		raise NotImplementedError
 
@@ -25,7 +26,7 @@ class _AVAST(_basevirusscanner):
 
 	def __init__(self,parent):
 		self.cmd=shutil.which("scan")
-		_basevirusscanner.__init__(self,parent)
+		_basevirusscanner.__init__(self,parent,filename=__file__)
 
 	@_dbg					
 	def has_virus(self,directory):

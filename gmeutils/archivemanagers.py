@@ -22,7 +22,7 @@ _use_filecmd=(_filecmd!=None and len(_filecmd)>0)
 class _baseunpacker(_gmechild):
 
 	def __init__(self,parent,chdir=False):
-		_gmechild.__init__(self,parent=parent)
+		_gmechild.__init__(self,parent=parent,filename=__file__)
 		self.cmd=""
 		self.chdir=chdir
 		self.parent=parent
@@ -57,9 +57,9 @@ class _baseunpacker(_gmechild):
 			os.chdir(directory)
 			self.debug("os.chdir(%s)"%_origdir)
 
-		uncompresscmd=' '.join(self.uncompresscommand(filename,directory))
+		uncompresscmd=self.uncompresscommand(filename,directory)
 		self.debug("uncompresscommand:'%s'"%uncompresscmd)
-		_result = subprocess.call(uncompresscmd, shell=True) 
+		_result = subprocess.call(" ".join(uncompresscmd), shell=True) 
 
 		if self.chdir:
 			os.chdir(_origdir)
@@ -95,9 +95,9 @@ class _basedeleteunpacker(_baseunpacker):
 		origdir,fname=os.path.split(filename)
 		targetname=os.path.join(directory,fname)
 		shutil.move(filename,targetname)
-		uncompresscmd=' '.join(self.uncompresscommand(targetname,directory))
+		uncompresscmd=self.uncompresscommand(targetname,directory)
 		self.debug("uncompresscommand:'%s'"%uncompresscmd)
-		_result = subprocess.call(uncompresscmd, shell=True) 
+		_result = subprocess.call(' '.join(uncompresscmd), shell=True) 
 
 		if self.chdir:
 			os.chdir(_origdir)
@@ -950,15 +950,19 @@ class _ZIP(_baseunpacker):
 															   password)))
 			_result = subprocess.call( 
 					   ' '.join(self._createzipcommand_fromdir(fname,
-															   directory,
-															   None,
-															   compress=False)),
+														directory,
+														None,
+														compress=False)),
 						shell=True ) 
 			directory=tempdir
 
 			if _result !=0:
 				self.log("Error executing command"
 								" (Error code %d)"%_result,"e")
+				self.log("%s"%self._createzipcommand_fromdir(fname,
+															   directory,
+															   None,
+															   compress=False))
 
 				try:
 					shutil.rmtree(tempdir)
@@ -971,8 +975,8 @@ class _ZIP(_baseunpacker):
 			' '.join(self._createzipcommand_fromdir(f.name,
 													directory,
 													password)))
-		_result = subprocess.call( 
-						' '.join(self._createzipcommand_fromdir( f.name,
+		_result = subprocess.call( ' '.join(
+									self._createzipcommand_fromdir( f.name,
 																 directory,
 																 password)),
 						shell=True ) 
@@ -984,6 +988,10 @@ class _ZIP(_baseunpacker):
 
 		if _result !=0:
 		  self.log("Error executing command (Error code %d)"%_result,"e")
+		  self.log(self._createzipcommand_fromdir( f.name,
+																 directory,
+																 password),
+					"e")
 		  return result,None
 		else:
 			result=True
@@ -1120,14 +1128,15 @@ class _ZIP(_baseunpacker):
 
 		directory1=tempfile.mkdtemp()
 		result=False
-		unzipcmd=' '.join(self._createunzipcommand_indir(   zipfile,
+		unzipcmd=self._createunzipcommand_indir(   zipfile,
 															directory1,
-															password))
+															password)
 		self.debug("UNZIP command: '%s'" % unzipcmd)
-		_result = subprocess.call(unzipcmd, shell=True) 
+		_result = subprocess.call(" ".join(unzipcmd), shell=True) 
 
 		if _result !=0:
 		  self.log("Error executing command (Error code %d)"%_result,"e")
+		  self.log(unzipcmd ,"e")
 		  return result,None
 		else:
 			result=True
@@ -1137,12 +1146,12 @@ class _ZIP(_baseunpacker):
 		if containerfile!=None:
 			result=False
 			directory2 = tempfile.mkdtemp()
-			unzipcmd=' '.join(self._createunzipcommand_indir(
+			unzipcmd=self._createunzipcommand_indir(
 							os.path.join(directory1,"%s.zip"%containerfile),
 										 directory2,
-										 password))
+										 password)
 			self.debug("UNZIP command2: '%s'" % unzipcmd)
-			_result = subprocess.call(unzipcmd, shell=True) 
+			_result = subprocess.call(' '.join(unzipcmd), shell=True) 
 
 			if _result==0:
 				self.debug("shutil 1 move %s, %s"%(directory2,directory))

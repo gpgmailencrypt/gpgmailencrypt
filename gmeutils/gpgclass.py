@@ -20,7 +20,7 @@ class _GPG(_gmechild):
 	def __init__(   self, 
 					parent,
 					keyhome=None):
-		_gmechild.__init__(self,parent)
+		_gmechild.__init__(self,parent,filename=__file__)
 		self._recipient = ''
 		self._filename=''	
 		self.count=0
@@ -430,7 +430,7 @@ class _GPGEncryptedAttachment(email.message.Message,_gmechild):
 
 	def  __init__(self,parent=None):
 		email.message.Message. __init__(self)
-		_gmechild.__init__(self,parent)
+		_gmechild.__init__(self,parent,filename=__file__)
 		self._masterboundary=None
 		self._filename=None
 		self.set_type("text/plain")

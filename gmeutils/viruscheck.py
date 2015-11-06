@@ -16,7 +16,7 @@ import shutil
 class _virus_check(_gmechild):
 	
 	def __init__(self,parent):
-		_gmechild.__init__(self,parent=parent)
+		_gmechild.__init__(self,parent=parent,filename=__file__)
 		self.debug("viruscheck __init__")
 		self.parent=parent
 		self.archivemap={}
@@ -24,6 +24,7 @@ class _virus_check(_gmechild):
 		self.virusscanner={}
 		self._search_archivemanager()
 		self._search_virusscanner()
+		self.filename="viruscheck.py"
 
 	###########
 	#_mktempdir

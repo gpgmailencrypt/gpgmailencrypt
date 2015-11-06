@@ -7,18 +7,23 @@
 class _gmechild:
 	"base class of all classes that will be used from class gme"
 	
-	def __init__(self,parent):
+	def __init__(self,parent,filename):
 		self.parent=parent
 		self._level=0
+		self.filename=filename
 
 	def log(self,
 			msg,
 			infotype="m",
-			ln=-1):
+			ln=-1,
+			filename=""):
+
+		if filename=="":
+			filename=self.filename
 
 		try:
 			self.parent._level+=self._level
-			self.parent.log(msg=msg,infotype=infotype,ln=ln)
+			self.parent.log(msg=msg,infotype=infotype,ln=ln,filename=filename)
 			self.parent._level-=self._level
 		except:
 			pass
@@ -32,10 +37,11 @@ class _gmechild:
 
 	def debug(  self,
 				msg,
-				lineno=0):
+				lineno=0,
+				filename=""):
 		try:
 			self.parent._level+=self._level
-			self.parent.debug(msg=msg,lineno=lineno)
+			self.parent.debug(msg=msg,lineno=lineno,filename=filename)
 			self.parent._level-=self._level
 		except:
 			pass

@@ -2,6 +2,7 @@
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 from   functools			import wraps
 import inspect
+import os
 from . import child
 
 #####
@@ -31,7 +32,8 @@ def _dbg(func):
 
 		lineno=0
 		endlineno=0
-
+		filename=inspect.getfile(func)
+		
 		try:
 			source=inspect.getsourcelines(func)
 			lineno=source[1]
@@ -42,9 +44,9 @@ def _dbg(func):
 		if hasattr(parent,"_level"):
 			parent._level+=1
 
-		parent.debug("START %s"%func.__name__,lineno)
+		parent.debug("START  %s"%func.__name__,lineno,filename)
 		result=func(*args,**kwargs)
-		parent.debug("END %s"%func.__name__,endlineno)
+		parent.debug("END %s"%func.__name__,endlineno,filename)
 
 		if hasattr(parent,"_level"):
 			parent._level-=1

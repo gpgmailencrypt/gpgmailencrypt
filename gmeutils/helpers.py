@@ -118,7 +118,7 @@ _htmlname={
 class _htmldecode(html.parser.HTMLParser,_gmechild):
 
 	def __init__(self,parent):
-		_gmechild.__init__(self,parent=parent)
+		_gmechild.__init__(self,parent=parent,filename=__file__)
 		html.parser.HTMLParser.__init__(self)
 		self.data=""
 		self.in_throwaway=0

@@ -21,8 +21,9 @@ class _SMIME(_gmechild):
 
 	def __init__(   self,
 					parent, 
-					keyhome=None):
-		_gmechild.__init__(self,parent)
+					keyhome=None,
+					filename=__file__):
+		_gmechild.__init__(self,parent,filename=__file__)
 		self.debug("_SMIME.__init__ %s"%self.parent._SMIMEKEYHOME)
 
 		if type(keyhome)==str:
