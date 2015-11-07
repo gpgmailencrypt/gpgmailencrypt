@@ -1039,7 +1039,7 @@ class gme:
 
 		if self._LOGGING!=self.l_none:
 
-			if infotype=='d':
+			if infotype in ['d','m','w']:
 				space=" "*self._level
 			else:
 				space=" "
@@ -1065,14 +1065,14 @@ class gme:
 			
 			prefix=prefix.ljust(7)
 			t=time.localtime(time.time())
-			_lntxt="%s Line %s:%s"%(filename.ljust(18),str(ln).ljust(4),space)
+			_lntxt="%s %s:%s"%(filename.ljust(18),str(ln).rjust(4),space)
 			tm=("%02d.%02d.%04d %02d:%02d:%02d:" % (t[2],t[1],t[0],t[3],
 													t[4],t[5])).ljust(_lftmsg)
 			
 			if infotype in["w","e"]:
 				self._systemmessages.append([tm[:-1],infotype,msg])
 
-			txt=splitstring(msg,320)
+			txt=splitstring(msg,800)
 			c=0
 
 			for t in txt:
@@ -1104,11 +1104,11 @@ class gme:
 					syslog.syslog(level,t)
 				elif  self._LOGGING==self.l_file and self._logfile!=None:
 					#write to _logfile
-					self._logfile.write("%s %s: %s\n"%(tm,prefix,t ))
+					self._logfile.write("%s %s:%s\n"%(tm,prefix,t ))
 					self._logfile.flush()
 				else:
 					# print to stdout if nothing else works
-					sys.stdout.write("%s %s: %s\n"%(tm,prefix,t ))
+					sys.stdout.write("%s %s:%s\n"%(tm,prefix,t ))
 
 	##############
 	#log_traceback
