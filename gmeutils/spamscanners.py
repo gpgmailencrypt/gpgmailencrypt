@@ -12,7 +12,6 @@ S_NOSPAM=0
 S_MAYBESPAM=1
 S_SPAM=2
 
-
 #################
 #_basespamchecker
 #################
