@@ -759,6 +759,7 @@ class _RZIP(_basedeleteunpacker):
 				sourcefile,
 				">/dev/null"]
 		return cmd
+
 ######
 #_SHAR
 ######
@@ -786,6 +787,65 @@ class _SHAR(_baseunpacker):
 							directory):
 		cmd=[   self.cmd, 
 				sourcefile,
+				">/dev/null"]
+		return cmd
+
+######
+#_SNAPPY
+######
+
+class _SNAPPY(_baseunpacker):
+
+	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent,chdir=True)
+		tst="""
+try:
+	import snappy
+except:
+	exit(1)
+exit(0)
+"""
+		f=tempfile.NamedTemporaryFile(  mode='w',
+										delete=False,
+										prefix='snappy-',
+										suffix=".py",
+									)
+		f.write(tst)
+		f.close()
+		py2=shutil.which("python2")
+
+		if py2!=None:
+			_result = subprocess.call("%s %s "%(py2,f.name), shell=True) 
+
+			if _result==0:
+				self.cmd="snappyexists"
+		try:
+			os.remove(f.name)
+		except:
+			pass
+
+
+	#################
+	#unpackingformats
+	#################
+
+	def unpackingformats(self):
+		return ["SNAPPY"]
+ 
+	##################
+	#uncompresscommand
+	##################
+
+	@_dbg
+	def uncompresscommand(  self,
+							sourcefile,
+							directory):
+		cmd=[   "python", 
+				"-m",
+				"snappy",
+				"-d",
+				sourcefile,
+				"snappycontent",
 				">/dev/null"]
 		return cmd
 
@@ -1390,6 +1450,8 @@ def get_archivemanager(manager, parent):
 		return _RZIP(parent=parent)
 	elif manager=="SHAR":
 		return _SHAR(parent=parent)
+	elif manager=="SNAPPY":
+		return _SNAPPY(parent=parent)
 	elif manager=="TAR":
 		return _TAR(parent=parent)
 	elif manager=="TNEF":
@@ -1432,6 +1494,7 @@ def get_managerlist():
 				"RPM",
 				"RZIP",
 				"SHAR",
+				"SNAPPY",
 				"TAR",
 				"TNEF",
 				"XZ",
@@ -1490,6 +1553,7 @@ def get_archivetype(filename,filetype):
 		"x-lzma":						"LZMA",
 		"x-lzop":						"LZO",
 		"x-shar":						"SHAR",
+		"x-snappy-framed":				"SNAPPY",
 		"x-tar":						"TAR",
 		"x-rar-compressed":				"RAR",
 		"x-xz":							"XZ",
@@ -1533,6 +1597,8 @@ def get_archivetype(filename,filetype):
 				"rz":	"RZIP",
 				"s7z":	"7Z",
 				"shar":	"SHAR",
+				"snappy":"SNAPPY",
+				"sz":	"SNAPPY",
 				"tar":	"TAR",
 				"tbz":	"TARBZ",
 				"tbz2":	"TARBZ2",
