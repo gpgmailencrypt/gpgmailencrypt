@@ -988,9 +988,9 @@ class _ZIP(_baseunpacker):
 
 		if _result !=0:
 		  self.log("Error executing command (Error code %d)2"%_result,"e")
-		  self.log(self._createzipcommand_fromdir( f.name,
-																 directory,
-																 password),
+		  self.log(self._createzipcommand_fromdir( 	f.name,
+													directory,
+													password),
 					"e")
 		  return result,None
 		else:
