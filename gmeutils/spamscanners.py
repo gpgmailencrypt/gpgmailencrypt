@@ -162,7 +162,6 @@ def get_spamscanner(scanner,parent,leveldict):
 			return _s
 
 	if scanner=="SPAMASSASSIN":
-		print("get scanner spamassassin")
 		_s=_SPAMASSASSIN(parent,leveldict)
 
 		if _s.is_available():
