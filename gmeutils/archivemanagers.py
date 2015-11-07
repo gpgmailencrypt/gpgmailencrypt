@@ -111,6 +111,38 @@ class _basedeleteunpacker(_baseunpacker):
 		return result,directory
 
 ####
+#_ACE
+####
+
+class _ACE(_baseunpacker):
+
+	def __init__(self,parent):
+		_baseunpacker.__init__(self,parent=parent,chdir=True)
+		self.cmd=shutil.which("unace")
+
+	#################
+	#unpackingformats
+	#################
+
+	def unpackingformats(self):
+		return ["ACE"]
+ 
+	##################
+	#uncompresscommand
+	##################
+
+	@_dbg
+	def uncompresscommand(  self,
+							sourcefile,
+							directory):
+		cmd=[   self.cmd, 
+				"x",
+				"-y",
+				sourcefile,
+				">/dev/null"]
+		return cmd
+
+####
 #_AR
 ####
 
@@ -1318,7 +1350,9 @@ class _ZPAQ(_baseunpacker):
 def get_archivemanager(manager, parent):
 	manager=manager.upper().strip()
 
-	if manager=="AR":
+	if manager=="ACE":
+		return _ACE(parent=parent)
+	elif manager=="AR":
 		return _AR(parent=parent)
 	elif manager=="ARC":
 		return _ARC(parent=parent)
@@ -1378,7 +1412,8 @@ def get_archivemanager(manager, parent):
 ################
 
 def get_managerlist():
-	return [	"AR",
+	return [	"ACE",
+				"AR",
 				"ARC",
 				"ARJ",
 				"BZIP2",
@@ -1438,6 +1473,7 @@ def get_archivetype(filename,filetype):
 		"vnd.android.package-archive":	"ZIP",
 		"vnd.ms-tnef":					"TNEF",
 		"x-7z-compressed":				"7Z",
+		"x-ace-compressed":				"ACE",
 		"x-arc-compressed":				"ARC",
 		"x-archive":					"AR",
 		"x-arj":						"ARJ",
@@ -1463,6 +1499,7 @@ def get_archivetype(filename,filetype):
 					  
 	extensions={"7z":	"7Z",
 				"aar":	"ZIP",
+				"ace":	"ACE",
 				"ar":	"AR",
 				"arc":	"ARC",
 				"arj":	"ARJ",
