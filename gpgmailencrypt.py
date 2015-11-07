@@ -1591,6 +1591,9 @@ class gme:
 		if maintype=="video":
 			return False
 
+		if maintype=="text" and subtype=="calendar":
+			return False
+
 		if maintype=="image":
 
 			if subtype in ["bmp","x-windows-bmp","svg+xml","tiff",
@@ -1674,7 +1677,7 @@ class gme:
 					"docx","xlsx","pptx","ods","odt","odp","ott","odm","oth",
 					"ots","odg","otg","odf","odb","oxt","odg","odc","odi",
 					#Miscellaneous
-					"epub"
+					"epub","ics"
 					]:
 					return False
 		return True
