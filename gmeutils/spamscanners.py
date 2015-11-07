@@ -28,6 +28,10 @@ class _basespamchecker(_gmechild):
 	def set_leveldict(self,leveldict):
 		raise NotImplementedError
 	
+	@_dbg					
+	def is_spam(self,mail):
+		raise NotImplementedError
+
 	def is_available(self):
 
 		if self.cmd!= None and len(self.cmd)>0:
