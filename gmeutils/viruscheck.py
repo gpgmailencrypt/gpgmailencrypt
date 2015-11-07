@@ -24,7 +24,6 @@ class _virus_check(_gmechild):
 		self.virusscanner={}
 		self._search_archivemanager()
 		self._search_virusscanner()
-		self.filename="viruscheck.py"
 
 	###########
 	#_mktempdir
@@ -96,12 +95,12 @@ class _virus_check(_gmechild):
 					except:
 						self.archivemap[ff]=m
 
-	##################
-	#_print_archivemap
-	##################
+	#################
+	#print_archivemap
+	#################
 
 	@_dbg					
-	def _print_archivemap(self):
+	def print_archivemap(self):
 
 			for f in self.archivemap:
 				print(("Format %s"%f).ljust(20)+
