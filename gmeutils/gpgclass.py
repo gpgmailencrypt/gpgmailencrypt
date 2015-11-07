@@ -16,7 +16,7 @@ class _GPG(_gmechild):
 	"""class to encrypt and decrypt files via gpg
 	Don't call this class directly, use gme.gpg_factory() instead!
 	"""
-	@_dbg
+
 	def __init__(   self, 
 					parent,
 					keyhome=None):

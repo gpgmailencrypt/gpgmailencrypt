@@ -39,10 +39,15 @@ class _gmechild:
 				msg,
 				lineno=0,
 				filename=""):
+
+		if filename=="":
+			filename=self.filename
+
 		try:
 			self.parent._level+=self._level
 			self.parent.debug(msg=msg,lineno=lineno,filename=filename)
 			self.parent._level-=self._level
 		except:
+			raise
 			pass
 

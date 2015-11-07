@@ -1,9 +1,9 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
-from   functools			import wraps
-import inspect
-import os
-from . import child
+from   	functools			import wraps
+import 	inspect
+import 	os
+from	.					import child
 
 #####
 #_dbg
@@ -19,7 +19,7 @@ def _dbg(func):
 
 			if isinstance(args[0],child._gmechild):
 				parent=args[0]
-			elif hasattr(args[0],"log") and hasattr(args[0],"debug"):
+			elif hasattr(args[0],"send_mails"):
 				parent=args[0]
 			elif hasattr(args[0],"parent"):
 				parent=args[0].parent

@@ -23,9 +23,6 @@ class _basespamchecker(_gmechild):
 		_gmechild.__init__(self,parent=parent,filename=__file__)
 		self.cmd=None
 	
-	@_dbg
-	def is_spam(self,mail):
-		raise NotImplementedError
 
 	@_dbg
 	def set_leveldict(self,leveldict):
@@ -44,9 +41,10 @@ class _basespamchecker(_gmechild):
 
 class _SPAMASSASSIN(_basespamchecker):
 
-	def __init__(self,parent,leveldict):
-		_basespamchecker(parent=parent,leveldict=leveldict)
-		self.parent=parent
+	def __init__(	self,
+					parent,
+					leveldict):
+		_basespamchecker.__init__(self,parent,leveldict)
 		self._SPAMHOST="localhost"
 		self._SPAMPORT=783
 		self._SPAMMAXSIZE=5000000
@@ -69,7 +67,6 @@ class _SPAMASSASSIN(_basespamchecker):
 
 	@_dbg					
 	def is_spam(self,mail):
-			self.debug("is_spam spamassassin")
 			spamlevel=S_NOSPAM
 			p=subprocess.Popen([self.cmd,
 								"-s",str(self._SPAMMAXSIZE),
@@ -105,7 +102,7 @@ class _SPAMASSASSIN(_basespamchecker):
 class _BOGOFILTER(_basespamchecker):
 
 	def __init__(self,parent,leveldict):
-		_basespamchecker(parent=parent,leveldict=leveldict)
+		_basespamchecker.__init__(self,parent,leveldict)
 		self.cmd=shutil.which("bogofilter")
 		self.set_leveldict(leveldict)
 
@@ -162,6 +159,7 @@ def get_spamscanner(scanner,parent,leveldict):
 			return _s
 
 	if scanner=="SPAMASSASSIN":
+		print("get scanner spamassassin")
 		_s=_SPAMASSASSIN(parent,leveldict)
 
 		if _s.is_available():
