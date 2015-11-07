@@ -4443,7 +4443,7 @@ def start_adminconsole(host,port):
 	class gmeadmin(_gmechild):
 
 		def __init__(self,parent=None):
-			_gmechild.__init__(self,parent)
+			_gmechild.__init__(self,parent,filename=__file__)
 			self.smtp= None
 			self.host="localhost"
 			self.port=0
