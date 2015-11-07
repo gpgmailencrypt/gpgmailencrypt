@@ -5,7 +5,7 @@ import re
 import shutil
 import subprocess
 from .child 			import _gmechild 
-from   ._dbg 			import _dbg
+from ._dbg	 			import _dbg
 from .version 			import *
 
 S_NOSPAM=0
