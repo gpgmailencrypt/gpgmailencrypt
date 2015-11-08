@@ -3899,7 +3899,7 @@ class gme:
 										from_addr,
 										to_addr)
 				return
-		elif len(virusinfo)>0:
+		elif virusinfo!=None and len(virusinfo)>0:
 				self.log(
 				"No virus found, but received the following messages",
 				"w")
