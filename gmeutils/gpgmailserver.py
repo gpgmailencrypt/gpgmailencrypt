@@ -55,6 +55,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 										None,
 										data_size_limit=data_size_limit)
 		except socket.error as e:
+
 			if parent:
 				parent.log("_gpgmailencryptserver: error",e)
 			raise 
@@ -860,6 +861,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 
 			if self.write_smtpdpasswordfile:
 				self.write_smtpdpasswordfile(self.parent._SMTPD_PASSWORDFILE)
+
 			self.push("250 OK")
 
 		else:

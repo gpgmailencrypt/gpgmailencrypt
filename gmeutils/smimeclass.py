@@ -320,6 +320,7 @@ class _SMIME(_gmechild):
 		found=re.search("(?<=emailAddress=)(.*)",cert)
 
 		if found != None:
+
 			try:
 				email.append(cert[found.start():found.end()])
 			except:
@@ -357,6 +358,7 @@ class _SMIME(_gmechild):
 							fingerprint.decode("UTF-8",unicodeerror))
 
 		if found != None:
+
 			try:
 				fingerprint=fingerprint[found.start():found.end()]
 			except:

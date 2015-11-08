@@ -108,7 +108,6 @@ class _BOGOFILTER(_basespamchecker):
 		_basespamchecker.__init__(self,parent,leveldict)
 		self.cmd=shutil.which("bogofilter")
 		self.set_leveldict(leveldict)
-
 		
 	@_dbg					
 	def set_leveldict(self,leveldict):

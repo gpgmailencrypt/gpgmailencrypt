@@ -48,6 +48,5 @@ class _gmechild:
 			self.parent.debug(msg=msg,lineno=lineno,filename=filename)
 			self.parent._level-=self._level
 		except:
-			raise
 			pass
 

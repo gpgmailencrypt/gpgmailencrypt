@@ -629,6 +629,9 @@ class _RAR(_baseunpacker):
 	def __init__(self,parent):
 		_baseunpacker.__init__(self,parent)
 		self.cmd=shutil.which("unrar")
+
+		if self.cmd==None:
+			self.cmd=shutil.which("rar")
 	
 	#################
 	#unpackingformats
@@ -648,7 +651,7 @@ class _RAR(_baseunpacker):
 		format=""
 		extension=os.path.splitext(sourcefile)[1].lower()
 		cmd=[   self.cmd, 
-				"e",sourcefile,
+				"x",sourcefile,
 				directory,
 				">/dev/null"
 			]
@@ -790,27 +793,37 @@ class _SHAR(_baseunpacker):
 				">/dev/null"]
 		return cmd
 
-######
+############
+#_snappytest
+############
+
+_snappytest="""
+txt="testtext"
+try:
+	import snappy
+	x=snappy.compress(txt)
+	y=snappy.uncompress(x)
+	if y!=txt:
+		exit(2)
+except:
+	exit(1)
+exit(0)
+"""
+
+########
 #_SNAPPY
-######
+########
 
 class _SNAPPY(_baseunpacker):
 
 	def __init__(self,parent):
 		_baseunpacker.__init__(self,parent,chdir=True)
-		tst="""
-try:
-	import snappy
-except:
-	exit(1)
-exit(0)
-"""
 		f=tempfile.NamedTemporaryFile(  mode='w',
 										delete=False,
 										prefix='snappy-',
 										suffix=".py",
 									)
-		f.write(tst)
+		f.write(_snappytest)
 		f.close()
 		py2=shutil.which("python2")
 
@@ -819,6 +832,7 @@ exit(0)
 
 			if _result==0:
 				self.cmd="snappyexists"
+
 		try:
 			os.remove(f.name)
 		except:
@@ -1536,7 +1550,9 @@ def get_archivetype(filename,filetype):
 		"vnd.android.package-archive":	"ZIP",
 		"vnd.ms-tnef":					"TNEF",
 		"x-7z-compressed":				"7Z",
+		"x-ace":						"ACE",
 		"x-ace-compressed":				"ACE",
+		"x-arc":						"ARC",
 		"x-arc-compressed":				"ARC",
 		"x-archive":					"AR",
 		"x-arj":						"ARJ",
@@ -1553,6 +1569,7 @@ def get_archivetype(filename,filetype):
 		"x-lzma":						"LZMA",
 		"x-lzop":						"LZO",
 		"x-shar":						"SHAR",
+		"x-snappy":						"SNAPPY",
 		"x-snappy-framed":				"SNAPPY",
 		"x-tar":						"TAR",
 		"x-rar-compressed":				"RAR",
@@ -1561,7 +1578,9 @@ def get_archivetype(filename,filetype):
 		"x-zoo":						"ZOO",
 		}
 					  
-	extensions={"7z":	"7Z",
+	extensions={
+				"7z":	"7Z",
+				"7zip":	"7Z",
 				"aar":	"ZIP",
 				"ace":	"ACE",
 				"ar":	"AR",
@@ -1570,6 +1589,7 @@ def get_archivetype(filename,filetype):
 				"apk":	"ZIP",
 				"bz":	"BZIP",
 				"bz2":	"BZIP2",
+				"bzp2":	"BZIP2",
 				"cab":	"CAB",
 				"cb7":	"7Z",
 				"cbr":	"RAR",
@@ -1581,6 +1601,7 @@ def get_archivetype(filename,filetype):
 				"ear":	"JAR",
 				"exe":	"EXE",
 				"f":	"FREEZE",
+				"gtar":	"TAR",
 				"gz":	"GZIP",
 				"iso":	"ISO",
 				"jar":	"JAR",
@@ -1595,6 +1616,7 @@ def get_archivetype(filename,filetype):
 				"rar":	"RAR",
 				"rpm":	"RPM",
 				"rz":	"RZIP",
+				"rzip":	"RZIP",
 				"s7z":	"7Z",
 				"shar":	"SHAR",
 				"snappy":"SNAPPY",
@@ -1605,6 +1627,7 @@ def get_archivetype(filename,filetype):
 				"tgz":	"TARGZ",
 				"tlz":	"TARLZMA",
 				"txz":	"TARXZ",
+				"uzip":	"ZIP",
 				"war":	"ZIP",
 				"wim":	"ZIP",
 				"xar":	"AR",
