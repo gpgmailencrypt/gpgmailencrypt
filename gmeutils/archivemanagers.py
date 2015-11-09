@@ -89,8 +89,8 @@ class _basedeleteunpacker(_baseunpacker):
 			directory = tempfile.mkdtemp()
 		
 		if self.chdir:
-			os.chdir(directory)
 			_origdir=os.getcwd()
+			os.chdir(directory)
 
 		origdir,fname=os.path.split(filename)
 		targetname=os.path.join(directory,fname)
@@ -908,6 +908,7 @@ class _TAR(_baseunpacker):
 			cmd.insert(2,"--lzma")
 		elif extension in ["lzo","tlzo","lzop","tlzop"]:
 			cmd.insert(2,"--lzop")
+
 		return cmd
 
 ######

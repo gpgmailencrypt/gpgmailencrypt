@@ -13,6 +13,7 @@ from   ._dbg 			import _dbg
 ##################
 
 class _basevirusscanner(_gmechild):
+
 	def __init__(self,parent):
 		_gmechild.__init__(self,parent=parent,filename=__file__)
 
@@ -62,6 +63,7 @@ class _AVAST(_basevirusscanner):
 #############
 
 class _BITDEFENDER(_basevirusscanner):
+
 	def __init__(self,parent):
 		self.cmd=shutil.which("bdscan")
 		_basevirusscanner.__init__(self,parent)
@@ -119,6 +121,7 @@ try:
 	import pyclamd
 	
 	class _CLAMAV(_basevirusscanner):
+
 		def __init__(self,parent):
 			self.clamd=pyclamd.ClamdAgnostic()
 			_basevirusscanner.__init__(self,parent)
@@ -187,6 +190,7 @@ class _DRWEB(_basevirusscanner):
 #######
 
 class _FPROT(_basevirusscanner):
+
 	def __init__(self,parent):
 		self.cmd=shutil.which("fpscan")
 		_basevirusscanner.__init__(self,parent)
@@ -225,6 +229,7 @@ class _FPROT(_basevirusscanner):
 ########
 
 class _SOPHOS(_basevirusscanner):
+
 	def __init__(self,parent):
 		self.cmd=shutil.which("savscan")
 		_basevirusscanner.__init__(self,parent)

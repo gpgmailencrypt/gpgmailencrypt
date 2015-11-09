@@ -1,9 +1,9 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
-from .child 			import _gmechild
-from . 					import virusscanners
-from . 					import archivemanagers
-from   ._dbg 			import _dbg
+from 	.child 			import _gmechild
+from 	.				import virusscanners
+from 	.				import archivemanagers
+from   	._dbg 			import _dbg
 import email
 import tempfile
 import os
@@ -48,6 +48,7 @@ class _virus_check(_gmechild):
 
 			for f in files:
 				pathf=os.path.join(root,f)
+
 				if not os.path.islink(pathf):
 					os.chmod(pathf,0o640)
 
