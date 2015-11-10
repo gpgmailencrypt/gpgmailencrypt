@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
+import email
 from .child 			import _gmechild 
 from .version 			import *
 from ._dbg	 			import _dbg
 from .thirdparty		import dkim
 
-class _mydkim(_gmechild):
+#######
+#mydkim
+#######
+
+class mydkim(_gmechild):
 
 	def __init__(self,parent,selector,domain,privkey):
 		_gmechild.__init__(self,parent,filename=__file__)
@@ -22,13 +27,18 @@ class _mydkim(_gmechild):
 			self.log_traceback()
 		
 	def sign_mail(self,mail):
-		
+	
+		origmail=email.message_from_string(mail)
+		if "DKIM-Signature" in origmail:
+			del origmail["DKIM-Signature"]
 		try:
 			_res=dkim.sign(	mail.encode("UTF-8",unicodeerror),
-						self.selector,
-						self.domain,
+						self.selector.encode("UTF-8",unicodeerror),
+						self.domain.encode("UTF-8",unicodeerror),
 						self.privkey).decode("UTF-8",unicodeerror)
-			return _res+mail
+			msg=_res.split(":",1)[1]
+			origmail["DKIM-Signature"]=msg
+			return origmail.as_string()
 		except:
 			self.log("Error executing dkim.sign_mail","e")
 			self.log_traceback()

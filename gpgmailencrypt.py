@@ -51,6 +51,7 @@ from   gmeutils.smimeclass 		import _SMIME
 from   gmeutils.usage       	import show_usage,print_exampleconfig
 from   gmeutils.viruscheck    	import _virus_check
 from   gmeutils.version			import *
+from   gmeutils.dkim			import mydkim
 import html
 import inspect
 from   io					  	import TextIOWrapper 
@@ -269,6 +270,7 @@ class gme:
 		self._spam_cmd=shutil.which("spamc")
 		self._spam_leveldict={}
 		self._usepdf=False
+		self._dkim=None
 
 		if not os.path.exists(self._deferdir):
 			os.makedirs(self._deferdir)
@@ -342,6 +344,10 @@ class gme:
 		self._SPAMSUBJECT="***SPAM***"
 		self._SPAMSUSPECTSUBJECT="***SPAMSUSPICION***"
 		self._SPAMADDHEADER=True
+		self._USEDKIM=False
+		self._DKIMSELECTOR="gpgdkim"
+		self._DKIMDOMAIN="localhost"
+		self._DKIMKEY=""
 		self._read_configfile()
 
 		if self._DEBUG:
@@ -788,6 +794,32 @@ class gme:
 			except:
 				pass
 
+		if _cfg.has_section('dkim'):
+
+			try:
+				self._USEDKIM=_cfg.getboolean('dkim','use_dkim')
+			except:
+				pass
+
+			try:
+				self._DKIMSELECTOR=_cfg.get('dkim','selector')
+			except:
+				pass
+
+			try:
+				self._DKIMDOMAIN=_cfg.get('dkim','domain')
+			except:
+				pass
+
+			try:
+				self._DKIMKEY=_cfg.get('dkim','key')
+			except:
+				pass
+
+		self._dkim=mydkim(	parent=self,
+							selector=self._DKIMSELECTOR,
+							domain=self._DKIMDOMAIN,
+							privkey=self._DKIMKEY)
 		s=self.smime_factory()
 		self._smimeuser.update(s.create_keylist(self._SMIMEKEYHOME))
 
@@ -1738,6 +1770,15 @@ class gme:
 						to_addr,
 						store_deferred=True):
 		self.debug("_send_textmsg output %i"%self._OUTPUT)
+		gaddr=email.utils.parseaddr(from_addr)[1]
+		addr=gaddr.split('@')
+		domain=''
+
+		if len(addr)==2:
+			domain = addr[1]
+
+		if self._USEDKIM and (domain in self._HOMEDOMAINS):
+				message=self._dkim.sign_mail(message)
 
 		if self._OUTPUT==self.o_mail:
 
