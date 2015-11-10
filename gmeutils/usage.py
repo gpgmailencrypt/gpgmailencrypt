@@ -196,6 +196,8 @@ def print_exampleconfig():
 
 	print ("")
 	print ("[spam]")
+	print ("spamscanner=spamassassin".ljust(space)+
+	"#spamassassin|bogofilter")
 	print ("checkspam=False".ljust(space)+
 	"#if true, e-mails will be checked if they are spam")
 	print ("sa_host=localhost".ljust(space)+

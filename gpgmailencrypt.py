@@ -1670,9 +1670,9 @@ class gme:
 					"mjpeg","3gp","asx","m4v","rv","swz","rm","m2v","mv4",
 					"xwmv","3ga","mp3","ogg",
 					#Archives
-					"zip","arj","deb","tgz","bz2","bz","gz","7z","s7z","rar",
-					"ar","xar","cpio","lz","lzh","lha","lzo","lzma","xz","z",
-					"apk","cab","rpm","jar","zoo",
+					"zip","zipx","arj","deb","tgz","bz2","bz","gz","7z","s7z",
+					"ar","xar","cpio","lz","lzh","lha","lzo","lzma","rar","xz",
+					"apk","tgz","tbz2","cab","rpm","jar","z","zoo",
 					#Office
 					"docx","xlsx","pptx","ods","odt","odp","ott","odm","oth",
 					"ots","odg","otg","odf","odb","oxt","odg","odc","odi",

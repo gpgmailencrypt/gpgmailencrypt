@@ -192,6 +192,7 @@ class _GPG(_gmechild):
 						if (len(email)>0 
 							and self.parent._GPGkeys.count(email) == 0):
 							self.parent._GPGkeys.append(email)
+
 		except:
 			self.log("Error opening keyring (Perhaps wrong "
 							"directory '%s'?)"%self._keyhome,"e")

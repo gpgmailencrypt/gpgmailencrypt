@@ -304,6 +304,7 @@ class _htmldecode(html.parser.HTMLParser,_gmechild):
 
 	def mydata(self):
 		return self.data
+
 ###################################
 #Definition of encryption functions
 ###################################

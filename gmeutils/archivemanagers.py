@@ -1640,6 +1640,9 @@ def get_archivetype(filename,filetype):
 				"zpaq":	"ZPAQ",
 				}
 
+	if extension=="zipx":
+		return None
+
 	if maintype in ["application","other"]:
 		extension=extension[1:]
 		tar=(".tar" in fname)
