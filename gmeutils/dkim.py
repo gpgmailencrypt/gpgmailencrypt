@@ -2,6 +2,7 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 import email
+import os.path
 from .child 			import _gmechild 
 from .version 			import *
 from ._dbg	 			import _dbg
@@ -20,7 +21,7 @@ class mydkim(_gmechild):
 		self.privkey=None
 
 		try:
-			with open(privkey,"rb") as f:
+			with open(os.path.expanduser(privkey),"rb") as f:
 				self.privkey=f.read()
 		except:
 			self.log("Could not read DKIM key","e")

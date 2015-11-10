@@ -222,3 +222,15 @@ def print_exampleconfig():
 	print ("spamsuspect_subject=***SPAMSUSPICION***".ljust(space)+
 	"#subject prefix for suspected spam")
 
+	print ("")
+	print ("[dkim]")
+	print ("use_dkim=False".ljust(space)+
+	"#if true, the email will be signed,when the senders address is "
+	"in homedomains")
+	print ("dkimdomain=localhost".ljust(space)+
+	"#the dkim domain name")
+	print ("dkimselector=gpgdkim".ljust(space)+
+	"#the dkim selector")
+	print ("key=~/dkim.key".ljust(space)+
+	"#the private key to be used to sign the mail")
+
