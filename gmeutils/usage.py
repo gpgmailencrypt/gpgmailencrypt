@@ -104,6 +104,8 @@ def print_exampleconfig():
 	"#file that keeps user and password information")    
 	print("".ljust(space)+
 	"#file format 'user=password'")
+	print ("cacerts=/etc/ssl/ca-certificates.crt".ljust(space)+
+	"#the ca certificate storage file used for verifiying smtp connections")
 
 	print ("")
 	print ("[encryptionmap]")

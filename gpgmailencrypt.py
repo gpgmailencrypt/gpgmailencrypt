@@ -54,7 +54,7 @@ from   gmeutils.version			import *
 from   gmeutils.dkim			import mydkim
 import html
 import inspect
-from   io					  	import TextIOWrapper 
+from   io					  	import TextIOWrapper,StringIO
 import locale
 import mimetypes
 import os
@@ -70,6 +70,7 @@ except:
 import shutil
 import signal
 import smtplib
+import ssl
 import stat
 import string
 import subprocess
@@ -291,9 +292,12 @@ class gme:
 		self._SERVERHOST="127.0.0.1"
 		self._SERVERPORT=1025
 		self._AUTHENTICATE=False
+		self._CACERTS=None
 		self._SMTP_CREDENTIAL=""
 		self._SMTP_USER=""
 		self._SMTP_PASSWORD=""
+		self._SMTP_USESMTPS=False
+		self._SMTP_CERTFINGERPRINTS=[]
 		self._DOMAINS=""
 		self._HOMEDOMAINS=["localhost"]
 		self._CONFIGFILE='/etc/gpgmailencrypt.conf'
@@ -527,6 +531,11 @@ class gme:
 				pass
 
 			try:
+				self._SMTP_USESMTPS=_cfg.getint('mailserver','usetls')
+			except:
+				pass
+
+			try:
 				self._AUTHENTICATE=_cfg.getboolean('mailserver','authenticate')
 			except:
 				pass
@@ -535,6 +544,14 @@ class gme:
 				self._SMTP_CREDENTIAL=_cfg.get('mailserver','smtpcredential')
 			except:
 				pass
+
+			try:
+				self._CACERTS=_cfg.get('mailserver','cacerts')
+				if self._CACERTS.upper()=="NONE":
+					self._CACERTS=None
+			except:
+				pass
+
 
 		if _cfg.has_section('usermap'):
 
@@ -1773,6 +1790,7 @@ class gme:
 		gaddr=email.utils.parseaddr(from_addr)[1]
 		addr=gaddr.split('@')
 		domain=''
+		usessl=False
 
 		if len(addr)==2:
 			domain = addr[1]
@@ -1789,19 +1807,43 @@ class gme:
 			self.debug("Sending email to: <%s>" % to_addr)
 
 			try:
-				smtp = smtplib.SMTP(self._HOST, self._PORT)
+
+				if self._SMTP_USESMTPS:
+					context=ssl.create_default_context(cafile=self._CACERTS)
+					smtp = smtplib.SMTP_SSL(self._HOST, 
+											self._PORT,
+											context=context)
+					usessl=True
+				else:
+					smtp = smtplib.SMTP(self._HOST, self._PORT)
+
 				smtp.ehlo_or_helo_if_needed()
 
 				try:
 
 					if smtp.has_extn("starttls"):
 						self.debug("_send_textmsg starttls")
-						smtp.starttls()
+						context=ssl.create_default_context(cafile=self._CACERTS)
+						smtp.starttls(context=context)
 						smtp.ehlo_or_helo_if_needed()
+						usessl=True
 
 				except:
 					self.debug("smtp.starttls on server failed")
+					self.log_traceback()
+					return False
 
+				if usessl:
+					cert=ssl.DER_cert_to_PEM_cert(smtp.sock.getpeercert(True))
+
+					if len(self._SMTP_CERTFINGERPRINTS)==0:
+						#fingerprint=x=bytearray.fromhex(result.split("=",1)[1])
+						fingerprint=""
+						
+						if not fingerprint in self._SMTP_CERTFINGERPRINTS:
+							self.log("Certificate fingerprint not pinned","e")
+							return False
+					
 				if self._AUTHENTICATE and smtp.has_extn("auth"):
 					self.debug("_send_textmsg: authenticate at smtp server"
 					" with user %s"%self._SMTP_USER)
