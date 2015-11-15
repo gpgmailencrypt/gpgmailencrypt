@@ -22,8 +22,6 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-import asynchat
-import asyncore
 import atexit
 import base64
 import binascii
@@ -54,7 +52,7 @@ from   gmeutils.version			import *
 from   gmeutils.dkim			import mydkim
 import html
 import inspect
-from   io					  	import TextIOWrapper,StringIO
+from   io					  	import TextIOWrapper
 import locale
 import mimetypes
 import os
