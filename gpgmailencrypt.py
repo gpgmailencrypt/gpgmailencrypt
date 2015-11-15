@@ -2125,17 +2125,18 @@ class gme:
 	@_dbg
 	def _log_statistics(self):
 		self.log("Mail statistics: total: %i, encrypt: %i, were encrypted:"
-		" %i, total deferred: %i, still deferred: %i" %(
+		" %i" %(
 				self._count_totalmails,
 				self._count_encryptedmails,
-				self._count_alreadyencryptedmails,
-				self._count_deferredmails,
-				len(self._deferred_emails)))
+				self._count_alreadyencryptedmails))
 		self.log("PGPMIME: %i, PGPINLINE: %i, SMIME: %i, PDF: %i"%(
 				self._count_pgpmimemails,
 				self._count_pgpinlinemails, 
 				self._count_smimemails ,
 				self._count_pdfmails))
+		self.log("total deferred: %i, still deferred: %i" %(
+				self._count_deferredmails,
+				len(self._deferred_emails)))
 		self.log("Systemerrors: %i, systemwarnings: %i" %(
 				self._systemerrors,
 				self._systemwarnings))
