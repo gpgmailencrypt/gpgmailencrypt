@@ -73,7 +73,6 @@ import smtplib
 import ssl
 import stat
 import string
-import subprocess
 import sys
 import syslog
 import tempfile
@@ -1929,12 +1928,14 @@ class gme:
 
 			for l in f:
 				mail=l.split("|")
+
 				try:
 					mail[3]=float(mail[3])
 				except:
 					mail[3]=-1
 					self.log("load_viruslist, id could not be converted"
 							" to float","e")
+
 				self._virus_queue.append(mail)
 
 			f.close()
