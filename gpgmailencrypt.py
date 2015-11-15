@@ -531,7 +531,7 @@ class gme:
 				pass
 
 			try:
-				self._SMTP_USESMTPS=_cfg.getint('mailserver','usetls')
+				self._SMTP_USESMTPS=_cfg.getint('mailserver','usetsmtps')
 			except:
 				pass
 
@@ -552,6 +552,13 @@ class gme:
 			except:
 				pass
 
+			try:
+				fingerprints=_cfg.get('mailserver','fingerprints').split(",")
+
+				for f in fingerprints:
+					self._SMTP_CERTFINGERPRINTS.append(f.strip())
+			except:
+				pass
 
 		if _cfg.has_section('usermap'):
 
@@ -1805,14 +1812,14 @@ class gme:
 				return False
 
 			self.debug("Sending email to: <%s>" % to_addr)
+			sslcontext=ssl.create_default_context(cafile=self._CACERTS)
 
 			try:
 
 				if self._SMTP_USESMTPS:
-					context=ssl.create_default_context(cafile=self._CACERTS)
 					smtp = smtplib.SMTP_SSL(self._HOST, 
 											self._PORT,
-											context=context)
+											context=sslcontext)
 					usessl=True
 				else:
 					smtp = smtplib.SMTP(self._HOST, self._PORT)
@@ -1823,8 +1830,7 @@ class gme:
 
 					if smtp.has_extn("starttls"):
 						self.debug("_send_textmsg starttls")
-						context=ssl.create_default_context(cafile=self._CACERTS)
-						smtp.starttls(context=context)
+						smtp.starttls(context=sslcontext)
 						smtp.ehlo_or_helo_if_needed()
 						usessl=True
 
@@ -1835,14 +1841,16 @@ class gme:
 
 				if usessl:
 					cert=ssl.DER_cert_to_PEM_cert(smtp.sock.getpeercert(True))
+					fingerprint=get_certfingerprint(cert)
+					self.debug("CERT fingerprint='%s'"%fingerprint)
 
-					if len(self._SMTP_CERTFINGERPRINTS)==0:
-						#fingerprint=x=bytearray.fromhex(result.split("=",1)[1])
-						fingerprint=""
+					if len(self._SMTP_CERTFINGERPRINTS)>0:
 						
 						if not fingerprint in self._SMTP_CERTFINGERPRINTS:
-							self.log("Certificate fingerprint not pinned","e")
+							self.log("Wrong Certificate fingerprint!","e")
 							return False
+						else:
+							self.debug("CERT fingerprint ok.")
 					
 				if self._AUTHENTICATE and smtp.has_extn("auth"):
 					self.debug("_send_textmsg: authenticate at smtp server"

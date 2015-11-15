@@ -100,12 +100,20 @@ def print_exampleconfig():
 	print ("port = 25".ljust(space)+"#smtp port")
 	print ("authenticate = False".ljust(space)+
 	"#user must authenticate")
+	print ("usetsmtps=False".ljust(space)+
+	"#if True, the connection is ssl encrypted from the beginning")
+	print ("".ljust(space)+
+	"#don't confuse it with STARTTLS, which will be used automatically")
 	print ("smtpcredential =/etc/gpgmailencrypt.cfg".ljust(space)+
 	"#file that keeps user and password information")    
 	print("".ljust(space)+
 	"#file format 'user=password'")
 	print ("cacerts=/etc/ssl/ca-certificates.crt".ljust(space)+
 	"#the ca certificate storage file used for verifiying smtp connections")
+	print ("#fingerprints=12345".ljust(space)+
+	"#a comma separated list of certificate fingerprints used for certificate ")
+	print ("".ljust(space)+
+	"#pinning, if list is empty, certificate pinning is switched off")
 
 	print ("")
 	print ("[encryptionmap]")

@@ -3,12 +3,14 @@
 import base64
 import binascii
 import email
+import hashlib
 import html
 import html.parser
 from   io					  	import BytesIO
 from   io					  	import StringIO
 import re
 import quopri
+import subprocess
 import uu
 
 from 	.child 			import _gmechild
@@ -19,9 +21,9 @@ from   .version			import *
 #Definition of general functions and variables
 ##############################################
 
-#############
+############
 #splitstring
-#############
+############
 
 def splitstring(txt,length=80):
 
@@ -463,9 +465,9 @@ def guess_fileextension(ct):
 	else:
 		return "bin"
 
-###########
+##########
 #decodetxt
-########### 
+########## 
 
 def decodetxt( text,
 				encoding,
@@ -518,9 +520,9 @@ def decodetxt( text,
 
 	return result.decode(charset,unicodeerror)
 
-################
+###############
 #encodefilename
-################ 
+############### 
 
 def encodefilename(name):
 	n1=(email.utils.encode_rfc2231(name,"UTF-8"))
@@ -529,4 +531,20 @@ def encodefilename(name):
 						).decode("UTF-8",unicodeerror)[0:-1]
 	return n1,n2
 
+####################
+#get_certfingerprint
+####################
+
+def get_certfingerprint(cert):
+
+	if isinstance(cert,str):
+		cert=cert.encode("UTF-8",unicodeerror)
+
+	cmd=("openssl x509 -inform PEM -pubkey|openssl rsa -inform PEM -pubin "
+		"-modulus 2>1|grep Modulus")
+	_result = subprocess.check_output(	cmd, 
+										shell=True,
+										input=cert)
+	pubkey=bytearray.fromhex(_result[8:-1].decode("UTF-8"))
+	return hashlib.sha512(pubkey).hexdigest()
 
