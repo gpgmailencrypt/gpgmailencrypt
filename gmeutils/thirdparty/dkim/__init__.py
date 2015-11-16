@@ -25,11 +25,11 @@ import logging
 import re
 import time
 
-from dkim.canonicalization import (
+from .canonicalization import (
     CanonicalizationPolicy,
     InvalidCanonicalizationPolicyError,
     )
-from dkim.crypto import (
+from .crypto import (
     DigestTooLargeError,
     HASH_ALGORITHMS,
     parse_pem_private_key,
@@ -39,11 +39,11 @@ from dkim.crypto import (
     UnparsableKeyError,
     )
 try:
-  from dkim.dnsplug import get_txt
+  from .dnsplug import get_txt
 except:
   def get_txt(s):
     raise RuntimeError("DKIM.verify requires DNS or dnspython module")
-from dkim.util import (
+from .util import (
     get_default_logger,
     InvalidTagValueList,
     parse_tag_value,

@@ -34,7 +34,7 @@ import base64
 import hashlib
 import re
 
-from dkim.asn1 import (
+from .asn1 import (
     ASN1FormatError,
     asn1_build,
     asn1_parse,
