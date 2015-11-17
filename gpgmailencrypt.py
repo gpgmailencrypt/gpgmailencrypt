@@ -823,12 +823,12 @@ class gme:
 				pass
 
 			try:
-				self._DKIMSELECTOR=_cfg.get('dkim','selector')
+				self._DKIMSELECTOR=_cfg.get('dkim','dkimselector')
 			except:
 				pass
 
 			try:
-				self._DKIMDOMAIN=_cfg.get('dkim','domain')
+				self._DKIMDOMAIN=_cfg.get('dkim','dkimdomain')
 			except:
 				pass
 

@@ -542,9 +542,14 @@ def get_certfingerprint(cert):
 
 	cmd=("openssl x509 -inform PEM -pubkey|openssl rsa -inform PEM -pubin "
 		"-modulus 2>1|grep Modulus")
-	_result = subprocess.check_output(	cmd, 
+
+	try:
+		_result = subprocess.check_output(	cmd, 
 										shell=True,
 										input=cert)
+	except:
+		return None
+		
 	pubkey=bytearray.fromhex(_result[8:-1].decode("UTF-8"))
 	return hashlib.sha512(pubkey).hexdigest()
 
