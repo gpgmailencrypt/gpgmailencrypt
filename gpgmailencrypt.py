@@ -1809,7 +1809,11 @@ class gme:
 				return False
 
 			self.debug("Sending email to: <%s>" % to_addr)
-			sslcontext=ssl.create_default_context(cafile=self._CACERTS)
+
+			if self._CACERTS==None:
+				sslcontext=None
+			else:
+				sslcontext=ssl.create_default_context(cafile=self._CACERTS)
 
 			try:
 
