@@ -545,11 +545,11 @@ def get_certfingerprint(cert):
 
 	try:
 		_result = subprocess.check_output(	cmd, 
-										shell=True,
-										input=cert)
+											shell=True,
+											input=cert)
 	except:
 		return None
-		
+
 	pubkey=bytearray.fromhex(_result[8:-1].decode("UTF-8"))
 	return hashlib.sha512(pubkey).hexdigest()
 

@@ -79,7 +79,6 @@ import traceback
 
 __all__ =["gme","start_adminconsole"]
 
-
 ####
 #gme
 ####
@@ -4664,7 +4663,7 @@ def start_adminconsole(host,port):
 		###########
 		
 		def print_help(self):
-			space=20
+			space=18
 			print("\nAllowed commands:")
 			print("=================")
 			print("flush".ljust(space)+"tries to re-send deferred emails")
@@ -4678,7 +4677,8 @@ def start_adminconsole(host,port):
 			print("quarantine".ljust(space)+
 			"handles the quarantine queue")
 			print("".ljust(space)+"quarantine show : shows the queue ")
-			print("".ljust(space)+"                  first value is the id")
+			print("".ljust(space)+"                        first value is"
+			" the id")
 			print("".ljust(space)+"quarantine delete  xxx: deletes an entry")
 			print("".ljust(space)+"                        xxx is the id'")
 			print("".ljust(space)+"quarantine release xxx: sends the mail")
