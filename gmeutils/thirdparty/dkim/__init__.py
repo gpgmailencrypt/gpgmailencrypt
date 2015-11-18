@@ -296,7 +296,7 @@ class DKIM(object):
     b'mime-version', b'content-type', b'content-transfer-encoding',
     b'content-id', b'content- description', b'resent-date', b'resent-from',
     b'resent-sender', b'resent-to', b'resent-cc', b'resent-message-id',
-    b'in-reply-to', 'references', b'list-id', b'list-help', b'list-unsubscribe',
+    b'in-reply-to', b'references', b'list-id', b'list-help', b'list-unsubscribe',
     b'list-subscribe', b'list-post', b'list-owner', b'list-archive'
   )
 

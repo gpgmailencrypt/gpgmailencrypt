@@ -31,7 +31,7 @@ def get_txt_dnspython(name):
       a = dns.resolver.query(name, dns.rdatatype.TXT,raise_on_no_answer=False)
       for r in a.response.answer:
           if r.rdtype == dns.rdatatype.TXT:
-              return b"".join(r.items[0].strings)
+              return "".join(r.items[0].strings).encode("UTF-8")
     except dns.resolver.NXDOMAIN: pass
     return None
 
@@ -81,5 +81,5 @@ def get_txt(name):
         return None
     txt = _get_txt(unicode_name)
     if txt:
-      txt = txt.encode('utf-8')
+      txt = txt.decode('utf-8')
     return txt
