@@ -169,7 +169,7 @@ class _AR(_baseunpacker):
 							directory):
 		cmd=[   self.cmd, 
 				"-x",
-				sourcefile,
+				"\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
 
@@ -200,7 +200,7 @@ class _ARC(_baseunpacker):
 							directory):
 		cmd=[   self.cmd, 
 				"x",
-				sourcefile,
+				"\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
 
@@ -230,7 +230,7 @@ class _ARJ(_baseunpacker):
 							sourcefile,
 							directory):
 		cmd=[   self.cmd, 
-				"x",sourcefile,
+				"x","\"%s\""%sourcefile,
 				"\"-ht%s\""%directory,
 				"-u",
 				"-y",
@@ -276,7 +276,7 @@ class _BZ2(_baseunpacker):
 		
 		directory=os.path.join(directory,fname+new_ext)	
 		cmd=[   self.cmd, 
-				"-cd",sourcefile,
+				"-cd","\"%s\""%sourcefile,
 				"> \"%s\""%directory,
 			]
 		return cmd
@@ -308,7 +308,7 @@ class _CAB(_baseunpacker):
 							directory):
 		cmd=[   self.cmd, 
 				"-d%s"%directory,
-				sourcefile,
+				"\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
 
@@ -340,7 +340,7 @@ class _CPIO(_baseunpacker):
 		cmd=[   self.cmd, 
 				"-i",
 				"--quiet",
-				"-F",sourcefile,
+				"-F","\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
 
@@ -386,7 +386,7 @@ class _DAR(_baseunpacker):
 				"-wa",
 				"-R",directory,
 				"-x",
-				sourcefile,
+				"\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
 
@@ -416,7 +416,7 @@ class _FREEZE(_basedeleteunpacker):
 									sourcefile,
 									directory):
 		cmd=[   self.cmd, 
-				sourcefile,
+				"\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
 
@@ -458,7 +458,7 @@ class _GZIP(_baseunpacker):
 		
 		directory=os.path.join(directory,fname+new_ext)	
 		cmd=[   self.cmd, 
-				"-cd",sourcefile,
+				"-cd","\"%s\""%sourcefile,
 				"> \"%s\""%directory,
 			]
 		return cmd
@@ -489,7 +489,7 @@ class _KGB(_baseunpacker):
 							sourcefile,
 							directory):
 		cmd=[   self.cmd, 
-				sourcefile,
+				"\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
 
@@ -521,7 +521,7 @@ class _LHA(_baseunpacker):
 		cmd=[   self.cmd, 
 				"-w=%s"%directory,
 				"-e",
-				sourcefile,
+				"\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
 
@@ -552,7 +552,7 @@ class _LRZIP(_baseunpacker):
 							directory):
 		cmd=[   self.cmd, 
 				"-O \"%s\""%directory,
-				sourcefile,
+				"\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
 
@@ -583,7 +583,7 @@ class _LZIP(_basedeleteunpacker):
 									directory):
 		cmd=[   self.cmd, 
 				"-d",
-				sourcefile,
+				"\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
 
@@ -616,7 +616,7 @@ class _LZO(_baseunpacker):
 				"-p%s"%directory,
 				"-d",
 				"-P",
-				sourcefile,
+				"\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
 
@@ -651,7 +651,7 @@ class _RAR(_baseunpacker):
 		format=""
 		extension=os.path.splitext(sourcefile)[1].lower()
 		cmd=[   self.cmd, 
-				"x",sourcefile,
+				"x","\"%s\""%sourcefile,
 				directory,
 				">/dev/null"
 			]
@@ -685,7 +685,7 @@ class _RIPOLE(_baseunpacker):
 		format=""
 		extension=os.path.splitext(sourcefile)[1].lower()
 		cmd=[   self.cmd, 
-				"-i",sourcefile,
+				"-i","\"%s\""%sourcefile,
 				"-d",directory,
 				">/dev/null"
 			]
@@ -728,7 +728,7 @@ class _RPM(_baseunpacker):
 							sourcefile,
 							directory):
 		cmd=[   self.cmd, 
-				sourcefile,
+				"\"%s\""%sourcefile,
 				"| %s -dium"%self.cmdcpio]
 		return cmd
 
@@ -759,7 +759,7 @@ class _RZIP(_basedeleteunpacker):
 									directory):
 		cmd=[   self.cmd, 
 				"-d",
-				sourcefile,
+				"\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
 
@@ -789,7 +789,7 @@ class _SHAR(_baseunpacker):
 							sourcefile,
 							directory):
 		cmd=[   self.cmd, 
-				sourcefile,
+				"\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
 
@@ -858,7 +858,7 @@ class _SNAPPY(_baseunpacker):
 				"-m",
 				"snappy",
 				"-d",
-				sourcefile,
+				"\"%s\""%sourcefile,
 				"snappycontent",
 				">/dev/null"]
 		return cmd
@@ -900,7 +900,7 @@ class _TAR(_baseunpacker):
 		
 		cmd=[   self.cmd, 
 				"-x%s"%format,
-				"-f",sourcefile,
+				"-f","\"%s\""%sourcefile,
 				"-C%s"%directory,
 			]
 
@@ -939,7 +939,7 @@ class _TNEF(_baseunpacker):
 							directory):
 		cmd=[   self.cmd, 
 				"-C \"%s\""%directory,
-				"-f",sourcefile,
+				"-f","\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
 
@@ -982,7 +982,7 @@ class _XZ(_baseunpacker):
 		
 		directory=os.path.join(directory,fname+new_ext)	
 		cmd=[   self.cmd, 
-				"-cd",sourcefile,
+				"-cd","\"%s\""%sourcefile,
 				"> \"%s\""%directory,
 			]
 
@@ -1302,7 +1302,7 @@ class _ZIP(_baseunpacker):
 									directory,
 									password):
 		cmd=[  	self.cmd, 
-				"e",sourcefile,
+				"e","\"%s\""%sourcefile,
 				"-o%s"%directory,
 				"-y",
 				">/dev/null"]
@@ -1338,7 +1338,7 @@ class _ZIP2(_baseunpacker):
 							sourcefile,
 							directory):
 		cmd=[   self.cmd, 
-				sourcefile,
+				"\"%s\""%sourcefile,
 				"-d",directory,
 				">/dev/null"
 			]
@@ -1370,7 +1370,7 @@ class _ZOO(_baseunpacker):
 									sourcefile,
 									directory):
 		cmd=[   self.cmd, 
-				"-extract",sourcefile,
+				"-extract","\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
 
@@ -1412,7 +1412,7 @@ class _ZPAQ(_baseunpacker):
 
 		cmd=[   self.cmd, 
 				extract,
-				sourcefile,
+				"\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
 
