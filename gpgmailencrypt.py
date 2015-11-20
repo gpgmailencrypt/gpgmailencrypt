@@ -4157,6 +4157,15 @@ class gme:
 		has_virus=False
 		virusinfo=None
 		raw_message = email.message_from_string( mailtext )
+
+		field="From"
+		if not raw_message[field]:
+			raw_message[field]="UNKNOWN"
+
+		field="To"
+		if not raw_message[field]:
+			raw_message[field]="UNKNOWN"
+
 		from_addr = raw_message['From']
 
 		if self._SPAMCHECK and self._spam_checker==None:
