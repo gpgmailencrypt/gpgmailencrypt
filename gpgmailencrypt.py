@@ -338,7 +338,7 @@ class gme:
 		self._DKIMSELECTOR="gpgdkim"
 		self._DKIMDOMAIN="localhost"
 		self._DKIMKEY=""
-		self._SENTADDRESS="SENT@localhost"
+		self._SENTADDRESS="SENT"
 		self._USE_SENTADDRESS=False
 		self._read_configfile()
 
@@ -4294,12 +4294,13 @@ class gme:
 											has_virus,
 											virusinfo)
 
+			newfrom="%s <%s>"%(	self._SENTADDRESS,
+					 			email.utils.parseaddr(from_addr)[1])
 			if (self._USE_SENTADDRESS and 
-				self._SENTADDRESS not in from_addr and 
+				newfrom not in from_addr and 
 				maildomain(from_addr) in self._HOMEDOMAINS):
 					 del raw_message['From']
-					 raw_message['From']="%s <%s>"%(self._SENTADDRESS,
-					 				email.utils.parseaddr(from_addr)[1])
+					 raw_message['From']=newfrom
 					 self.send_mails(raw_message.as_string(),from_addr)
 				
 		except:
