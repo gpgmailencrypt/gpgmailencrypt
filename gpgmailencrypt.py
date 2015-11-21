@@ -486,7 +486,8 @@ class gme:
 				pass
 
 			try:
-				self._SENTADDRESS=_cfg.get('default','sent_address')
+				self._SENTADDRESS=_cfg.get('default',
+							'sent_address').replace("<","_").replace(">","_")
 			except:
 				pass
 
@@ -496,8 +497,6 @@ class gme:
 			except:
 				pass
 		
-		print(self._SENTADDRESS,self._USE_SENTADDRESS)
-
 		if _cfg.has_section('gpg'):
 
 			try:
