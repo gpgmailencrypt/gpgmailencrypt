@@ -52,12 +52,9 @@ import html
 import inspect
 from   io					  	import TextIOWrapper
 import locale
-import mimetypes
 import os
-import quopri
 import random
 import re
-
 import shutil
 import signal
 import smtplib
@@ -70,7 +67,7 @@ import tempfile
 import time
 import traceback
 
-__all__ =["gme","start_adminconsole"]
+__all__ =["gme"]
 
 ####
 #gme
@@ -341,6 +338,8 @@ class gme:
 		self._DKIMSELECTOR="gpgdkim"
 		self._DKIMDOMAIN="localhost"
 		self._DKIMKEY=""
+		self._SENTADDRESS="SENT@localhost"
+		self._USE_SENTADDRESS=False
 		self._read_configfile()
 
 		if self._DEBUG:
@@ -485,6 +484,19 @@ class gme:
 				self._ALWAYSENCRYPT=_cfg.getboolean('default','alwaysencrypt')
 			except:
 				pass
+
+			try:
+				self._SENTADDRESS=_cfg.get('default','sent_address')
+			except:
+				pass
+
+			try:
+				self._USE_SENTADDRESS=_cfg.getboolean('default',
+													'use_sentaddress')
+			except:
+				pass
+		
+		print(self._SENTADDRESS,self._USE_SENTADDRESS)
 
 		if _cfg.has_section('gpg'):
 
@@ -4153,13 +4165,14 @@ class gme:
 
 		field="From"
 		if not raw_message[field]:
-			raw_message[field]="UNKNOWN"
+			raw_message[field]=""
 
 		field="To"
 		if not raw_message[field]:
-			raw_message[field]="UNKNOWN"
+			raw_message[field]=""
 
 		from_addr = raw_message['From']
+		
 
 		if self._SPAMCHECK and self._spam_checker==None:
 			self._spam_checker=spamscanners.get_spamscanner(self._SPAMSCANNER,
@@ -4280,6 +4293,14 @@ class gme:
 											spamlevel,
 											has_virus,
 											virusinfo)
+
+			if (self._USE_SENTADDRESS and 
+				from_addr!=self._SENTADDRESS and 
+				maildomain(from_addr) in self._HOMEDOMAINS):
+					 del raw_message['From']
+					 raw_message['From']=self._SENTADDRESS
+					 self.send_mails(raw_message.as_string(),from_addr)
+				
 		except:
 			self._count_deferredmails+=1
 			self.log_traceback()

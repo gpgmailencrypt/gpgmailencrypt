@@ -78,6 +78,16 @@ def print_exampleconfig():
 	"#if True e-mails will be sent encrypted, even if there is no key")
 	print ("".ljust(space)+
 	"#Fallback encryption is encrypted pdf")
+	print ("use_sentaddress=False".ljust(space)+
+	"#If true a copy of the mail will be sent to the sender of the mail.")
+	print ("".ljust(space)+
+	"#the from address will be changed to 'sent_address'. This can be used")
+	print ("".ljust(space)+
+	"#to store encrypted e-mails in the sent folder of the user")
+	print ("".ljust(space)+
+	"#using the sent_address to filter with sieve or the e-mail client")
+	print ("sent_address=sent@localhost".ljust(space)+
+	"#see use_sentaddress")
 
 	print ("")
 	print ("[gpg]")

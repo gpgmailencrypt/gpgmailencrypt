@@ -3,6 +3,7 @@
 import base64
 import binascii
 import email
+import email.utils 
 import hashlib
 import html
 import html.parser
@@ -553,3 +554,15 @@ def get_certfingerprint(cert):
 	pubkey=bytearray.fromhex(_result[8:-1].decode("UTF-8"))
 	return hashlib.sha512(pubkey).hexdigest()
 
+###########
+#maildomain
+###########
+
+def maildomain(mailaddress):
+	addr= email.utils.parseaddr(mailaddress)[1].split('@')
+	domain=""
+	
+	if len(addr)==2:
+		domain = addr[1]
+
+	return domain

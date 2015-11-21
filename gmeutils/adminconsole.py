@@ -247,11 +247,15 @@ def start_adminconsole(host,port):
 			print(line_buffer, end="")
 			sys.stdout.flush()
 
-	completer = MyCompleter(_gpgmailencryptserver.ADMINALLCOMMANDS)
-	readline.set_completer_delims(' \t\n;')
-	readline.set_completer(completer.complete)
-	readline.parse_and_bind('tab: complete')
-	readline.set_completion_display_matches_hook(completer.display_matches)
+	try:
+		completer = MyCompleter(_gpgmailencryptserver.ADMINALLCOMMANDS)
+		readline.set_completer_delims(' \t\n;')
+		readline.set_completer(completer.complete)
+		readline.parse_and_bind('tab: complete')
+		readline.set_completion_display_matches_hook(completer.display_matches)
+	except:
+		print("python3 module 'readline' not installed, "
+				"starting without autocompletion")
 	g=gmeadmin()
 	g.start(host,port)
 
