@@ -86,8 +86,8 @@ def print_exampleconfig():
 	"#to store encrypted e-mails in the sent folder of the user")
 	print ("".ljust(space)+
 	"#using the sent_address to filter with sieve or the e-mail client")
-	print ("sent_address=sent@localhost".ljust(space)+
-	"#see use_sentaddress")
+	print ("sent_address=sent".ljust(space)+
+	"#the used address looks like 'sent_address <original@fromaddress>'")
 
 	print ("")
 	print ("[gpg]")

@@ -4295,10 +4295,11 @@ class gme:
 											virusinfo)
 
 			if (self._USE_SENTADDRESS and 
-				from_addr!=self._SENTADDRESS and 
+				self._SENTADDRESS not in from_addr and 
 				maildomain(from_addr) in self._HOMEDOMAINS):
 					 del raw_message['From']
-					 raw_message['From']=self._SENTADDRESS
+					 raw_message['From']="%s <%s>"%(self._SENTADDRESS,
+					 				email.utils.parseaddr(from_addr)[1])
 					 self.send_mails(raw_message.as_string(),from_addr)
 				
 		except:
