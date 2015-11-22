@@ -67,7 +67,7 @@ class _virus_check(_gmechild):
 
 			if vscanner!=None:
 				self.virusscanner[s]=vscanner
-				self.log("Virusscanner %s registered"%s)
+				self.log("Virusscanner %s activated"%s)
 				
 		if len(self.virusscanner)==0:
 			self.log("No virusscanners available!","e")

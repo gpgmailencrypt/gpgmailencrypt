@@ -836,7 +836,7 @@ class gme:
 				pass
 
 			try:
-				self._DKIMKEY=_cfg.get('dkim','key')
+				self._DKIMKEY=_cfg.get('dkim','dkimkey')
 			except:
 				pass
 
@@ -886,7 +886,6 @@ class gme:
 
 		if not self._use_pdf:
 			self.log("PDF support is not available","e")
-		
 
 	###################
 	#_parse_commandline

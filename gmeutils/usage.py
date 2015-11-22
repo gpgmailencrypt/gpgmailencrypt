@@ -37,7 +37,7 @@ def show_usage():
 	print ("                    email will be sent via smtp")
 	print ("-o p --output p:    valid values for p are 'mail' or 'stdout',")
 	print ("                    alternatively set an outputfile with -m")
-	print ("--spamcheck=true:   if true, check if the e-mail is span")
+	print ("--spamcheck=true:   if true, check if the e-mail is spam")
 	print ("-x --example:       print example config file")
 	print ("-v --verbose:       print debugging information into _logfile")
 	print ("--viruscheck=true:  if true, check if the e-mail contains a virus")
@@ -86,7 +86,7 @@ def print_exampleconfig():
 	"#to store encrypted e-mails in the sent folder of the user")
 	print ("".ljust(space)+
 	"#using the sent_address to filter with sieve or the e-mail client")
-	print ("sent_address=sent".ljust(space)+
+	print ("sent_address=SENT".ljust(space)+
 	"#the used address looks like 'sent_address <original@fromaddress>'")
 
 	print ("")
@@ -251,6 +251,6 @@ def print_exampleconfig():
 	"#the dkim domain name")
 	print ("dkimselector=gpgdkim".ljust(space)+
 	"#the dkim selector")
-	print ("key=~/dkim.key".ljust(space)+
+	print ("dkimkey=~/dkim.key".ljust(space)+
 	"#the private key to be used to sign the mail")
 
