@@ -53,7 +53,6 @@ import inspect
 from   io					  	import TextIOWrapper
 import locale
 import os
-import random
 import re
 import shutil
 import signal
@@ -1218,27 +1217,6 @@ class gme:
 
 		return False
 
-	#################
-	#_create_password
-	#################
- 
-	@_dbg
-	def _create_password(self,pwlength=10):
-		#prior to pdf 1.7 only ASCII characters are allowed and 
-		#maximum 32 characters
-		_min=5
-		_max=32
-
-		if pwlength<_min:
-			pwlength=_min
-		elif pwlength>_max:
-			pwlength=_max
-
-		nonletters="0123456789+-*/@"
-		pwkeys="ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstvwxyz"+nonletters
-		return ''.join(random.SystemRandom().choice(pwkeys) 
-					for _ in range(pwlength))
-
 	####################
 	#_load_rawmailmaster
 	####################
@@ -1316,7 +1294,7 @@ class gme:
 		except:	
 			pass
 
-		pw= self._create_password(self._PDFPASSWORDLENGTH)
+		pw= create_password(self._PDFPASSWORDLENGTH)
 		self.set_pdfpassword(user,pw)
 		return pw
 
@@ -2213,33 +2191,6 @@ class gme:
 		charset=str(res[1]).replace('"','').replace("'","")
 		return charset
 
-	###############
-	#_make_boundary
-	###############
- 
-	@_dbg
-	def _make_boundary(self,text=None):
-		_width = len(repr(sys.maxsize-1))
-		_fmt = '%%0%dd' % _width	
-		token = random.randrange(sys.maxsize)
-		boundary = ('=' * 15) + (_fmt % token) + '=='
-
-		if text is None:
-			return boundary
-
-		b = boundary
-		counter = 0
-
-		while True:
-			cre = re.compile('^--' + re.escape(b) + '(--)?$', re.MULTILINE)
-
-			if not cre.search(text):
-				break
-
-			b = boundary + '.' + str(counter)
-			counter += 1
-		return b
-
 	################
 	#set_output2mail
 	################
@@ -2262,7 +2213,6 @@ class gme:
 
 		self._OUTFILE=os.path.expanduser(mailfile)
 		self._OUTPUT=self.o_file
-
 	
 	##################
 	#set_output2stdout
@@ -2368,7 +2318,6 @@ class gme:
 			return True
 		else:
 			return False
-
 
 	###################
 	#quarantine_release
@@ -3237,7 +3186,7 @@ class gme:
 			self.debug("Content-Type not set, set default 'text/plain'.")
 			newmsg.set_type("text/plain")
 
-		boundary=self._make_boundary(message)
+		boundary=make_boundary(message)
 
 		try:
 			newmsg.set_boundary(boundary)
@@ -4170,7 +4119,6 @@ class gme:
 			raw_message[field]=""
 
 		from_addr = raw_message['From']
-		
 
 		if self._SPAMCHECK and self._spam_checker==None:
 			self._spam_checker=spamscanners.get_spamscanner(self._SPAMSCANNER,

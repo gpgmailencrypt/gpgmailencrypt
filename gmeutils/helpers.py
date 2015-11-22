@@ -9,9 +9,11 @@ import html
 import html.parser
 from   io					  	import BytesIO
 from   io					  	import StringIO
+import random
 import re
 import quopri
 import subprocess
+import sys
 import uu
 
 from 	.child 			import _gmechild
@@ -566,3 +568,51 @@ def maildomain(mailaddress):
 		domain = addr[1]
 
 	return domain
+
+################
+#create_password
+################
+ 
+def create_password(self,pwlength=10):
+	#prior to pdf 1.7 only ASCII characters are allowed and 
+	#maximum 32 characters
+	_min=5
+	_max=32
+
+	if pwlength<_min:
+		pwlength=_min
+	elif pwlength>_max:
+		pwlength=_max
+
+	nonletters="0123456789+-*/@"
+	pwkeys="ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstvwxyz"+nonletters
+	return ''.join(random.SystemRandom().choice(pwkeys) 
+				for _ in range(pwlength))
+
+##############
+#make_boundary
+##############
+ 
+def make_boundary(self,text=None):
+	_width = len(repr(sys.maxsize-1))
+	_fmt = '%%0%dd' % _width	
+	token = random.randrange(sys.maxsize)
+	boundary = ('=' * 15) + (_fmt % token) + '=='
+
+	if text is None:
+		return boundary
+
+	b = boundary
+	counter = 0
+
+	while True:
+		cre = re.compile('^--' + re.escape(b) + '(--)?$', re.MULTILINE)
+
+		if not cre.search(text):
+			break
+
+		b = boundary + '.' + str(counter)
+		counter += 1
+	return b
+
+
