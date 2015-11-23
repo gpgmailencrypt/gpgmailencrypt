@@ -1,10 +1,10 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 from gmeutils.child 			import _gmechild 
-from gmeutils.version		import *
-from gmeutils._dbg 			import _dbg
+from gmeutils.version			import *
+from gmeutils._dbg 				import _dbg
 from gmeutils.mytimer       	import _mytimer
-from gmeutils.gpgmailserver  import _gpgmailencryptserver
+from gmeutils.gpgmailserver 	import _gpgmailencryptserver
 import getpass
 import smtplib
 import binascii

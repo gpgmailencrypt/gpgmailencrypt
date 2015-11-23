@@ -7,8 +7,8 @@ import os
 import re
 import subprocess
 from	.child 			import _gmechild 
-from   .version			import *
-from   ._dbg 			import _dbg
+from	.version		import *
+from	._dbg 			import _dbg
 ###########
 #CLASS _GPG
 ###########

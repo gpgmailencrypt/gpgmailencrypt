@@ -2,7 +2,7 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 """
-gpgmailencrypt is an e-mail gateway, that  can encrypt e-mails, scan for viruses
+gpgmailencrypt is an e-mail gateway, that can encrypt e-mails, scan for viruses
 and spam.
 
 It supports
@@ -58,8 +58,8 @@ import shutil
 import signal
 import smtplib
 import ssl
-import stat
-import string
+#import stat
+#import string
 import sys
 import syslog
 import tempfile

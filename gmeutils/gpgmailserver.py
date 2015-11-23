@@ -12,7 +12,7 @@ import socket
 import ssl
 import sys
 from	.child 			import _gmechild 
-from   .version			import *
+from	.version		import *
 
 ######################
 #_gpgmailencryptserver
@@ -325,7 +325,9 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 										line).decode("UTF-8",unicodeerror)
 					self.in_loginauth=2
 					self.push('334 %s'%binascii.b2a_base64(
-								"Password:".encode("UTF8")).decode("UTF8")[:-1])
+								"Password:".encode("UTF8",
+											unicodeerror)).decode("UTF8",
+											unicodeerror)[:-1])
 					self._SMTPChannel__line=[]
 					return
 				elif self.in_loginauth==2:
@@ -505,7 +507,9 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 						self.in_loginauth=2
 					else:   
 						 self.push('334 %s'%binascii.b2a_base64(
-							"Username:".encode("UTF8")).decode("UTF8")[:-1])
+							"Username:".encode("UTF8",
+									unicodeerror)).decode("UTF8",
+									unicodeerror)[:-1])
 					return
 
 		if len(res)<2:

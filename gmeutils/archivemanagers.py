@@ -10,10 +10,8 @@ from .child 			import _gmechild
 from .version 			import *
 from   ._dbg 			import _dbg
 
-
 _filecmd=shutil.which("file")
 _use_filecmd=(_filecmd!=None and len(_filecmd)>0)
-
 
 ####################
 #CLASS _baseunpacker

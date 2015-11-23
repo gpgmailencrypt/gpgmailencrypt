@@ -7,8 +7,8 @@ import email.utils
 import hashlib
 import html
 import html.parser
-from   io					  	import BytesIO
-from   io					  	import StringIO
+from   io				import BytesIO
+from   io				import StringIO
 import random
 import re
 import quopri
@@ -17,8 +17,8 @@ import sys
 import uu
 
 from 	.child 			import _gmechild
-from   ._dbg 			import _dbg
-from   .version			import *
+from	._dbg 			import _dbg
+from	.version		import *
 
 ##############################################
 #Definition of general functions and variables
@@ -614,5 +614,4 @@ def make_boundary(self,text=None):
 		b = boundary + '.' + str(counter)
 		counter += 1
 	return b
-
 

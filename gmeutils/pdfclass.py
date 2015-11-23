@@ -6,9 +6,9 @@ import re
 import shutil
 import subprocess
 from	.child 			import _gmechild 
-from   .version			import *
-from   ._dbg 			import _dbg
-from   .thirdparty		import email2pdf
+from	.version		import *
+from	._dbg 			import _dbg
+from	.thirdparty		import email2pdf
 
 ###########
 #CLASS _PDF

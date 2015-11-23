@@ -6,8 +6,8 @@ import re
 import subprocess
 import tempfile
 from	.child 			import _gmechild 
-from   .version			import *
-from   ._dbg 			import _dbg
+from	.version		import *
+from	._dbg 			import _dbg
 
 #############
 #CLASS _SMIME
