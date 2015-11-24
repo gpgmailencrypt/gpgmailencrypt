@@ -36,6 +36,7 @@ from   email.mime.text	  		import MIMEText
 import getopt
 import gmeutils.spamscanners 	as spamscanners
 import gmeutils.archivemanagers as archivemanagers
+import gmeutils.storagebackend 	as backend
 from   gmeutils.child         	import _gmechild 
 from   gmeutils._dbg 		  	import _dbg
 from   gmeutils.gpgclass 		import _GPG,_GPGEncryptedAttachment
@@ -128,6 +129,7 @@ class gme:
 		self._DEBUG=False
 		self._GPGkeys=list()
 		self._GPGprivatekeys=list()
+		self._backend=backend.get_backend("TEXT",parent=self)
 		self.init()
 
 	#################
@@ -234,7 +236,6 @@ class gme:
 
 		#Internal variables
 		self._logfile=None
-		self._addressmap = dict()
 		self._encryptionmap = dict()
 		self._smimeuser = dict()
 		self._tempfiles = list()
@@ -339,12 +340,10 @@ class gme:
 		self._DKIMKEY=""
 		self._SENTADDRESS="SENT"
 		self._USE_SENTADDRESS=False
+		self._backend.init()
 		self._read_configfile()
 
-		if self._DEBUG:
 
-			for a in self._addressmap:
-				self.debug("_addressmap: '%s'='%s'"%(a,self._addressmap[a]))
 
 	#################
 	#_read_configfile
@@ -496,6 +495,13 @@ class gme:
 			except:
 				pass
 		
+			try:
+				backend=_cfg.get('default',
+								'storagebackend')
+				self._backend=backend.get_backend(backend,parent=self)
+			except:
+				pass
+		
 		if _cfg.has_section('gpg'):
 
 			try:
@@ -558,11 +564,6 @@ class gme:
 					self._SMTP_CERTFINGERPRINTS.append(f.strip())
 			except:
 				pass
-
-		if _cfg.has_section('usermap'):
-
-			for (name, value) in _cfg.items('usermap'):
-					self._addressmap[name] = value
 
 		if _cfg.has_section('encryptionmap'):
 
@@ -885,6 +886,8 @@ class gme:
 
 		if not self._use_pdf:
 			self.log("PDF support is not available","e")
+		
+		self._backend.read_configfile(_cfg)
 
 	###################
 	#_parse_commandline
@@ -2608,7 +2611,7 @@ class gme:
 		gpg = self.gpg_factory()
 
 		try:
-			gpg_to_addr=self._addressmap[gaddr]
+			gpg_to_addr=self._backend.usermap(gaddr)
 		except:
 			self.debug("_addressmap to_addr not found")
 			gpg_to_addr=gaddr
@@ -2648,7 +2651,7 @@ class gme:
 		smime = self.smime_factory()
 
 		try:
-			smime_to_addr=self._addressmap[saddr]
+			smime_to_addr=self._backend.usermap(saddr)
 		except:
 			self.debug("smime _addressmap to_addr not found")
 			smime_to_addr=saddr
@@ -3338,7 +3341,7 @@ class gme:
 		_u=user
 
 		try:
-			_u=self._addressmap[user]
+			_u=self._backend.usermap(user)
 		except:
 			pass
 
@@ -3962,7 +3965,7 @@ class gme:
 		_encrypt_subject=self.check_encryptsubject(mailtext)
 
 		try:
-			to_pdf=self._addressmap[to_addr]
+			to_pdf=self._backend.usermap(to_addr)
 		except:
 			self.debug("preferpdf _addressmap to_addr not found")
 			to_pdf=to_addr
