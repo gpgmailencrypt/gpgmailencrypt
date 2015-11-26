@@ -236,7 +236,6 @@ class gme:
 
 		#Internal variables
 		self._logfile=None
-		self._encryptionmap = dict()
 		self._smimeuser = dict()
 		self._tempfiles = list()
 		self._pdfpasswords=dict()
@@ -496,9 +495,9 @@ class gme:
 				pass
 		
 			try:
-				backend=_cfg.get('default',
+				b=_cfg.get('default',
 								'storagebackend')
-				self._backend=backend.get_backend(backend,parent=self)
+				self._backend=backend.get_backend(b,parent=self)
 			except:
 				pass
 		
@@ -564,11 +563,6 @@ class gme:
 					self._SMTP_CERTFINGERPRINTS.append(f.strip())
 			except:
 				pass
-
-		if _cfg.has_section('encryptionmap'):
-
-			for (name, value) in _cfg.items('encryptionmap'):
-					self._encryptionmap[name] = value.split(":")
 
 		if _cfg.has_section('daemon'):
 
@@ -3347,7 +3341,7 @@ class gme:
 
 		try:
 			self.debug("get_preferred encryptionmap %s"%_u)
-			_m=self._encryptionmap[_u][0].upper()
+			_m=self._backend.encryptionmap(_u)[0].upper()
 		except:
 			pass
 
@@ -3357,7 +3351,7 @@ class gme:
 			if len(addr)==2:
 
 				try:
-					_m=self._encryptionmap["*@%s"%addr[1]][0].upper()
+					_m=self._backend.encryptionmap("*@%s"%addr[1])[0].upper()
 					self.debug("preferencedencryptionmethod for "
 								"*@%s=%s"%(addr[1],_m))
 				except:
@@ -3752,7 +3746,7 @@ class gme:
 		Zip=self.zip_factory()
 
 		try:
-			Zip.set_zipcipher(self._encryptionmap[pdfuser][1])
+			Zip.set_zipcipher(self._backend.encryptionmap(pdfuser)[1])
 		except:
 
 			try:
@@ -3760,7 +3754,8 @@ class gme:
 
 				if len(_addr)==2:
 					domain = _addr[1]
-					Zip.set_zipcipher(self._encryptionmap["*@%s"%domain][1])
+					Zip.set_zipcipher(self._backend.encryptionmap("*@%s"
+																%domain)[1])
 			except:
 				pass
 
