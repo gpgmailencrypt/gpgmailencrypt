@@ -110,7 +110,7 @@ def print_exampleconfig():
 	print ("port = 25".ljust(space)+"#smtp port")
 	print ("authenticate = False".ljust(space)+
 	"#user must authenticate")
-	print ("usetsmtps=False".ljust(space)+
+	print ("usesmtps=False".ljust(space)+
 	"#if True, the connection is ssl encrypted from the beginning")
 	print ("".ljust(space)+
 	"#don't confuse it with STARTTLS, which will be used automatically")
@@ -129,6 +129,7 @@ def print_exampleconfig():
 	print ("[encryptionmap]")
 	print ("user@domain.com = PGPMIME".ljust(space)+
 	"#PGPMIME|PGPINLINE|SMIME|PDF[:zipencryptionmethod]|NONE")
+
 	print ("")
 	print ("[usermap]")
 	print (""
