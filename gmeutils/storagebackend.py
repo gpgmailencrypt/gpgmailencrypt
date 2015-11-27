@@ -13,8 +13,9 @@ __all__ =["get_backend","get_backendlist"]
 
 class _base_storage(_gmechild):
 
-	def __init__(self,parent):
+	def __init__(self,parent,backend):
 		_gmechild.__init__(self,parent=parent,filename=__file__)
+		self._backend=backend
 		self.init()
 	
 	#####
@@ -111,12 +112,12 @@ class _TEXT_BACKEND(_base_storage):
 
 		self.debug("textbackend encryptionmap %s=>%s"%(user,encryption))
 		return encryption
-		
-#################
-#_SQLITE3_BACKEND
-#################
 
-class _SQLITE3_BACKEND(_base_storage):
+#############
+#_sql_backend
+#############
+
+class _sql_backend(_base_storage):
 
 	#####
 	#init
@@ -125,10 +126,23 @@ class _SQLITE3_BACKEND(_base_storage):
 	@_dbg
 	def init(self):
 		self._DATABASE="gpgmailencrypt"
-		self._USERMAPSQL="SELECT to_user FROM usermap WHERE user=?"
-		self._ENCRYPTIONMAPSQL="SELECT encrypt FROM encryptionmap WHERE user=?"
+		self._USERMAPSQL="SELECT to_user FROM usermap WHERE user= ?"
+		self._ENCRYPTIONMAPSQL="SELECT encrypt FROM encryptionmap WHERE user= ?"
+		self._USER="gpgmailencrypt"
+		self._PASSWORD=""
+		self._HOST="127.0.0.1"
+		self._PORT=4711
 		self._db=None
+		self._cursor=None
+		self.placeholder="?"
 
+	########
+	#connect
+	########
+
+	def connect(self):
+		raise NotImplementedError
+	
 	################
 	#read_configfile
 	################
@@ -136,7 +150,6 @@ class _SQLITE3_BACKEND(_base_storage):
 	@_dbg
 	def read_configfile(self,cfg):
 
-		import sqlite3
 
 		if cfg.has_section('sql'):
 
@@ -144,8 +157,6 @@ class _SQLITE3_BACKEND(_base_storage):
 				self._DATABASE=os.path.expanduser(cfg.get('sql','database'))
 			except:
 				pass
-			
-			self._db=sqlite3.connect(self._DATABASE)
 
 			try:
 				self._USERMAPSQL=cfg.get('sql','usermapsql')
@@ -153,9 +164,31 @@ class _SQLITE3_BACKEND(_base_storage):
 				pass
 
 			try:
-				self._ENCRYPTIONMAPSQL=_cfg.get('sql','encryptionmapsql')
+				self._ENCRYPTIONMAPSQL=cfg.get('sql','encryptionmapsql')
 			except:
 				pass
+
+			try:
+				self._USER=cfg.get('sql','user')
+			except:
+				pass
+
+			try:
+				self._PASSWORD=cfg.get('sql','password')
+			except:
+				pass
+
+			try:
+				self._HOST=cfg.get('sql','host')
+			except:
+				pass
+
+			try:
+				self._PORT=cfg.getint('sql','port')
+			except:
+				pass
+
+		self.connect()
 
 	########
 	#usermap
@@ -163,13 +196,24 @@ class _SQLITE3_BACKEND(_base_storage):
  
 	@_dbg
 	def usermap(self, user):
-		conn=self._db.execute(self._USERMAPSQL,(user,))
-		r=conn.fetchone()
+
+		if self._cursor== None:
+			raise KeyError(user)
+			
+		try:
+			self._cursor.execute(self._USERMAPSQL.replace("?",
+														self.placeholder),
+														(user,))
+		except:
+			self.log_traceback()
+			raise
+			
+		r=self._cursor.fetchone()
 
 		if r==None:
 			raise KeyError(user)
 		
-		self.debug("sqlitebackend usermap %s=>%s"%(user,r[0]))
+		self.debug("sqlbackend %s usermap %s=>%s"%(self._backend,user,r[0]))
 		return r[0]
 
 	##############
@@ -178,14 +222,109 @@ class _SQLITE3_BACKEND(_base_storage):
  
 	@_dbg
 	def encryptionmap(self, user):
-		conn=self._db.execute(self._ENCRYPTIONMAPSQL,(user,))
-		r=conn.fetchone()
+
+		if self._cursor== None:
+			raise KeyError(user)
+			
+		try:
+			self._cursor.execute(self._ENCRYPTIONMAPSQL.replace("?",
+														self.placeholder),
+														(user,))
+		except:
+			self.log_traceback()
+			raise
+			
+		r=self._cursor.fetchone()
 
 		if r==None:
 			raise KeyError(user)
 
-		self.debug("sqlitebackend encryptionmap %s=>%s"%(user,r[0]))
+		self.debug("sqlbackend %s encryptionmap %s=>%s"%(self._backend,
+														user,
+														r[0]))
 		return r[0].split(":")
+
+		
+#################
+#_SQLITE3_BACKEND
+#################
+
+class _SQLITE3_BACKEND(_sql_backend):
+
+	########
+	#connect
+	########
+
+	def connect(self):
+		result=False
+		try:
+			import sqlite3
+		except:
+			self.log("SQLITE driver not found","e")
+			self.log_traceback()
+			return result
+			
+		if os.path.exists(self._DATABASE):
+			self._db=sqlite3.connect(self._DATABASE)
+			self._cursor=self._db.cursor()
+			result=True
+		else:
+			self.log("Database '%s' does not exist"%self._DATABASE,"e")
+		
+		return result
+
+###############
+#_MYSQL_BACKEND
+###############
+
+class _MYSQL_BACKEND(_sql_backend):
+
+
+	#####
+	#init
+	#####
+ 
+	@_dbg
+	def init(self):
+		_sql_backend.init(self)
+		self._PORT=3306
+		self.placeholder="%s"
+		
+	########
+	#connect
+	########
+
+	def connect(self):
+		result=False
+		try:
+			import mysql.connector as mysql
+			from mysql.connector import errorcode
+
+		except:
+			self.log("MYSQL (mysql.connector) driver not found","e")
+			self.log_traceback()
+			return result
+			
+		try:
+			self._db=mysql.connect(	database=self._DATABASE,
+									user=self._USER,
+									password=self._PASSWORD,
+									host=self._HOST,
+									port=self._PORT)
+			self._cursor=self._db.cursor()
+			result=True
+		except mysql.Error as err:
+
+			if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+				self.log(	"Could not connect to database, "
+							"wrong username and/or password"
+							,"e")
+			elif err.errno == errorcode.ER_BAD_DB_ERROR:
+				self.log("database %s does not exist"%self._DATABASE,"e")
+
+			self.log_traceback()
+
+		return result
 
 ################################################################################
 
@@ -194,7 +333,7 @@ class _SQLITE3_BACKEND(_base_storage):
 ################
 
 def get_backendlist():
-	return ["TEXT","SQLITE3"]
+	return ["MYSQL","SQLITE3","TEXT"]
 
 ############
 #get_backend
@@ -203,21 +342,21 @@ def get_backendlist():
 def get_backend(backend,parent):
 		backend=backend.upper().strip()
 
-		if backend=="MYSQL":
-
-			try:
-				return _MYSQL_BACKEND(parent=parent)
-			except:
-				parent.log("Storage backend %s could not be loaded"%backend,"e")
-				
 		if backend=="SQLITE3":
 
 			try:
-				return _SQLITE3_BACKEND(parent=parent)
+				return _SQLITE3_BACKEND(parent=parent,backend="SQLITE")
+			except:
+				parent.log("Storage backend %s could not be loaded"%backend,"e")
+				
+		if backend=="MYSQL":
+
+			try:
+				return _MYSQL_BACKEND(parent=parent,backend="MYSQL")
 			except:
 				parent.log("Storage backend %s could not be loaded"%backend,"e")
 				
 		else:
 			# default backend=="TEXT":
-			return _TEXT_BACKEND(parent=parent)
+			return _TEXT_BACKEND(parent=parent,backend="TEXT")
 
