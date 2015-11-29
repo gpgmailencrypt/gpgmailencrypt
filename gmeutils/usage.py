@@ -89,6 +89,34 @@ def print_exampleconfig():
 	print ("sent_address=SENT".ljust(space)+
 	"#the used address looks like 'sent_address <original@fromaddress>'")
 
+
+	print ("")
+	print ("[sql]")
+	print ("database=gpgmailencrypt".ljust(space)+
+	"#")
+	print ("user=gpgmailencrypt".ljust(space)+
+	"#")
+	print ("password=".ljust(space)+
+	"#")
+	print ("host=127.0.0.1".ljust(space)+
+	"#")
+	print ("port=3306".ljust(space)+
+	"#")
+	print ("usermapsql".ljust(space)+
+	"#")
+	print ("publickeysql".ljust(space)+
+	"#")
+	print ("privatekeysql".ljust(space)+
+	"#")
+	print ("encryptionmapsql".ljust(space)+
+	"#")
+	print ("use_sqlusermap=True".ljust(space)+
+	"#")
+	print ("use_sqlencryptionmap=True".ljust(space)+
+	"#")
+	print ("use_sqlsmime=True".ljust(space)+
+	"#")
+
 	print ("")
 	print ("[gpg]")
 	print ("keyhome = /var/lib/gpgmailencrypt/.gnupg".ljust(space)+
