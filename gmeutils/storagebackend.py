@@ -50,6 +50,30 @@ class _base_storage(_gmechild):
 	def encryptionmap(self, user):
 		raise NotImplementedError
 
+	##########
+	#smimeuser
+	##########
+ 
+	@_dbg
+	def smimeuser(self, user):
+		raise NotImplementedError
+
+	#################
+	#smimepublic_keys
+	#################
+ 
+	@_dbg
+	def smimepublic_keys(self):
+		raise NotImplementedError
+
+	##################
+	#smimeprivate_keys
+	##################
+ 
+	@_dbg
+	def smimeprivate_keys(self):
+		raise NotImplementedError
+
 ##############
 #_TEXT_BACKEND
 ##############
@@ -64,6 +88,7 @@ class _TEXT_BACKEND(_base_storage):
 	def init(self):
 		self._addressmap = dict()
 		self._encryptionmap = dict()
+		self._smimeuser = dict()
 
 	################
 	#read_configfile
@@ -81,6 +106,36 @@ class _TEXT_BACKEND(_base_storage):
 
 			for (name, value) in cfg.items('encryptionmap'):
 					self._encryptionmap[name] = value.split(":")
+
+		if cfg.has_section('smimeuser'):
+			self._smimeuser = dict()
+			privatepath=None
+
+			for (name, value) in cfg.items('smimeuser'):
+				user=value.split(",")
+				cipher=self.parent._SMIMECIPHER
+
+				if len(user)>1:
+					tmpcipher=user[1].upper().strip()
+
+					if len(tmpcipher)>0 and tmpcipher!="DEFAULT":
+						cipher=tmpcipher
+
+				if len(user)>2:
+					upath=os.path.join(self.parent._SMIMEKEYHOME,user[2])
+					privatepath=os.path.expanduser(upath)
+
+				upath=os.path.join(self.parent._SMIMEKEYHOME,user[0])
+				publicpath=os.path.expanduser(upath)
+
+				if os.path.isfile(publicpath):
+					self._smimeuser[name] = [publicpath,cipher,privatepath]
+
+		s=self.parent.smime_factory()
+		self._smimeuser.update(s.create_keylist(self.parent._SMIMEKEYHOME))
+
+		for u in self._smimeuser:
+			self.debug("SMimeuser: '%s %s'"%(u,self._smimeuser[u]))
 
 	########
 	#usermap
@@ -113,6 +168,53 @@ class _TEXT_BACKEND(_base_storage):
 		self.debug("textbackend encryptionmap %s=>%s"%(user,encryption))
 		return encryption
 
+	##########
+	#smimeuser
+	##########
+ 
+	@_dbg
+	def smimeuser(self, user):
+		self.debug("textbackend smimeuser check ",user)
+		try:
+			self.debug("smimeuser %s"%user)
+			smime=self._smimeuser[user]
+		except:
+			self.log_traceback()
+			raise KeyError(user)
+
+		self.debug("textbackend smimeuser %s=>%s"%(user,smime))
+		return smime
+
+	#################
+	#smimepublic_keys
+	#################
+ 
+	@_dbg
+	def smimepublic_keys(self):
+		"returns a list of all available keys"
+		result=list()
+
+		for user in self._smimeuser:
+			result.append(user)
+
+		return result
+ 
+ 	##################
+	#smimeprivate_keys
+	################## 
+
+	@_dbg
+	def smimeprivate_keys(self):
+		"returns a list of all available private keys"
+		result=list()
+
+		for user in self._smimeuser:
+
+			if self._smimeuser[user][2]!=None:
+				result.append(user)
+
+		return result
+
 #############
 #_sql_backend
 #############
@@ -128,13 +230,22 @@ class _sql_backend(_base_storage):
 		self._DATABASE="gpgmailencrypt"
 		self._USERMAPSQL="SELECT to_user FROM usermap WHERE user= ?"
 		self._ENCRYPTIONMAPSQL="SELECT encrypt FROM encryptionmap WHERE user= ?"
+		self._SMIMEUSERSQL=("SELECT publickey,cipher FROM smimeusers "
+							"WHERE user= ?")
+		self._SMIMEPUBLICKEYSQL="SELECT user,publickey,cipher FROM smimeusers"
+		self._SMIMEPRIVATEKEYSQL=("SELECT user,privatekey,cipher FROM "
+									"smimeusers WHERE privatekey is not NULL")
 		self._USER="gpgmailencrypt"
 		self._PASSWORD=""
 		self._HOST="127.0.0.1"
 		self._PORT=4711
+		self._USE_SQLUSERMAP=True
+		self._USE_SQLENCRYPTIONMAP=True
+		self._USE_SQLSMIME=True
 		self._db=None
 		self._cursor=None
 		self.placeholder="?"
+		self._textbackend=get_backend("TEXT",self.parent)
 
 	########
 	#connect
@@ -150,7 +261,6 @@ class _sql_backend(_base_storage):
 	@_dbg
 	def read_configfile(self,cfg):
 
-
 		if cfg.has_section('sql'):
 
 			try:
@@ -160,6 +270,16 @@ class _sql_backend(_base_storage):
 
 			try:
 				self._USERMAPSQL=cfg.get('sql','usermapsql')
+			except:
+				pass
+
+			try:
+				self._SMIMEPUBLICKEYSQL=cfg.get('sql','publickeysql')
+			except:
+				pass
+
+			try:
+				self._SMIMEPRIVATEKEYSQL=cfg.get('sql','privatekeysql')
 			except:
 				pass
 
@@ -188,6 +308,24 @@ class _sql_backend(_base_storage):
 			except:
 				pass
 
+			try:
+				self._USE_SQLUSERMAP=cfg.getboolean('sql','use_sqlusermap')
+			except:
+				pass
+
+			try:
+				self._USE_SQLENCRYPTIONMAP=cfg.getboolean('sql',
+														'use_sqlencryptionmap')
+			except:
+				pass
+
+			try:
+				self._USE_SQLSMIME=cfg.getboolean('sql',
+														'use_sqlsmime')
+			except:
+				pass
+
+		self._textbackend.read_configfile(cfg)
 		self.connect()
 
 	########
@@ -196,6 +334,9 @@ class _sql_backend(_base_storage):
  
 	@_dbg
 	def usermap(self, user):
+
+		if not self._USE_SQLUSERMAP:
+			return self._textbackend.usermap(user)
 
 		if self._cursor== None:
 			raise KeyError(user)
@@ -223,6 +364,9 @@ class _sql_backend(_base_storage):
 	@_dbg
 	def encryptionmap(self, user):
 
+		if not self._USE_SQLENCRYPTIONMAP:
+			return self._textbackend.encryptionmap(user)
+			
 		if self._cursor== None:
 			raise KeyError(user)
 			
@@ -244,6 +388,117 @@ class _sql_backend(_base_storage):
 														r[0]))
 		return r[0].split(":")
 
+	##########
+	#smimeuser
+	##########
+ 
+	@_dbg
+	def smimeuser(self, user):
+
+		if not self._USE_SQLSMIME:
+			return self._textbackend.smimuser(user)
+			
+		if self._cursor== None:
+			raise KeyError(user)
+			
+		try:
+			self._cursor.execute(self._SMIMEUSERSQL.replace("?",
+														self.placeholder),
+														(user,))
+		except:
+			self.log_traceback()
+			raise
+			
+		r=self._cursor.fetchone()
+		if r==None:
+			raise KeyError(user)
+
+		cipher=self.parent._SMIMECIPHER
+
+		if len(user)>1:
+			tmpcipher=r[1].upper().strip()
+
+			if len(tmpcipher)>0 and tmpcipher!="DEFAULT":
+				cipher=tmpcipher
+
+		upath=os.path.join(self.parent._SMIMEKEYHOME,r[0])
+		publicpath=os.path.expanduser(upath)
+		
+		result= [publicpath,cipher]
+		self.debug("sqlbackend %s smimuser %s=>%s"%(self._backend,
+														user,
+														result))
+		return result
+		
+	#################
+	#smimepublic_keys
+	#################
+ 
+	@_dbg
+	def smimepublic_keys(self):
+
+		if not self._USE_SQLSMIME:
+			return self._textbackend.smimepublic_keys()
+		rows=list()
+
+		try:
+			self._cursor.execute(self._SMIMEPUBLICKEYSQL)
+		except:
+			self.log_traceback()
+			raise
+			
+		for r in self._cursor:
+
+			user=r[0]
+			publickey=r[1]
+			cipher=self.parent._SMIMECIPHER
+			tmpcipher=r[2].upper().strip()
+
+			if len(tmpcipher)>0 and tmpcipher!="DEFAULT":
+				cipher=tmpcipher
+
+		
+			result= [user,publickey,cipher]
+
+			if publickey!=None:
+				rows.append(result)
+
+		return rows
+		
+	##################
+	#smimeprivate_keys
+	##################
+ 
+	@_dbg
+	def smimeprivate_keys(self):
+
+		if not self._USE_SQLSMIME:
+			return self._textbackend.smimepublic_keys()
+		rows=list()
+
+		try:
+			self._cursor.execute(self._SMIMEPRIVATEKEYSQL)
+		except:
+			self.log_traceback()
+			raise
+			
+		for r in self._cursor:
+
+			user=r[0]
+			privatekey=r[1]
+			cipher=self.parent._SMIMECIPHER
+			tmpcipher=r[2].upper().strip()
+
+			if len(tmpcipher)>0 and tmpcipher!="DEFAULT":
+				cipher=tmpcipher
+
+		
+			result= [user,privatekey,cipher]
+
+			if privatekey!=None:
+				rows.append(result)
+
+		return rows
 		
 #################
 #_SQLITE3_BACKEND
@@ -278,7 +533,6 @@ class _SQLITE3_BACKEND(_sql_backend):
 ###############
 
 class _MYSQL_BACKEND(_sql_backend):
-
 
 	#####
 	#init

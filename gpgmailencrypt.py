@@ -236,7 +236,6 @@ class gme:
 
 		#Internal variables
 		self._logfile=None
-		self._smimeuser = dict()
 		self._tempfiles = list()
 		self._pdfpasswords=dict()
 		self._mailcount=0
@@ -838,39 +837,8 @@ class gme:
 							selector=self._DKIMSELECTOR,
 							domain=self._DKIMDOMAIN,
 							privkey=self._DKIMKEY)
-		s=self.smime_factory()
-		self._smimeuser.update(s.create_keylist(self._SMIMEKEYHOME))
-
-		if _cfg.has_section('smimeuser'):
-			self._smimeuser = dict()
-			privatepath=None
-
-			for (name, value) in _cfg.items('smimeuser'):
-				user=value.split(",")
-				cipher=self._SMIMECIPHER
-
-				if len(user)>1:
-					tmpcipher=user[1].upper().strip()
-
-					if len(tmpcipher)>0 and tmpcipher!="DEFAULT":
-						cipher=tmpcipher
-
-				if len(user)>2:
-					upath=os.path.join(self._SMIMEKEYHOME,user[2])
-					privatepath=os.path.expanduser(upath)
-
-				upath=os.path.join(self._SMIMEKEYHOME,user[0])
-				publicpath=os.path.expanduser(upath)
-
-				if os.path.isfile(publicpath):
-					self._smimeuser[name] = [publicpath,cipher,privatepath]
 
 		self._set_logmode()
-
-		if self._DEBUG:
-
-			for u in self._smimeuser:
-				self.debug("SMimeuser: '%s %s'"%(u,self._smimeuser[u]))
 
 		if self._AUTHENTICATE:
 			self._read_smtpcredentials(self._SMTP_CREDENTIAL)

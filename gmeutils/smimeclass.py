@@ -42,12 +42,8 @@ class _SMIME(_gmechild):
 	@_dbg
 	def public_keys(self):
 		"returns a list of all available public keys"
-		result=list()
 
-		for user in self.parent._smimeuser:
-			result.append(user)
-
-		return result
+		return self.parent._backend.smimepublic_keys()
  
 	#############
 	#private_keys
@@ -56,14 +52,7 @@ class _SMIME(_gmechild):
 	@_dbg
 	def private_keys(self):
 		"returns a list of all available private keys"
-		result=list()
-
-		for user in self.parent._smimeuser:
-
-			if self.parent._smimeuser[user][2]!=None:
-				result.append(user)
-
-		return result
+		return self.parent._backend.smimeprivate_keys()
  
 	#############
 	#set_filename
@@ -125,7 +114,7 @@ class _SMIME(_gmechild):
 			return False
 
 		try:
-			_u=self.parent._smimeuser[key]
+			_u=self.parent._backend.smimeuser(key)
 		except:
 		   self.debug("smime has_public_key, key not found for '%s'"%key)
 		   return False
@@ -197,7 +186,7 @@ class _SMIME(_gmechild):
 	def _command_encrypt_fromfile(  self,
 									sourcefile,
 									binary):
-		_recipient=self.parent._smimeuser[self._recipient]
+		_recipient=self.parent._backend.smimeuser(self._recipient)
 		encrypt="des3" # RFC 3583
 
 		if _recipient[1]=="AES256":
@@ -278,7 +267,7 @@ class _SMIME(_gmechild):
 	def _command_decrypt_fromfile(  self,
 									sourcefile,
 									binary):
-		_recipient=self.parent._smimeuser[self._recipient]
+		_recipient=self.parent._backend.smimeuser(self._recipient)
 		cmd=[self.parent._SMIMECMD, 
 				"smime",
 				"-decrypt", 
