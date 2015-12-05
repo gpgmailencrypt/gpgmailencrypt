@@ -140,13 +140,17 @@ class _TEXT_BACKEND(_base_storage):
 	########
 	#usermap
 	########
- 
+
 	@_dbg
 	def usermap(self, user):
+		exception=False
 
 		try:
 			to_addr=self._addressmap[user]
 		except:
+			exception=True
+
+		if exception:
 			raise KeyError(user)
 
 		self.debug("textbackend usermap %s=>%s"%(user,to_addr))
@@ -175,6 +179,7 @@ class _TEXT_BACKEND(_base_storage):
 	@_dbg
 	def smimeuser(self, user):
 		self.debug("textbackend smimeuser check ",user)
+
 		try:
 			self.debug("smimeuser %s"%user)
 			smime=self._smimeuser[user]
