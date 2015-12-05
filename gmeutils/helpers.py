@@ -615,3 +615,13 @@ def make_boundary(self,text=None):
 		counter += 1
 	return b
 
+###############
+#clean_filename
+###############
+
+def clean_filename(name):
+	"removes whitespaces and some special characters"
+	if name==None:
+		return None
+	return re.sub("[\s:\"*?!<>|#{}\[\]'`´\$§%&^°¬²³¹¼½+\(\)~]","_",name)
+

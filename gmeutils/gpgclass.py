@@ -7,6 +7,8 @@ import os
 import re
 import subprocess
 from	.child 			import _gmechild 
+from   	.helpers 		import *
+
 from	.version		import *
 from	._dbg 			import _dbg
 ###########
@@ -26,6 +28,9 @@ class _GPG(_gmechild):
 		self._filename=''	
 		self.count=0
 		self.debug("_GPG.__init__")
+		self._localGPGkeys=list()
+		self._local_from_user=None
+		self._local_gpg_dir=""
 		self.set_recipient(None)
 
 		if isinstance(keyhome,str):
@@ -37,6 +42,18 @@ class _GPG(_gmechild):
 
 		self.debug("_GPG.__init__ end")
 
+
+	##############
+	#set_from_user
+	##############
+	
+	@_dbg
+	def set_from_user(self, user):
+		user=email.utils.parseaddr(user)[1].lower()
+
+		if self._local_from_user!= user:
+			self._get_public_keys_from(from_user=user)
+			
 	#############
 	#_set_counter
 	#############
@@ -136,7 +153,10 @@ class _GPG(_gmechild):
 			self.debug("has_public_key, key not of type str")
 			return False
 
-		if key in self.parent._GPGkeys:	
+		if key in self._localGPGkeys:	
+			self.debug("has_publickey, key %s found in _localGPGkeys"%key)
+			return True
+		elif key in self.parent._GPGkeys:	
 			return True
 		else:
 			self.debug("has_publickey, key not in _GPGkeys")
@@ -148,13 +168,36 @@ class _GPG(_gmechild):
 	#################
 
 	@_dbg
-	def _get_public_keys( self ):
+	def _get_public_keys( self):
+		self._get_public_keys_from(from_user=None)
+		
+	######################
+	#_get_public_keys_from
+	######################
+
+	@_dbg
+	def _get_public_keys_from( self, from_user=None ):
 		self.debug("_GPG._get_public_keys")
-		self.parent._GPGkeys = list()
+		
+		if from_user==None:
+			self.parent._GPGkeys = list()
+			keys=self.parent._GPGkeys
+			keyhome=self._keyhome.replace("%user",self._recipient)
+		else:
+			self._localGPGkeys=list()
+			self._local_from_user=from_user
+			self._local_gpg_dir=os.path.join(	self._keyhome,
+												clean_filename(from_user))
+			keys=self._localGPGkeys
+			keyhome=self._local_gpg_dir
+
+			if not os.path.exists(keyhome):
+				os.makedirs(keyhome)
+				self.debug("_GPG.public_keys key homedirectory '%s' created"%
+							keyhome)
+
 		cmd = '%s --homedir %s --list-keys --with-colons' % (
-					self.parent._GPGCMD, 
-					self._keyhome.replace("%user",
-					self._recipient))
+					self.parent._GPGCMD, keyhome)
 		self.debug("_GPG.public_keys command: '%s'"%cmd)
 
 		try:
@@ -191,12 +234,12 @@ class _GPG(_gmechild):
 						email=email.lower()
 
 						if (len(email)>0 
-							and self.parent._GPGkeys.count(email) == 0):
-							self.parent._GPGkeys.append(email)
+						and keys.count(email) == 0):
+							keys.append(email)
 
 		except:
 			self.log("Error opening keyring (Perhaps wrong "
-							"directory '%s'?)"%self._keyhome,"e")
+							"directory '%s'?)"%keyhome,"e")
 			self.log_traceback()
  
 	##################
@@ -324,11 +367,15 @@ class _GPG(_gmechild):
 	def _encryptcommand_fromfile(   self,
 									sourcefile,
 									binary):
+
+		if self._recipient in self._localGPGkeys:	
+			keyhome=self._local_gpg_dir
+		else:
+			keyhome=self._keyhome.replace("%user",self._recipient)
 		cmd=[self.parent._GPGCMD, 
 								"--trust-model", "always", 
 								"-r",self._recipient,
-								"--homedir", 
-								self._keyhome.replace("%user",self._recipient), 
+								"--homedir", keyhome, 
 								"--batch", 
 								"--yes", 
 								"--pgp7", 

@@ -2558,7 +2558,7 @@ class gme:
 	###################
  
 	@_dbg
-	def check_gpgrecipient(self,gaddr):
+	def check_gpgrecipient(self,gaddr, from_addr=None):
 		"""returns True and the effective key-emailaddress if emails 
 		to address 'gaddr' can be GPG encrcrypted"""
 		self.debug("check_gpgrecipient: start '%s'"%gaddr)
@@ -2577,6 +2577,9 @@ class gme:
 		except:
 			self.debug("_addressmap to_addr not found")
 			gpg_to_addr=gaddr
+
+		if maildomain(from_addr) in self._HOMEDOMAINS:
+			gpg.set_from_user(from_addr)
 
 		if gpg.has_public_key(gpg_to_addr):
 
@@ -2598,7 +2601,7 @@ class gme:
 	#####################
  
 	@_dbg
-	def check_smimerecipient(self,saddr):
+	def check_smimerecipient(self,saddr, from_addr=None):
 		"""returns True and the effective key-emailaddress if emails 
 		to address 'saddr' can be SMIME encrcrypted"""
 		self.debug("check_smimerecipient: start '%s'"%saddr)
@@ -2837,6 +2840,7 @@ class gme:
 	def _encrypt_payload(   self,
 							payload,
 							gpguser,
+							from_addr,
 							counter=0 ):
 		htmlheader=""
 		htmlbody=""
@@ -2856,6 +2860,8 @@ class gme:
 		gpg =self.gpg_factory()
 		gpg._set_counter(counter)
 		gpg.set_recipient(gpguser)
+		gpg.set_from_user(from_addr)
+
 		raw_payload = payload.get_payload(decode=not is_text)
 
 		if is_text:
@@ -3043,7 +3049,7 @@ class gme:
 				if (charset==None 
 				or charset.upper()=="ASCII"):
 					message.set_param("charset",charset)		
-				pl=self._encrypt_payload( message ,gpguser)
+				pl=self._encrypt_payload( message ,gpguser,from_addr=from_addr)
 
 				if contenttype=="text/calendar":
 					CAL=MIMEText(   pl.get_payload(decode=True),
@@ -3077,7 +3083,10 @@ class gme:
 				continue
 			else:
 				self.debug("in schleife for _encrypt payload %s" %type(payload))
-				res=self._encrypt_payload( payload,gpguser,counter )
+				res=self._encrypt_payload( 	payload,
+											gpguser,
+											from_addr=from_addr,
+											counter=counter )
 
 				if (res and payload.get_content_type()=="text/calendar" 
 				and payload.get_param(  'attachment', 
@@ -3186,6 +3195,7 @@ class gme:
 
 		gpg =self.gpg_factory()
 		gpg.set_recipient(gpguser)
+		gpg.set_from_user(from_addr)
 		fp=self._new_tempfile()
 		self.debug("encrypt_mime new tempfile %s"%fp.name)
 
@@ -3941,7 +3951,7 @@ class gme:
 			m["Subject"]=subject
 			mailtext=m.as_string()
 			
-		g_r,to_gpg=self.check_gpgrecipient(to_addr)
+		g_r,to_gpg=self.check_gpgrecipient(to_addr,from_addr=from_addr)
 		s_r,to_smime=self.check_smimerecipient(to_addr)
 		method=self.get_preferredencryptionmethod(to_addr)
 		self.debug("GPG encrypt possible %i / %s"%(g_r,to_gpg))
