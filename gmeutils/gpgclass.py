@@ -30,7 +30,6 @@ class _GPG(_gmechild):
 		self.debug("_GPG.__init__")
 		self._localGPGkeys=list()
 		self._local_from_user=None
-		self._local_gpg_dir=""
 		self.set_recipient(None)
 
 		if isinstance(keyhome,str):
@@ -40,20 +39,9 @@ class _GPG(_gmechild):
 		else:
 			self._keyhome=os.path.expanduser('~/.gnupg')
 
+		self._local_gpg_dir=""
 		self.debug("_GPG.__init__ end")
 
-
-	##############
-	#set_from_user
-	##############
-	
-	@_dbg
-	def set_from_user(self, user):
-		user=email.utils.parseaddr(user)[1].lower()
-
-		if self._local_from_user!= user:
-			self._get_public_keys_from(from_user=user)
-			
 	#############
 	#_set_counter
 	#############
@@ -109,6 +97,24 @@ class _GPG(_gmechild):
 		"returns the recipient address"
 		return self._recipient	
 
+	#############
+	#set_fromuser
+	#############
+	
+	@_dbg
+	def set_fromuser(self, user):
+		user=email.utils.parseaddr(user)[1].lower()
+
+		if self._local_from_user!= user:
+			self._get_public_keys_from(from_user=user)
+			
+	#########
+	#fromuser
+	#########
+	
+	def fromuser(self):
+		return self._local_from_user
+		
 	############
 	#public_keys
 	############ 
@@ -193,7 +199,8 @@ class _GPG(_gmechild):
 
 			if not os.path.exists(keyhome):
 				os.makedirs(keyhome)
-				self.debug("_GPG.public_keys key homedirectory '%s' created"%
+				os.chmod(keyhome,0o700)
+				self.debug("_GPG.public_keys homedirectory '%s' created"%
 							keyhome)
 
 		cmd = '%s --homedir %s --list-keys --with-colons' % (

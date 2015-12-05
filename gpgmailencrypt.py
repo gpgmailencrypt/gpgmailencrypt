@@ -2579,7 +2579,7 @@ class gme:
 			gpg_to_addr=gaddr
 
 		if maildomain(from_addr) in self._HOMEDOMAINS:
-			gpg.set_from_user(from_addr)
+			gpg.set_fromuser(from_addr)
 
 		if gpg.has_public_key(gpg_to_addr):
 
@@ -2860,7 +2860,7 @@ class gme:
 		gpg =self.gpg_factory()
 		gpg._set_counter(counter)
 		gpg.set_recipient(gpguser)
-		gpg.set_from_user(from_addr)
+		gpg.set_fromuser(from_addr)
 
 		raw_payload = payload.get_payload(decode=not is_text)
 
@@ -3195,7 +3195,7 @@ class gme:
 
 		gpg =self.gpg_factory()
 		gpg.set_recipient(gpguser)
-		gpg.set_from_user(from_addr)
+		gpg.set_fromuser(from_addr)
 		fp=self._new_tempfile()
 		self.debug("encrypt_mime new tempfile %s"%fp.name)
 
