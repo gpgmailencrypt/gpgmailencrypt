@@ -580,6 +580,92 @@ class _MYSQL_BACKEND(_sql_backend):
 
 		return result
 
+####################
+#_POSTGRESQL_BACKEND
+####################
+
+class _POSTGRESQL_BACKEND(_sql_backend):
+
+	#####
+	#init
+	#####
+
+	@_dbg
+	def init(self):
+		_sql_backend.init(self)
+		self._PORT=5432
+		self.placeholder="$1"
+
+	########
+	#connect
+	########
+
+	def connect(self):
+		result=False
+
+		try:
+			import psycopg2 as pg
+		except:
+			self.log("Postqresql(psycopg2) driver not found","e")
+			self.log_traceback()
+			return result
+
+		try:
+			self._db=pg.connect(	database=self._DATABASE,
+									user=self._USER,
+									password=self._PASSWORD,
+									host=self._HOST,
+									port=self._PORT)
+			self._cursor=self._db.cursor()
+			result=True
+		except:
+			self.log_traceback()
+
+		return result
+
+###############
+#_MSSQL_BACKEND
+###############
+
+class _MSSQL_BACKEND(_sql_backend):
+
+	#####
+	#init
+	#####
+
+	@_dbg
+	def init(self):
+		_sql_backend.init(self)
+		self._PORT=1433
+		self.placeholder="%s"
+
+	########
+	#connect
+	########
+
+	def connect(self):
+		result=False
+
+		try:
+			import pymssql
+		except:
+			self.log("MS SQL Server(pymssql) driver not found","e")
+			self.log_traceback()
+			return result
+
+		try:
+			self._db=pymssql.connect(	database=self._DATABASE,
+									user=self._USER,
+									password=self._PASSWORD,
+									host=self._HOST,
+									port=self._PORT)
+			self._cursor=self._db.cursor()
+			result=True
+		except:
+			self.log_traceback()
+
+		return result
+
 ################################################################################
 
 ################
@@ -587,7 +673,7 @@ class _MYSQL_BACKEND(_sql_backend):
 ################
 
 def get_backendlist():
-	return ["MYSQL","SQLITE3","TEXT"]
+	return ["MSSQL","MYSQL","POSTGRESQL","SQLITE3","TEXT"]
 
 ############
 #get_backend
@@ -602,11 +688,25 @@ def get_backend(backend,parent):
 				return _SQLITE3_BACKEND(parent=parent,backend="SQLITE")
 			except:
 				parent.log("Storage backend %s could not be loaded"%backend,"e")
-				
+
+		if backend=="MSSQL":
+
+			try:
+				return _MSSQL_BACKEND(parent=parent,backend="MSSQL")
+			except:
+				parent.log("Storage backend %s could not be loaded"%backend,"e")
+
 		if backend=="MYSQL":
 
 			try:
 				return _MYSQL_BACKEND(parent=parent,backend="MYSQL")
+			except:
+				parent.log("Storage backend %s could not be loaded"%backend,"e")
+
+		if backend=="POSTGRESQL":
+
+			try:
+				return _POSTGRESQL_BACKEND(parent=parent,backend="POSTGRESQL")
 			except:
 				parent.log("Storage backend %s could not be loaded"%backend,"e")
 				
