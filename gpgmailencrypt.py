@@ -833,10 +833,13 @@ class gme:
 			except:
 				pass
 
-		self._dkim=mydkim(	parent=self,
+		if self._USEDKIM:
+			self._dkim=mydkim(	parent=self,
 							selector=self._DKIMSELECTOR,
 							domain=self._DKIMDOMAIN,
 							privkey=self._DKIMKEY)
+		else:
+			self._dkim=None
 
 		self._set_logmode()
 
@@ -893,8 +896,10 @@ class gme:
 					if _arg=="syslog":
 						self._LOGGING=self.l_syslog
 						self._prepare_syslog()
-					else:
+					elif _arg=="stderr":
 						self._LOGGING=self.l_stderr
+					else:
+						self._LOGGING=self.l_none
 
 		for _opt, _arg in _opts:
 
