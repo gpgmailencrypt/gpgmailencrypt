@@ -59,7 +59,7 @@ def install_dir(fromdir,todir):
 ##############
 
 def _post_install(dir):
-	from subprocess import call
+	import subprocess
 	import pkg_resources
 	_templatepath="/usr/share/gpgmailencrypt"
 
@@ -67,9 +67,17 @@ def _post_install(dir):
 		os.makedirs(_templatepath)
 
 	install_dir(os.path.join(dir,"mailtemplates"),_templatepath)
+	initscript="/etc/init.d/gpgmailencrypt"
+	try:
+		shutil.copyfile(os.path.join(dir,"/misc/gpgmailencrypt.init"),initscript)
+		os.chmod(initscript,0o755)
+	except:
+		pass
 
 	try:
-		shutil.copyfile("%s/misc/gpgmailencrypt.init"%dir,"/etc/init.d/gpgmailencrypt")
+		cmd="gme.py -l none -x > /etc/gpgmailencrypt.conf.example"
+		_result = subprocess.check_output(	cmd, 
+											shell=True)
 	except:
 		pass
 
