@@ -88,34 +88,55 @@ def print_exampleconfig():
 	"#using the sent_address to filter with sieve or the e-mail client")
 	print ("sent_address=SENT".ljust(space)+
 	"#the used address looks like 'sent_address <original@fromaddress>'")
-
-
+	print ("storagebackend=TEXT".ljust(space)+
+	"#valid values are TEXT|MSSQL|MYSQL|SQLITE3|POSTGRESQL")
 	print ("")
 	print ("[sql]")
 	print ("database=gpgmailencrypt".ljust(space)+
-	"#")
+	"#name of database")
 	print ("user=gpgmailencrypt".ljust(space)+
-	"#")
+	"#database user")
 	print ("password=".ljust(space)+
-	"#")
+	"#database password")
 	print ("host=127.0.0.1".ljust(space)+
-	"#")
+	"#sql server")
 	print ("port=3306".ljust(space)+
-	"#")
-	print ("usermapsql".ljust(space)+
-	"#")
-	print ("publickeysql".ljust(space)+
-	"#")
-	print ("privatekeysql".ljust(space)+
-	"#")
-	print ("encryptionmapsql".ljust(space)+
-	"#")
+	"#sql server port")
+	print ("usermapsql=SELECT to_user FROM usermap WHERE user= ?".ljust(space)+
+	"#SQL command that returns one row with the alternatve e-mail address")
+	print ("encryptionmapsql=SELECT encrypt FROM encryptionmap WHERE user= ?")
+	print ("".ljust(space)+
+	"#SQL command that returns one row with the preferred encryption method")
+
+	print ("smimeusersql=SELECT publickey,cipher FROM smimeusers "
+							"WHERE user= ?".ljust(space)+"")
+	print ("".ljust(space)+
+	"#SQL command that returns one row with information about an SMIME user")
+
+	print ("smimepublickeysql=SELECT user,publickey,cipher FROM smimeusers")
+	print ("".ljust(space)+
+	"#SQL command that returns a list with information about all "
+	"SMIME users and their public keys")
+
+	print ("smimeprivatekeysql=SELECT user,privatekey,cipher FROM "
+	"smimeusers WHERE privatekey is not NULL")
+	print("".ljust(space)+
+	"#SQL command that returns a list with information about all "
+	"SMIME users and their private keys")
+
 	print ("use_sqlusermap=True".ljust(space)+
-	"#")
+	"#if True the usermap will be taken from the sql database else it will")
+	print ("".ljust(space)+
+	"#be taken from the config file, section [usermap]")
 	print ("use_sqlencryptionmap=True".ljust(space)+
-	"#")
+	"#if True the encryptionmap will be taken from the sql database else it")
+	print ("".ljust(space)+
+	"#will be taken from the config file, section [encryptionmap]")
+	
 	print ("use_sqlsmime=True".ljust(space)+
-	"#")
+	"#if True the SMIME user definition will be taken from the sql database")
+	print ("".ljust(space)+
+	"#else it will be taken from the config file, section [smimeuser]")
 
 	print ("")
 	print ("[gpg]")
