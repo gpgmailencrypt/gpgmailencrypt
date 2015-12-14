@@ -328,7 +328,7 @@ class gme:
 		self._SA_SPAMLEVEL=6.2
 		self._SA_SPAMSUSPECTLEVEL=3.0
 		self._SPAMMAXSIZE=500000
-		self._SPAMCHANGESUBJECT=True
+		self._SPAMCHANGESUBJECT=False
 		self._SPAMSUBJECT="***SPAM***"
 		self._SPAMSUSPECTSUBJECT="***SPAMSUSPICION***"
 		self._SPAMADDHEADER=True
@@ -340,8 +340,6 @@ class gme:
 		self._USE_SENTADDRESS=False
 		self._backend.init()
 		self._read_configfile()
-
-
 
 	#################
 	#_read_configfile
@@ -360,7 +358,6 @@ class gme:
 			self.log_traceback()
 			return
 
-		
 		if _cfg.has_section('logging'):
 
 			try:
