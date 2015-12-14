@@ -279,17 +279,22 @@ class _sql_backend(_base_storage):
 				pass
 
 			try:
-				self._SMIMEPUBLICKEYSQL=cfg.get('sql','publickeysql')
-			except:
-				pass
-
-			try:
-				self._SMIMEPRIVATEKEYSQL=cfg.get('sql','privatekeysql')
-			except:
-				pass
-
-			try:
 				self._ENCRYPTIONMAPSQL=cfg.get('sql','encryptionmapsql')
+			except:
+				pass
+
+			try:
+				self._SMIMEUSERSQL=cfg.get('sql','smimeusersql')
+			except:
+				pass
+
+			try:
+				self._SMIMEPUBLICKEYSQL=cfg.get('sql','smimepublickeysql')
+			except:
+				pass
+
+			try:
+				self._SMIMEPRIVATEKEYSQL=cfg.get('sql','smimeprivatekeysql')
 			except:
 				pass
 
