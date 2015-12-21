@@ -167,6 +167,7 @@ class _TEXT_BACKEND(_base_storage):
 			self.debug("get_preferred encryptionmap %s"%user)
 			encryption=self._encryptionmap[user]
 		except:
+			self.debug("No encryption map for user '%s' found"%user)
 			raise KeyError(user)
 
 		self.debug("textbackend encryptionmap %s=>%s"%(user,encryption))
@@ -184,7 +185,7 @@ class _TEXT_BACKEND(_base_storage):
 			self.debug("smimeuser %s"%user)
 			smime=self._smimeuser[user]
 		except:
-			self.log_traceback()
+			self.debug("No smime user '%s' found"%user)
 			raise KeyError(user)
 
 		self.debug("textbackend smimeuser %s=>%s"%(user,smime))
@@ -233,7 +234,7 @@ class _sql_backend(_base_storage):
 	@_dbg
 	def init(self):
 		self._DATABASE="gpgmailencrypt"
-		self._USERMAPSQL="SELECT to_user FROM usermap WHERE user= ?"
+		self._USERMAPSQL="select x_gpg from gpgusermap where username=?"
 		self._ENCRYPTIONMAPSQL="SELECT encrypt FROM encryptionmap WHERE user= ?"
 		self._SMIMEUSERSQL=("SELECT publickey,cipher FROM smimeusers "
 							"WHERE user= ?")
@@ -349,9 +350,11 @@ class _sql_backend(_base_storage):
 			return self._textbackend.usermap(user)
 
 		if self._cursor== None:
+			self.log("SQL usermap: self._cursor==None","e")
 			raise KeyError(user)
 			
 		try:
+			self.debug(self._USERMAPSQL.replace("?",user))
 			self._cursor.execute(self._USERMAPSQL.replace("?",
 														self.placeholder),
 														(user,))
@@ -361,9 +364,14 @@ class _sql_backend(_base_storage):
 			
 		r=self._cursor.fetchone()
 
+		try:
+			self._cursor.fetchall()
+		except:
+			pass
+		
 		if r==None:
 			raise KeyError(user)
-		
+			
 		self.debug("sqlbackend %s usermap %s=>%s"%(self._backend,user,r[0]))
 		return r[0]
 
@@ -389,6 +397,11 @@ class _sql_backend(_base_storage):
 			raise
 			
 		r=self._cursor.fetchone()
+
+		try:
+			self._cursor.fetchall()
+		except:
+			pass
 
 		if r==None:
 			raise KeyError(user)
@@ -420,6 +433,12 @@ class _sql_backend(_base_storage):
 			raise
 			
 		r=self._cursor.fetchone()
+
+		try:
+			self._cursor.fetchall()
+		except:
+			pass
+		
 		if r==None:
 			raise KeyError(user)
 
