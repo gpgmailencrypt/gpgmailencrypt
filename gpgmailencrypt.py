@@ -3155,8 +3155,13 @@ class gme:
 
 		contenttype="text/plain"
 		contenttransferencoding=None
+		contentdisposition=None
 		contentboundary=None
 		c=newmsg.get("Content-Type")
+		contentdisposition=newmsg.get("Content-Disposition")
+		
+		if contentdisposition!=None:
+			del newmsg["Content-Disposition"]
 
 		if c==None:
 			self.debug("Content-Type not set, set default 'text/plain'.")
@@ -3185,7 +3190,7 @@ class gme:
 			contenttransferencoding=newmsg['Content-Transfer-Encoding']
 		except:
 			self.log("contenttype and/or transerfencoding could not be found")
-			self.og_traceback()
+			self.log_traceback()
 
 		newmsg.set_type("multipart/encrypted")
 		newmsg.set_param("protocol","application/pgp-encrypted")
@@ -3229,7 +3234,7 @@ class gme:
 		and contenttransferencoding!=None 
 		and len(contenttransferencoding)>0):
 			bodymsg["Content-Transfer-Encoding"]=contenttransferencoding
-
+		
 		rawpayload=raw_message.get_payload()
 
 		if isinstance (rawpayload, str):
@@ -3267,6 +3272,9 @@ class gme:
 			if contenttransferencoding !=None:
 				msgheader+=(
 					"Content-Transfer-Encoding: %s\n" %contenttransferencoding)
+
+		if contentdisposition!=None:
+			msgheader+="Content-Disposition: %s\n"%contentdisposition
 
 			body=msgheader+"\n"+body	
 		else:
@@ -3470,6 +3478,8 @@ class gme:
 
 		newmsg.set_type( 'application/pkcs7-mime')
 
+		contentdisposition=newmsg.get("Content-Disposition")
+		
 		if newmsg["Content-Disposition"]:
 			del newmsg["Content-Disposition"]
 
@@ -3544,6 +3554,9 @@ class gme:
 			if contenttransferencoding !=None:
 				msgheader+=("Content-Transfer-Encoding: %s\n" %
 								contenttransferencoding)
+
+		if contentdisposition!=None:
+			msgheader+="Content-Disposition: %s\n"%contentdisposition
 
 			body=msgheader+"\n"+body	
 		else:
@@ -3889,6 +3902,25 @@ class gme:
 			msg['From'] = self._SYSTEMMAILFROM
 			self.send_mails(msg.as_string(),from_addr)
 		
+	#########################
+	#encrypt_unencrypted_mail
+	#########################
+ 
+	@_dbg
+	def send_unencrypted_mail(	self,
+								queue_id,
+								mailtext,
+								message,
+								from_addr,
+								to_addr):
+
+			self.debug(message)
+			self._send_rawmsg(  queue_id,
+								mailtext,
+								message,
+								from_addr,
+								to_addr)
+		
 	####################
 	#encrypt_single_mail
 	####################	
@@ -3933,8 +3965,7 @@ class gme:
 
 		if is_spam!=spamscanners.S_NOSPAM:
 			m="Email is SPAM"
-			self.debug(m)
-			self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
+			self.send_unencrypted_mail(queue_id,mailtext,m,from_addr,to_addr)
 			return
 			
 		_encrypt_subject=self.check_encryptsubject(mailtext)
@@ -3992,12 +4023,11 @@ class gme:
 		and not _prefer_pdf 
 		and not _encrypt_subject):
 			m="Email not encrypted, public key for '%s' not found"%to_addr
-			self.log(m)
 
 			if self._ZIPATTACHMENTS:
 				mailtext=self.zip_attachments(mailtext)
 
-			self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
+			self.send_unencrypted_mail(queue_id,mailtext,m,from_addr,to_addr)
 			return
 
 		if ((   not _prefer_pdf 
@@ -4054,8 +4084,7 @@ class gme:
 							to_addr )
 		else:
 			m="Email could not be encrypted"
-			self.debug(m)
-			self._send_rawmsg(  queue_id,
+			self.send_unencrypted_mail(  queue_id,
 								mailtext,
 								m,
 								from_addr,
