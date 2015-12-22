@@ -3158,6 +3158,7 @@ class gme:
 		contentdisposition=None
 		contentboundary=None
 		c=newmsg.get("Content-Type")
+		f=newmsg.get_filename()
 		contentdisposition=newmsg.get("Content-Disposition")
 		
 		if contentdisposition!=None:
@@ -3192,7 +3193,9 @@ class gme:
 			self.log("contenttype and/or transerfencoding could not be found")
 			self.log_traceback()
 
+		del newmsg["Content-Type"]
 		newmsg.set_type("multipart/encrypted")
+		#newmsg.del_param("name")
 		newmsg.set_param("protocol","application/pgp-encrypted")
 		newmsg.preamble=('This is an OpenPGP/MIME encrypted message'
 						' (RFC 4880 and 3156)')
@@ -3252,20 +3255,25 @@ class gme:
 			_ch=self._find_charset(header)
 			self.debug("Charset:%s"%str(_ch))
 			bdy=""
-
+			fname=""
+			params=[]
 			if contentboundary!=None:
 				bdy='boundary="%s"\n'%contentboundary
+				params.append(bdy)
 
 			if ("text/" in contenttype) and _ch!= None and len(_ch)>0 :
 				charset="charset=\"%s\""%_ch
+				params.append(charset)
 				self.debug("content-type: '%s' "
 								"charset: '%s'"%(contenttype,charset))
 
-			msgheader=('Content-Type: %(ctyp)s; %(charset)s'
-			'\n%(protocol)s%(bdy)s'%{   "bdy":bdy,
-										"ctyp":contenttype,
-										"protocol":protocol,
-										"charset":charset})
+			if f and len(f)>0:
+				n1,n2=encodefilename(f)
+				fname="name=\"%s\""%n2
+				params.append(fname)
+				
+			msgheader=('Content-Type: %(ctyp)s;'
+			'\n %(params)s\n'%{  "ctyp":contenttype, "params":";".join(params)})
 			self.debug("msgheader:	'%s'"%str(msgheader))
 			self.debug("new boundary: '%s'"%str(boundary))
 
@@ -3308,53 +3316,6 @@ class gme:
 		attachment.set_masterboundary(boundary)
 		self._del_tempfile(fp.name)
 		return newmsg
-
-	##############################
-	#get_preferredencryptionmethod
-	##############################	
- 
-	@_dbg
-	def get_preferredencryptionmethod(self,user):
-		"returns the preferenced encryption method for user 'user'"
-		self.debug("get_preferredencryptionmethod :'%s'"%user)
-		method=self._PREFERRED_ENCRYPTION
-		_m=""
-		user=email.utils.parseaddr(user)[1]
-		_u=user
-
-		try:
-			_u=self._backend.usermap(user)
-		except:
-			pass
-
-		try:
-			self.debug("get_preferred encryptionmap %s"%_u)
-			_m=self._backend.encryptionmap(_u)[0].upper()
-		except:
-			pass
-
-		if len(_m)==0:
-			addr=user.split('@')
-
-			if len(addr)==2:
-
-				try:
-					_m=self._backend.encryptionmap("*@%s"%addr[1])[0].upper()
-					self.debug("preferencedencryptionmethod for "
-								"*@%s=%s"%(addr[1],_m))
-				except:
-					self.debug("get_preferredencryptionmethod User"
-							" '%s/%s' not found"%(user,_u))
-					return method
-
-		if _m in ("PGPMIME","PGPINLINE","SMIME","PDF","NONE"):
-			self.debug("get_preferredencryptionmethod User "
-						"%s (=> %s) :'%s'"%(user,_u,_m))
-			return _m
-		else:
-			self.debug("get_preferredencryptionmethod: Method "
-						"'%s' for user '%s' unknown" % (_m,_u))
-			return method
 
 	#################
 	#encrypt_gpg_mail 
@@ -3593,6 +3554,53 @@ class gme:
 
 		self._del_tempfile(fp.name)
 		return newmsg
+
+	##############################
+	#get_preferredencryptionmethod
+	##############################	
+ 
+	@_dbg
+	def get_preferredencryptionmethod(self,user):
+		"returns the preferenced encryption method for user 'user'"
+		self.debug("get_preferredencryptionmethod :'%s'"%user)
+		method=self._PREFERRED_ENCRYPTION
+		_m=""
+		user=email.utils.parseaddr(user)[1]
+		_u=user
+
+		try:
+			_u=self._backend.usermap(user)
+		except:
+			pass
+
+		try:
+			self.debug("get_preferred encryptionmap %s"%_u)
+			_m=self._backend.encryptionmap(_u)[0].upper()
+		except:
+			pass
+
+		if len(_m)==0:
+			addr=user.split('@')
+
+			if len(addr)==2:
+
+				try:
+					_m=self._backend.encryptionmap("*@%s"%addr[1])[0].upper()
+					self.debug("preferencedencryptionmethod for "
+								"*@%s=%s"%(addr[1],_m))
+				except:
+					self.debug("get_preferredencryptionmethod User"
+							" '%s/%s' not found"%(user,_u))
+					return method
+
+		if _m in ("PGPMIME","PGPINLINE","SMIME","PDF","NONE"):
+			self.debug("get_preferredencryptionmethod User "
+						"%s (=> %s) :'%s'"%(user,_u,_m))
+			return _m
+		else:
+			self.debug("get_preferredencryptionmethod: Method "
+						"'%s' for user '%s' unknown" % (_m,_u))
+			return method
 
 	###############
 	#_decode_header
