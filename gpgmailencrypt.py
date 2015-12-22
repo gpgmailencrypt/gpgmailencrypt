@@ -3273,8 +3273,8 @@ class gme:
 				msgheader+=(
 					"Content-Transfer-Encoding: %s\n" %contenttransferencoding)
 
-		if contentdisposition!=None:
-			msgheader+="Content-Disposition: %s\n"%contentdisposition
+			if contentdisposition!=None:
+				msgheader+="Content-Disposition: %s\n"%contentdisposition
 
 			body=msgheader+"\n"+body	
 		else:
@@ -3555,8 +3555,8 @@ class gme:
 				msgheader+=("Content-Transfer-Encoding: %s\n" %
 								contenttransferencoding)
 
-		if contentdisposition!=None:
-			msgheader+="Content-Disposition: %s\n"%contentdisposition
+			if contentdisposition!=None:
+				msgheader+="Content-Disposition: %s\n"%contentdisposition
 
 			body=msgheader+"\n"+body	
 		else:
