@@ -91,6 +91,7 @@ def print_exampleconfig():
 	print ("storagebackend=TEXT".ljust(space)+
 	"#valid values are TEXT|MSSQL|MYSQL|SQLITE3|POSTGRESQL")
 	print ("")
+
 	print ("[sql]")
 	print ("database=gpgmailencrypt".ljust(space)+
 	"#name of database")
@@ -102,7 +103,8 @@ def print_exampleconfig():
 	"#sql server")
 	print ("port=3306".ljust(space)+
 	"#sql server port")
-	print ("usermapsql=SELECT to_user FROM usermap WHERE user= ?".ljust(space)+
+	print ("usermapsql=select x_gpg from gpgusermap where "
+			"username=?".ljust(space)+
 	"#SQL command that returns one row with the alternatve e-mail address")
 	print ("encryptionmapsql=SELECT encrypt FROM encryptionmap WHERE user= ?")
 	print ("".ljust(space)+
@@ -173,6 +175,17 @@ def print_exampleconfig():
 	"#a comma separated list of certificate fingerprints used for certificate ")
 	print ("".ljust(space)+
 	"#pinning, if list is empty, certificate pinning is switched off")
+
+	print ("useserver2 = False".ljust(space)+"#use a separate server for unencrypted emails")
+	print ("host2 = 127.0.0.1".ljust(space)+"#")
+	print ("port2 = 25".ljust(space)+"#")
+	print ("authenticate2 = False".ljust(space)+
+	"#")
+	print ("usesmtps2=False".ljust(space)+
+	"#")
+	print ("smtpcredential2 =/etc/gpgmailencrypt2.cfg".ljust(space)+
+	"#")    
+
 
 	print ("")
 	print ("[encryptionmap]")
