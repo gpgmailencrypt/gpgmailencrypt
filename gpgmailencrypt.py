@@ -271,17 +271,21 @@ class gme:
 		self._LOGGING=self.l_none
 		self._LOGFILE=""
 		self._ADDHEADER=False
-		self._HOST='localhost'
-		self._PORT=25
-		self._SERVERHOST="127.0.0.1"
-		self._SERVERPORT=1025
-		self._AUTHENTICATE=False
-		self._CACERTS=None
+		self._SMTP_HOST='localhost'
+		self._SMTP_PORT=25
 		self._SMTP_CREDENTIAL=""
 		self._SMTP_USER=""
 		self._SMTP_PASSWORD=""
 		self._SMTP_USESMTPS=False
 		self._SMTP_CERTFINGERPRINTS=[]
+		self._SMTP_USESERVER2=False
+		self._SMTP_HOST2='localhost'
+		self._SMTP_PORT2=25
+		self._SMTP_AUTHENTICATE2=False
+		self._SMTP_CREDENTIAL2=""
+		self._SMTP_USESMTPS2=False
+		self._SMTP_AUTHENTICATE=False
+		self._CACERTS=None
 		self._DOMAINS=""
 		self._HOMEDOMAINS=["localhost"]
 		self._CONFIGFILE='/etc/gpgmailencrypt.conf'
@@ -302,6 +306,8 @@ class gme:
 		self._DEBUGEXCLUDETEXT=[]
 		self._LOCALE="EN"
 		self._RUNMODE=self.m_script
+		self._SMTPD_HOST="127.0.0.1"
+		self._SMTPD_PORT=1025
 		self._SMTPD_USE_SMTPS=False
 		self._SMTPD_USE_STARTTLS=False
 		self._SMTPD_USE_AUTH=False
@@ -521,12 +527,12 @@ class gme:
 		if _cfg.has_section('mailserver'):
 
 			try:
-				self._HOST=_cfg.get('mailserver','host')
+				self._SMTP_HOST=_cfg.get('mailserver','host')
 			except:
 				pass
 
 			try:
-				self._PORT=_cfg.getint('mailserver','port')
+				self._SMTP_PORT=_cfg.getint('mailserver','port')
 			except:
 				pass
 
@@ -536,7 +542,7 @@ class gme:
 				pass
 
 			try:
-				self._AUTHENTICATE=_cfg.getboolean('mailserver','authenticate')
+				self._SMTP_AUTHENTICATE=_cfg.getboolean('mailserver','authenticate')
 			except:
 				pass
 
@@ -552,6 +558,51 @@ class gme:
 			except:
 				pass
 
+
+
+
+
+
+
+			try:
+				self._SMTP_USESERVER2=_cfg.getboolean('mailserver','useserver2')
+			except:
+				pass
+
+			try:
+				self._SMTP_HOST2=_cfg.get('mailserver','host2')
+			except:
+				pass
+
+			try:
+				self._SMTP_PORT2=_cfg.getint('mailserver','port2')
+			except:
+				pass
+
+			try:
+				self._SMTP_USESMTPS2=_cfg.getint('mailserver','usetsmtps2')
+			except:
+				pass
+
+			try:
+				self._SMTP_AUTHENTICATE2=_cfg.getboolean('mailserver','authenticate2')
+			except:
+				pass
+
+			try:
+				self._SMTP_CREDENTIAL2=_cfg.get('mailserver','smtpcredential2')
+			except:
+				pass
+
+
+
+
+
+
+
+
+
+
 			try:
 				fingerprints=_cfg.get('mailserver','fingerprints').split(",")
 
@@ -563,12 +614,12 @@ class gme:
 		if _cfg.has_section('daemon'):
 
 			try:
-				self._SERVERHOST=_cfg.get('daemon','host')
+				self._SMTPD_HOST=_cfg.get('daemon','host')
 			except:
 				pass
 
 			try:
-				self._SERVERPORT=_cfg.getint('daemon','port')
+				self._SMTPD_PORT=_cfg.getint('daemon','port')
 			except:
 				pass
 
@@ -840,7 +891,7 @@ class gme:
 
 		self._set_logmode()
 
-		if self._AUTHENTICATE:
+		if self._SMTP_AUTHENTICATE:
 			self._read_smtpcredentials(self._SMTP_CREDENTIAL)
 
 		pdf=self.pdf_factory()
@@ -1021,7 +1072,7 @@ class gme:
 	@_dbg
 	def _read_smtpcredentials(self,pwfile):
 
-		if not self._AUTHENTICATE:
+		if not self._SMTP_AUTHENTICATE:
 			return
 
 		try:
@@ -1276,7 +1327,7 @@ class gme:
 			f=open(os.path.expanduser(pwfile))
 		except:
 			self.log("read_pdfpasswordfile: passwords could not be read","e")
-			self.log_traceback()
+			#self.log_traceback()
 			return
 
 		txt=f.read()
@@ -1390,7 +1441,7 @@ class gme:
 	@_dbg
 	def _read_smtpcredentials(self,pwfile):
 
-		if not self._AUTHENTICATE:
+		if not self._SMTP_AUTHENTICATE:
 			return
 
 		try:
@@ -1765,12 +1816,12 @@ class gme:
 			try:
 
 				if self._SMTP_USESMTPS:
-					smtp = smtplib.SMTP_SSL(self._HOST, 
-											self._PORT,
+					smtp = smtplib.SMTP_SSL(self._SMTP_HOST, 
+											self._SMTP_PORT,
 											context=sslcontext)
 					usessl=True
 				else:
-					smtp = smtplib.SMTP(self._HOST, self._PORT)
+					smtp = smtplib.SMTP(self._SMTP_HOST, self._SMTP_PORT)
 
 				smtp.ehlo_or_helo_if_needed()
 
@@ -1800,7 +1851,7 @@ class gme:
 						else:
 							self.debug("CERT fingerprint ok.")
 					
-				if self._AUTHENTICATE and smtp.has_extn("auth"):
+				if self._SMTP_AUTHENTICATE and smtp.has_extn("auth"):
 					self.debug("_send_textmsg: authenticate at smtp server"
 					" with user %s"%self._SMTP_USER)
 
@@ -2053,7 +2104,7 @@ class gme:
 				m=f.read()
 				f.close()
 				mailtext=m.decode("UTF-8",unicodeerror)
-				self.encrypt_single_mail(-1,mailtext,mail[1],mail[2])	
+				self._encrypt_single_mail(-1,mailtext,mail[1],mail[2])	
 				del self._email_queue[qid]
 			except:
 				self.log("mail couldn't be removed from email queue")
@@ -2513,9 +2564,9 @@ class gme:
 					password=""):
 		"""sets the smtp setting for sending emails (don't mix it up with 
 		the daemon settings where the server listens)"""
-		self._HOST=host
-		self._PORT=port
-		self._AUTHENTICATE=auth
+		self._SMTP_HOST=host
+		self._SMTP_PORT=port
+		self._SMTP_AUTHENTICATE=auth
 		self._SMTP_USER=user
 		self._SMTP_PASSWORD=password
 
@@ -2533,8 +2584,8 @@ class gme:
 					sslcertfile=None,
 					passwordfile=None):
 		"sets the smtpd daemon settings"
-		self._SERVERHOST=host
-		self._SERVERPORT=port
+		self._SMTPD_HOST=host
+		self._SMTPD_PORT=port
 		self._SMTPD_USE_SMTPS=smtps
 		self._SMTPD_USE_AUTH=auth
 
@@ -3929,12 +3980,12 @@ class gme:
 								from_addr,
 								to_addr)
 		
-	####################
-	#encrypt_single_mail
-	####################	
+	#####################
+	#_encrypt_single_mail
+	#####################	
  
 	@_dbg
-	def encrypt_single_mail(	self,
+	def _encrypt_single_mail(	self,
 								queue_id,
 								mailtext,
 								from_addr,
@@ -4247,7 +4298,7 @@ class gme:
 				if self._RUNMODE==self.m_daemon:
 					self._queue_id+=1
 
-				self.encrypt_single_mail(   mailid,
+				self._encrypt_single_mail(   mailid,
 											raw_message.as_string(),
 											from_addr,
 											to_addr,
@@ -4362,8 +4413,8 @@ class gme:
 		_deferredlisthandler()
 		self.log("gpgmailencrypt %s starts as daemon on %s:%s"%(
 					VERSION,
-					self._SERVERHOST,
-					self._SERVERPORT) )
+					self._SMTPD_HOST,
+					self._SMTPD_PORT) )
 
 		if self._SMTPD_USE_AUTH:
 			self._read_smtpdpasswordfile(self._SMTPD_PASSWORDFILE)
@@ -4371,7 +4422,7 @@ class gme:
 		try:
 			server = _gpgmailencryptserver(	
 						  self,
-						  (self._SERVERHOST, self._SERVERPORT),
+						  (self._SMTPD_HOST, self._SMTPD_PORT),
 						  use_auth=self._SMTPD_USE_AUTH,
 						  authenticate_function=file_auth,
 						  write_smtpdpasswordfile=self.write_smtpdpasswordfile,
@@ -4492,9 +4543,9 @@ class gme:
 			f=open(pwfile,"w")
 
 			if not fileexists:
-				os.chmod(self._SMTPD_PASSWORDFILE,0o600)
 				self.debug("new pwfile chmod")
 				f=open(self._SMTPD_PASSWORDFILE,"w")
+				os.chmod(self._SMTPD_PASSWORDFILE,0o600)
 
 		except:
 			self.log("_gpgmailencryptserver: Config file could not be written",
@@ -4508,7 +4559,8 @@ class gme:
 				password=self._smtpd_passwords[user]
 				f.write(("%s=%s\n"%(user,password)))
 			except:
-				self.log_traceback()
+				#self.log_traceback()
+				pass
 
 		f.close()
 
