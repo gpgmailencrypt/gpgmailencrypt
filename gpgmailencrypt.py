@@ -274,6 +274,7 @@ class gme:
 		self._SMTP_HOST='localhost'
 		self._SMTP_PORT=25
 		self._SMTP_CREDENTIAL=""
+		self._SMTP_AUTHENTICATE=False
 		self._SMTP_USER=""
 		self._SMTP_PASSWORD=""
 		self._SMTP_USESMTPS=False
@@ -282,9 +283,10 @@ class gme:
 		self._SMTP_HOST2='localhost'
 		self._SMTP_PORT2=25
 		self._SMTP_AUTHENTICATE2=False
+		self._SMTP_USER2=""
+		self._SMTP_PASSWORD2=""
 		self._SMTP_CREDENTIAL2=""
 		self._SMTP_USESMTPS2=False
-		self._SMTP_AUTHENTICATE=False
 		self._CACERTS=None
 		self._DOMAINS=""
 		self._HOMEDOMAINS=["localhost"]
@@ -542,7 +544,8 @@ class gme:
 				pass
 
 			try:
-				self._SMTP_AUTHENTICATE=_cfg.getboolean('mailserver','authenticate')
+				self._SMTP_AUTHENTICATE=_cfg.getboolean('mailserver',
+														'authenticate')
 			except:
 				pass
 
@@ -557,12 +560,6 @@ class gme:
 					self._CACERTS=None
 			except:
 				pass
-
-
-
-
-
-
 
 			try:
 				self._SMTP_USESERVER2=_cfg.getboolean('mailserver','useserver2')
@@ -585,7 +582,8 @@ class gme:
 				pass
 
 			try:
-				self._SMTP_AUTHENTICATE2=_cfg.getboolean('mailserver','authenticate2')
+				self._SMTP_AUTHENTICATE2=_cfg.getboolean('mailserver',
+														'authenticate2')
 			except:
 				pass
 
@@ -593,15 +591,6 @@ class gme:
 				self._SMTP_CREDENTIAL2=_cfg.get('mailserver','smtpcredential2')
 			except:
 				pass
-
-
-
-
-
-
-
-
-
 
 			try:
 				fingerprints=_cfg.get('mailserver','fingerprints').split(",")
@@ -816,7 +805,8 @@ class gme:
 				pass
 
 			try:
-				self._SA_SPAMSUSPECTLEVEL=_cfg.getfloat('spam','sa_spamsuspectlevel')
+				self._SA_SPAMSUSPECTLEVEL=_cfg.getfloat('spam',
+														'sa_spamsuspectlevel')
 			except:
 				pass
 
@@ -892,7 +882,12 @@ class gme:
 		self._set_logmode()
 
 		if self._SMTP_AUTHENTICATE:
-			self._read_smtpcredentials(self._SMTP_CREDENTIAL)
+			self._SMTP_USER,self._SMTP_PASSWORD=self._read_smtpcredentials(
+													self._SMTP_CREDENTIAL)
+
+		if self._SMTP_AUTHENTICATE2:
+			self._SMTP_USER2,self._SMTP_PASSWORD2=self._read_smtpcredentials(
+													self._SMTP_CREDENTIAL2)
 
 		pdf=self.pdf_factory()
 		self._use_pdf=pdf.is_available()
@@ -1073,7 +1068,7 @@ class gme:
 	def _read_smtpcredentials(self,pwfile):
 
 		if not self._SMTP_AUTHENTICATE:
-			return
+			return "",""
 
 		try:
 			f=open(pwfile)
@@ -1085,18 +1080,21 @@ class gme:
 		txt=f.read()
 		f.close()
 		c=0
+		_USER=""
+		_PASSWORD=""
 
 		for l in txt.splitlines():
 
 			try:
 				name,passwd=l.split("=",1)
-				self._SMTP_USER=name.strip()
-				self._SMTP_PASSWORD=passwd.strip()
+				_USER=name.strip()
+				_PASSWORD=passwd.strip()
 				c+=1
 			except:
 				pass
 
 		self.debug("_read_smtpcredentials END read lines: %i"%c)
+		return _USER,_PASSWORD
 
 	####
 	#log
@@ -1434,38 +1432,6 @@ class gme:
 			self._LOGGING=self.l_syslog
 			syslog.openlog("gpgmailencrypt",syslog.LOG_PID,syslog.LOG_MAIL)
 
-	######################
-	#_read_smtpcredentials
-	######################	
- 
-	@_dbg
-	def _read_smtpcredentials(self,pwfile):
-
-		if not self._SMTP_AUTHENTICATE:
-			return
-
-		try:
-			f=open(pwfile)
-		except:
-			self.log("_gpgmailencryptserver: Config file could not be read","e")
-			self.log_traceback()
-			exit(5)
-
-		txt=f.read()
-		f.close()
-		c=0
-
-		for l in txt.splitlines():
-
-			try:
-				name,passwd=l.split("=",1)
-				self._SMTP_USER=name.strip()
-				self._SMTP_PASSWORD=passwd.strip()
-				c+=1
-			except:
-				pass
-
-		self.debug("_read_smtpcredentials END read lines: %i"%c)
 
 	########################
 	#_remove_mail_from_queue
@@ -1743,7 +1709,8 @@ class gme:
 						mailtext,
 						msg,
 						from_addr, 
-						to_addr):
+						to_addr,
+						use_server2=False):
 		try:
 			message = email.message_from_string( mailtext )
 
@@ -1754,7 +1721,11 @@ class gme:
 		except:
 			self.log("_send_rawmsg: exception _send_textmsg")
 			self.log_traceback()
-			self._send_textmsg(m_id,mailtext,from_addr,to_addr)
+			self._send_textmsg(	m_id,
+								mailtext,
+								from_addr,
+								to_addr,
+								use_server2=use_server2)
 
 	##########
 	#_send_msg
@@ -1787,13 +1758,13 @@ class gme:
 						message, 
 						from_addr,
 						to_addr,
-						store_deferred=True):
+						store_deferred=True,
+						use_server2=False):
 		self.debug("_send_textmsg output %i"%self._OUTPUT)
 		gaddr=email.utils.parseaddr(from_addr)[1]
 		addr=gaddr.split('@')
 		domain=''
 		usessl=False
-
 		if len(addr)==2:
 			domain = addr[1]
 
@@ -1808,6 +1779,21 @@ class gme:
 
 			self.debug("Sending email to: <%s>" % to_addr)
 
+			if use_server2:
+				_HOST=self._SMTP_HOST2
+				_PORT=self._SMTP_PORT2
+				_USESMTPS=self._SMTP_USESMTPS2
+				_AUTHENTICATE=self._SMTP_AUTHENTICATE2
+				_USER=self._SMTP_USER2
+				_PASSWORD=self._SMTP_PASSWORD2
+			else:
+				_HOST=self._SMTP_HOST
+				_PORT=self._SMTP_PORT
+				_USESMTPS=self._SMTP_USESMTPS
+				_AUTHENTICATE=self._SMTP_AUTHENTICATE
+				_USER=self._SMTP_USER
+				_PASSWORD=self._SMTP_PASSWORD
+
 			if self._CACERTS==None:
 				sslcontext=None
 			else:
@@ -1815,13 +1801,13 @@ class gme:
 
 			try:
 
-				if self._SMTP_USESMTPS:
-					smtp = smtplib.SMTP_SSL(self._SMTP_HOST, 
-											self._SMTP_PORT,
+				if _USESMTPS:
+					smtp = smtplib.SMTP_SSL(_HOST, 
+											_PORT,
 											context=sslcontext)
 					usessl=True
 				else:
-					smtp = smtplib.SMTP(self._SMTP_HOST, self._SMTP_PORT)
+					smtp = smtplib.SMTP(_HOST, _PORT)
 
 				smtp.ehlo_or_helo_if_needed()
 
@@ -1851,12 +1837,12 @@ class gme:
 						else:
 							self.debug("CERT fingerprint ok.")
 					
-				if self._SMTP_AUTHENTICATE and smtp.has_extn("auth"):
+				if _AUTHENTICATE and smtp.has_extn("auth"):
 					self.debug("_send_textmsg: authenticate at smtp server"
-					" with user %s"%self._SMTP_USER)
+					" with user %s"%_USER)
 
 					try:
-						smtp.login(self._SMTP_USER,self._SMTP_PASSWORD)
+						smtp.login(_USER,_PASSWORD)
 					except smtplib.SMTPAuthenticationError:
 						self.log("Could not send email, could not "
 								 "authenticate","e")
@@ -3966,7 +3952,7 @@ class gme:
 	#########################
  
 	@_dbg
-	def send_unencrypted_mail(	self,
+	def _send_unencrypted_mail(	self,
 								queue_id,
 								mailtext,
 								message,
@@ -3978,7 +3964,8 @@ class gme:
 								mailtext,
 								message,
 								from_addr,
-								to_addr)
+								to_addr,
+								self._SMTP_USERSERVER2)
 		
 	#####################
 	#_encrypt_single_mail
@@ -4024,7 +4011,7 @@ class gme:
 
 		if is_spam!=spamscanners.S_NOSPAM:
 			m="Email is SPAM"
-			self.send_unencrypted_mail(queue_id,mailtext,m,from_addr,to_addr)
+			self._send_unencrypted_mail(queue_id,mailtext,m,from_addr,to_addr)
 			return
 			
 		_encrypt_subject=self.check_encryptsubject(mailtext)
@@ -4086,7 +4073,7 @@ class gme:
 			if self._ZIPATTACHMENTS:
 				mailtext=self.zip_attachments(mailtext)
 
-			self.send_unencrypted_mail(queue_id,mailtext,m,from_addr,to_addr)
+			self._send_unencrypted_mail(queue_id,mailtext,m,from_addr,to_addr)
 			return
 
 		if ((   not _prefer_pdf 
@@ -4143,7 +4130,7 @@ class gme:
 							to_addr )
 		else:
 			m="Email could not be encrypted"
-			self.send_unencrypted_mail(  queue_id,
+			self._send_unencrypted_mail(  queue_id,
 								mailtext,
 								m,
 								from_addr,
