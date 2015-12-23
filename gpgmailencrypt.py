@@ -279,6 +279,7 @@ class gme:
 		self._SMTP_PASSWORD=""
 		self._SMTP_USESMTPS=False
 		self._SMTP_CERTFINGERPRINTS=[]
+		self._SMTP_CACERTS=None
 		self._SMTP_USESERVER2=False
 		self._SMTP_HOST2='localhost'
 		self._SMTP_PORT2=25
@@ -287,7 +288,7 @@ class gme:
 		self._SMTP_PASSWORD2=""
 		self._SMTP_CREDENTIAL2=""
 		self._SMTP_USESMTPS2=False
-		self._CACERTS=None
+		self._SMTP_CACERTS2=None
 		self._DOMAINS=""
 		self._HOMEDOMAINS=["localhost"]
 		self._CONFIGFILE='/etc/gpgmailencrypt.conf'
@@ -555,9 +556,9 @@ class gme:
 				pass
 
 			try:
-				self._CACERTS=_cfg.get('mailserver','cacerts')
-				if self._CACERTS.upper()=="NONE":
-					self._CACERTS=None
+				self._SMTP_CACERTS=_cfg.get('mailserver','cacerts')
+				if self._SMTP_CACERTS.upper()=="NONE":
+					self._SMTP_CACERTS=None
 			except:
 				pass
 
@@ -589,6 +590,13 @@ class gme:
 
 			try:
 				self._SMTP_CREDENTIAL2=_cfg.get('mailserver','smtpcredential2')
+			except:
+				pass
+
+			try:
+				self._SMTP_CACERTS2=_cfg.get('mailserver','cacerts2')
+				if self._SMTP_CACERTS2.upper()=="NONE":
+					self._SMTP_CACERTS2=None
 			except:
 				pass
 
@@ -1717,7 +1725,7 @@ class gme:
 			if self._ADDHEADER and not self._encryptheader in message and msg:
 				message.add_header(self._encryptheader,msg)
 
-			self._send_msg(m_id,message,from_addr,to_addr)
+			self._send_msg(m_id,message,from_addr,to_addr,use_server2=use_server2)
 		except:
 			self.log("_send_rawmsg: exception _send_textmsg")
 			self.log_traceback()
@@ -1736,17 +1744,26 @@ class gme:
 					m_id,
 					message,
 					from_addr,
-					to_addr ):
+					to_addr ,
+						use_server2=False):
 		self.debug("_send_msg output %i"%self._OUTPUT)
 
 		if isinstance(message,str):
-			self._send_textmsg(m_id,message,from_addr,to_addr)
+			self._send_textmsg(	m_id,
+								message,
+								from_addr,
+								to_addr,
+								use_server2=use_server2)
 		else:
 
 			if self._ADDHEADER and not self._encryptheader in message:
 				message.add_header(self._encryptheader,self._encryptgpgcomment)
 
-			self._send_textmsg(m_id,message.as_string(),from_addr,to_addr)
+			self._send_textmsg(	m_id,
+								message.as_string(),
+								from_addr,
+								to_addr,
+								use_server2=use_server2)
 
 	##############
 	#_send_textmsg
@@ -1786,6 +1803,7 @@ class gme:
 				_AUTHENTICATE=self._SMTP_AUTHENTICATE2
 				_USER=self._SMTP_USER2
 				_PASSWORD=self._SMTP_PASSWORD2
+				_CACERTS=self._SMTP_CACERTS2
 			else:
 				_HOST=self._SMTP_HOST
 				_PORT=self._SMTP_PORT
@@ -1793,11 +1811,12 @@ class gme:
 				_AUTHENTICATE=self._SMTP_AUTHENTICATE
 				_USER=self._SMTP_USER
 				_PASSWORD=self._SMTP_PASSWORD
+				_CACERTS=self._SMTP_CACERTS
 
-			if self._CACERTS==None:
+			if _CACERTS==None:
 				sslcontext=None
 			else:
-				sslcontext=ssl.create_default_context(cafile=self._CACERTS)
+				sslcontext=ssl.create_default_context(cafile=_CACERTS)
 
 			try:
 
@@ -3965,7 +3984,7 @@ class gme:
 								message,
 								from_addr,
 								to_addr,
-								self._SMTP_USERSERVER2)
+								use_server2=self._SMTP_USESERVER2)
 		
 	#####################
 	#_encrypt_single_mail

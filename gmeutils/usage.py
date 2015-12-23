@@ -176,15 +176,18 @@ def print_exampleconfig():
 	print ("".ljust(space)+
 	"#pinning, if list is empty, certificate pinning is switched off")
 
-	print ("useserver2 = False".ljust(space)+"#use a separate server for unencrypted emails")
-	print ("host2 = 127.0.0.1".ljust(space)+"#")
-	print ("port2 = 25".ljust(space)+"#")
+	print ("useserver2 = False".ljust(space)+
+	"#use a separate server for unencrypted emails")
+	print ("host2 = 127.0.0.1".ljust(space)+"#like host, for server2")
+	print ("port2 = 25".ljust(space)+"#like port, for server2")
 	print ("authenticate2 = False".ljust(space)+
-	"#")
+	"#like authenticate, for server2")
 	print ("usesmtps2=False".ljust(space)+
-	"#")
+	"#like usesmtps, for server2")
 	print ("smtpcredential2 =/etc/gpgmailencrypt2.cfg".ljust(space)+
-	"#")    
+	"#like smtpcredential, for server2")    
+	print ("cacerts2=/etc/ssl/ca-certificates.crt".ljust(space)+
+	"#like cacerts, for server2")
 
 
 	print ("")
