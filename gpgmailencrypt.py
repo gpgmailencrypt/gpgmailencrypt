@@ -59,8 +59,6 @@ import shutil
 import signal
 import smtplib
 import ssl
-#import stat
-#import string
 import sys
 import syslog
 import tempfile
@@ -1731,7 +1729,11 @@ class gme:
 			if self._ADDHEADER and not self._encryptheader in message and msg:
 				message.add_header(self._encryptheader,msg)
 
-			self._send_msg(m_id,message,from_addr,to_addr,use_server2=use_server2)
+			self._send_msg(	m_id,
+							message,
+							from_addr,
+							to_addr,
+							use_server2=use_server2)
 		except:
 			self.log("_send_rawmsg: exception _send_textmsg")
 			self.log_traceback()
@@ -3278,7 +3280,8 @@ class gme:
 		if contenttype=="multipart/signed":
 			protocol=" protocol=\"application/pgp-signature\";\r\n"
 
-		msgheader=('Content-Type: %(ctyp)s;\r\n%(protocol)s boundary="%(bdy)s"\r\n'
+		msgheader=('Content-Type: %(ctyp)s;\r\n%(protocol)s '
+					'boundary="%(bdy)s"\r\n'
 			%{  "bdy":contentboundary,
 				"ctyp":contenttype,
 				"protocol":protocol})
@@ -3345,7 +3348,7 @@ class gme:
 
 			if contenttransferencoding !=None:
 				msgheader+=(
-					"Content-Transfer-Encoding: %s\r\n" %contenttransferencoding)
+					"Content-Transfer-Encoding: %s\r\n"%contenttransferencoding)
 
 			if contentdisposition!=None:
 				msgheader+="Content-Disposition: %s\r\n"%contentdisposition
