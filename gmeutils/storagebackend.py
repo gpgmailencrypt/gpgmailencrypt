@@ -234,13 +234,13 @@ class _sql_backend(_base_storage):
 	@_dbg
 	def init(self):
 		self._DATABASE="gpgmailencrypt"
-		self._USERMAPSQL="select x_gpg from gpgusermap where username=?"
+		self._USERMAPSQL="SELECT x_gpg FROM gpgusermap WHERE username=?"
 		self._ENCRYPTIONMAPSQL="SELECT encrypt FROM encryptionmap WHERE user= ?"
 		self._SMIMEUSERSQL=("SELECT publickey,cipher FROM smimeusers "
 							"WHERE user= ?")
 		self._SMIMEPUBLICKEYSQL="SELECT user,publickey,cipher FROM smimeusers"
 		self._SMIMEPRIVATEKEYSQL=("SELECT user,privatekey,cipher FROM "
-									"smimeusers WHERE privatekey is not NULL")
+									"smimeusers WHERE privatekey IS NOT NULL")
 		self._USER="gpgmailencrypt"
 		self._PASSWORD=""
 		self._HOST="127.0.0.1"
@@ -541,6 +541,7 @@ class _SQLITE3_BACKEND(_sql_backend):
 
 	def connect(self):
 		result=False
+
 		try:
 			import sqlite3
 		except:
@@ -579,10 +580,10 @@ class _MYSQL_BACKEND(_sql_backend):
 
 	def connect(self):
 		result=False
+
 		try:
 			import mysql.connector as mysql
 			from mysql.connector import errorcode
-
 		except:
 			self.log("MYSQL (mysql.connector) driver not found","e")
 			self.log_traceback()
@@ -605,6 +606,45 @@ class _MYSQL_BACKEND(_sql_backend):
 			elif err.errno == errorcode.ER_BAD_DB_ERROR:
 				self.log("database %s does not exist"%self._DATABASE,"e")
 
+			self.log_traceback()
+
+		return result
+
+###############
+#_ODBC_BACKEND
+###############
+
+class _ODBC_BACKEND(_sql_backend):
+
+	#####
+	#init
+	#####
+ 
+	@_dbg
+	def init(self):
+		_sql_backend.init(self)
+		self._PORT=0
+		self.placeholder="?"
+		
+	########
+	#connect
+	########
+
+	def connect(self):
+		result=False
+
+		try:
+			import pydodbc as odbc
+		except:
+			self.log("ODBC (pyodbc) driver not found","e")
+			self.log_traceback()
+			return result
+			
+		try:
+			self._db=odbc.connect(database=self._DATABASE)
+			self._cursor=self._db.cursor()
+			result=True
+		except :
 			self.log_traceback()
 
 		return result
@@ -702,7 +742,7 @@ class _MSSQL_BACKEND(_sql_backend):
 ################
 
 def get_backendlist():
-	return ["MSSQL","MYSQL","POSTGRESQL","SQLITE3","TEXT"]
+	return ["MSSQL","MYSQL","ODBC","POSTGRESQL","SQLITE3","TEXT"]
 
 ############
 #get_backend
@@ -718,21 +758,28 @@ def get_backend(backend,parent):
 			except:
 				parent.log("Storage backend %s could not be loaded"%backend,"e")
 
-		if backend=="MSSQL":
+		elif backend=="MSSQL":
 
 			try:
 				return _MSSQL_BACKEND(parent=parent,backend="MSSQL")
 			except:
 				parent.log("Storage backend %s could not be loaded"%backend,"e")
 
-		if backend=="MYSQL":
+		elif backend=="MYSQL":
 
 			try:
 				return _MYSQL_BACKEND(parent=parent,backend="MYSQL")
 			except:
 				parent.log("Storage backend %s could not be loaded"%backend,"e")
 
-		if backend=="POSTGRESQL":
+		elif backend=="ODBC":
+
+			try:
+				return _ODBC_BACKEND(parent=parent,backend="ODBC")
+			except:
+				parent.log("Storage backend %s could not be loaded"%backend,"e")
+
+		elif backend=="POSTGRESQL":
 
 			try:
 				return _POSTGRESQL_BACKEND(parent=parent,backend="POSTGRESQL")
