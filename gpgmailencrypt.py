@@ -2200,7 +2200,7 @@ class gme:
 
 		find=re.search("^Content-Type:.*charset=[-_\.\'\"0-9A-Za-z]+",
 						msg,
-						re.I|re.MULTILINE)
+						re.I|re.MULTILINE|re.S)
 
 		if find==None:
 			return None
@@ -3251,7 +3251,6 @@ class gme:
 
 		del newmsg["Content-Type"]
 		newmsg.set_type("multipart/encrypted")
-		#newmsg.del_param("name")
 		newmsg.set_param("protocol","application/pgp-encrypted")
 		newmsg.preamble=('This is an OpenPGP/MIME encrypted message'
 						' (RFC 4880 and 3156)')
@@ -3314,7 +3313,7 @@ class gme:
 			fname=""
 			params=[]
 			if contentboundary!=None:
-				bdy='boundary="%s"\n'%contentboundary
+				bdy='boundary="%s"'%contentboundary
 				params.append(bdy)
 
 			if ("text/" in contenttype) and _ch!= None and len(_ch)>0 :
@@ -3327,9 +3326,14 @@ class gme:
 				n1,n2=encodefilename(f)
 				fname="name=\"%s\""%n2
 				params.append(fname)
+
+			if len(params)>0:
+				params="\n\t%s\n"%";\n\t".join(params)
+			else:
+				params=""
 				
 			msgheader=('Content-Type: %(ctyp)s;'
-			'\n %(params)s\n'%{  "ctyp":contenttype, "params":";".join(params)})
+			'%(params)s'%{  "ctyp":contenttype, "params":params})
 			self.debug("msgheader:	'%s'"%str(msgheader))
 			self.debug("new boundary: '%s'"%str(boundary))
 
@@ -3494,7 +3498,7 @@ class gme:
 			self.log_traceback()
 
 		newmsg.set_type( 'application/pkcs7-mime')
-
+		f=newmsg.get_filename()
 		contentdisposition=newmsg.get("Content-Disposition")
 		
 		if newmsg["Content-Disposition"]:
@@ -3549,23 +3553,33 @@ class gme:
 			_ch=self._find_charset(header)
 			self.debug("Charset:%s"%str(_ch))
 			bdy=""
+			fname=""
+			params=[]
 
 			if contentboundary!=None:
 				bdy='boundary="%s"\n'%contentboundary
+				params.append(bdy)
 
-			if (("text/" in contenttype) 
-			and _ch!= None 
-			and len(_ch)>0):
+			if (("text/" in contenttype) and _ch!= None and len(_ch)>0):
 				charset="charset=\"%s\""%_ch
+				params.append(charset)
 				self.debug("content-type: '%s' charset: '%s'"%(
 							contenttype,
 							charset))
+			
+			if f and len(f)>0:
+				n1,n2=encodefilename(f)
+				fname="name=\"%s\""%n2
+				params.append(fname)
 
-			msgheader="Content-Type: %(ctyp)s; %(charset)s\n%(protocol)s"
-			"%(bdy)s"%{ "bdy":bdy,
+			if len(params)>0:
+				params="\n\t%s\n"%";\n\t".join(params)
+			else:
+				params=""
+				
+			msgheader="Content-Type: %(ctyp)s;%(params)s"%{ 
 						"ctyp":contenttype,
-						"protocol":protocol,
-						"charset":charset}
+						"params":params}
 			self.debug("msgheader:	'%s'"%str(msgheader))
 
 			if contenttransferencoding !=None:
@@ -3966,9 +3980,9 @@ class gme:
 			msg['From'] = self._SYSTEMMAILFROM
 			self.send_mails(msg.as_string(),from_addr)
 		
-	#########################
-	#encrypt_unencrypted_mail
-	#########################
+	#######################
+	#_send_unencrypted_mail
+	#######################
  
 	@_dbg
 	def _send_unencrypted_mail(	self,
@@ -3978,7 +3992,7 @@ class gme:
 								from_addr,
 								to_addr):
 
-			self.debug(message)
+			self.debug("send_unencrypted: %s"%message)
 			self._send_rawmsg(  queue_id,
 								mailtext,
 								message,
