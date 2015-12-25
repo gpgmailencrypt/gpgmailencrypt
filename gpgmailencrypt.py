@@ -3206,7 +3206,7 @@ class gme:
 			return None
 
 		header,body=splitmsg 
-		header+="\n\n"
+		header+="\r\n\r\n"
 
 		try:
 			newmsg=email.message_from_string( header)
@@ -3311,7 +3311,7 @@ class gme:
 			charset=""
 
 			if contenttype=="multipart/signed":
-				protocol=" protocol=\"application/pgp-signature\";\n"
+				protocol=" protocol=\"application/pgp-signature\";\r\n"
 
 			_ch=self._find_charset(header)
 			self.debug("Charset:%s"%str(_ch))
@@ -3334,7 +3334,7 @@ class gme:
 				params.append(fname)
 
 			if len(params)>0:
-				params="\r\n\t%s\n"%";\r\n\t".join(params)
+				params="\r\n\t%s\r\n"%";\r\n\t".join(params)
 			else:
 				params="\r\n"
 				
@@ -3471,7 +3471,7 @@ class gme:
 			return None
 
 		header,body=splitmsg 
-		header+="\n\n"
+		header+="\r\n\r\n"
 
 		try:
 			newmsg=email.message_from_string( header)
@@ -3554,7 +3554,7 @@ class gme:
 			charset=""
 
 			if contenttype=="multipart/signed":
-				protocol=" protocol=\"application/pgp-signature\";\n"
+				protocol=" protocol=\"application/pgp-signature\";\r\n"
 
 			_ch=self._find_charset(header)
 			self.debug("Charset:%s"%str(_ch))
@@ -3563,7 +3563,7 @@ class gme:
 			params=[]
 
 			if contentboundary!=None:
-				bdy='boundary="%s"\n'%contentboundary
+				bdy='boundary="%s"'%contentboundary
 				params.append(bdy)
 
 			if (("text/" in contenttype) and _ch!= None and len(_ch)>0):
@@ -3579,7 +3579,7 @@ class gme:
 				params.append(fname)
 
 			if len(params)>0:
-				params="\r\n\t%s\n"%";\r\n\t".join(params)
+				params="\r\n\t%s\r\n"%";\r\n\t".join(params)
 			else:
 				params="\r\n"
 				
