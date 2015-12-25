@@ -58,6 +58,46 @@ class _AVAST(_basevirusscanner):
 		
 		return result,information
 
+#####
+#_AVG
+#####
+
+class _AVG(_basevirusscanner):
+
+	def __init__(self,parent):
+		self.cmd=shutil.which("avgscan")
+		_basevirusscanner.__init__(self,parent)
+
+	@_dbg					
+	def has_virus(self,directory):
+		cmd=[self.cmd,"-a",directory]
+		result=False
+		information=[]
+		
+		try:
+			p = subprocess.Popen(   cmd, 
+									stdin=None, 
+									stdout=subprocess.PIPE, 
+									stderr=subprocess.PIPE )
+			p.wait()
+			
+			for line in p.stdout.readlines():
+				_l=line.decode("UTF-8")
+
+				if _l.startswith(chr(27)):
+					found=_l.split("  Virus identified ",1)
+					
+					if len(found)>1:
+						virusinfo=found[1][:-1]
+						filename=os.path.split(found[0])[1]
+						information.append(["AVG",filename,virusinfo])
+						result=True
+
+		except:
+			self.log_traceback()
+		
+		return result,information
+
 #############
 #_BITDEFENDER
 #############
@@ -268,7 +308,7 @@ class _SOPHOS(_basevirusscanner):
 #####################
 
 def get_virusscannerlist():
-	return ["AVAST","BITDEFENDER","CLAMAV","DRWEB","FPROT","SOPHOS"]
+	return ["AVAST","AVG","BITDEFENDER","CLAMAV","DRWEB","FPROT","SOPHOS"]
 
 #################
 #get_virusscanner
@@ -279,6 +319,12 @@ def get_virusscanner(scanner,parent):
 
 	if scanner=="AVAST":
 		s= _AVAST(parent=parent)
+
+		if  s.cmd and len(s.cmd)>0:
+			return s
+
+	if scanner=="AVG":
+		s= _AVG(parent=parent)
 
 		if  s.cmd and len(s.cmd)>0:
 			return s
