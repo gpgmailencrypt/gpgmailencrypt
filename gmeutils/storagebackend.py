@@ -754,7 +754,7 @@ def get_backend(backend,parent):
 		if backend=="SQLITE3":
 
 			try:
-				return _SQLITE3_BACKEND(parent=parent,backend="SQLITE")
+				return _SQLITE3_BACKEND(parent=parent,backend="SQLITE3")
 			except:
 				parent.log("Storage backend %s could not be loaded"%backend,"e")
 
@@ -779,7 +779,7 @@ def get_backend(backend,parent):
 			except:
 				parent.log("Storage backend %s could not be loaded"%backend,"e")
 
-		elif backend=="POSTGRESQL":
+		if backend=="POSTGRESQL":
 
 			try:
 				return _POSTGRESQL_BACKEND(parent=parent,backend="POSTGRESQL")
