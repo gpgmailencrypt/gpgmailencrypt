@@ -1625,6 +1625,7 @@ def get_archivetype(filename,filetype):
 				"tbz2":	"TARBZ2",
 				"tgz":	"TARGZ",
 				"tlz":	"TARLZMA",
+				"ms-tnef":"TNEF",
 				"txz":	"TARXZ",
 				"uzip":	"ZIP",
 				"war":	"ZIP",

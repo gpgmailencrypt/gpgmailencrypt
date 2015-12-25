@@ -1612,7 +1612,11 @@ class gme:
 						filename):
 		maintype,subtype=filetype.lower().split("/")
 		filename, extension = os.path.splitext(filename)
+		f=filename.lower()
 
+		if f in ["winmail.dat","win.dat"]:
+			return False
+			
 		if maintype=="video":
 			return False
 
@@ -1695,9 +1699,11 @@ class gme:
 					"mjpeg","3gp","asx","m4v","rv","swz","rm","m2v","mv4",
 					"xwmv","3ga","mp3","ogg",
 					#Archives
-					"zip","zipx","arj","deb","tgz","bz2","bz","gz","7z","s7z",
-					"ar","xar","cpio","lz","lzh","lha","lzo","lzma","rar","xz",
-					"apk","tgz","tbz2","cab","rpm","jar","z","zoo",
+					"zip","zipx","arj","cpio","dar","deb","tgz","bz2","bz","gz",
+					"7z","s7z","7zip","ar","xar","cpio","kgb","lrz","lz","lzh",
+					"lha","lzo","lzma","rar","xz","apk","tgz","tbz","tbz2",
+					"tlz","txz","cab","rpm","sz","snappy","jar","z",
+					"zoo","zpaq",
 					#Office
 					"docx","xlsx","pptx","ods","odt","odp","ott","odm","oth",
 					"ots","odg","otg","odf","odb","oxt","odg","odc","odi",
