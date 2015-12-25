@@ -3336,7 +3336,7 @@ class gme:
 			if len(params)>0:
 				params="\n\t%s\n"%";\n\t".join(params)
 			else:
-				params=""
+				params="\n"
 				
 			msgheader=('Content-Type: %(ctyp)s;'
 			'%(params)s'%{  "ctyp":contenttype, "params":params})
@@ -3581,7 +3581,7 @@ class gme:
 			if len(params)>0:
 				params="\n\t%s\n"%";\n\t".join(params)
 			else:
-				params=""
+				params="\n"
 				
 			msgheader="Content-Type: %(ctyp)s;%(params)s"%{ 
 						"ctyp":contenttype,
