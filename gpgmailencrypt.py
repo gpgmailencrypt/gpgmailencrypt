@@ -3276,15 +3276,15 @@ class gme:
 		protocol=""
 
 		if contenttype=="multipart/signed":
-			protocol=" protocol=\"application/pgp-signature\";\n"
+			protocol=" protocol=\"application/pgp-signature\";\r\n"
 
-		msgheader=('Content-Type: %(ctyp)s;\n%(protocol)s boundary="%(bdy)s"\n'
+		msgheader=('Content-Type: %(ctyp)s;\r\n%(protocol)s boundary="%(bdy)s"\r\n'
 			%{  "bdy":contentboundary,
 				"ctyp":contenttype,
 				"protocol":protocol})
 
 		if contenttransferencoding !="None":
-			msgheader+=(	"Content-Transfer-Encoding: %s\n"%
+			msgheader+=(	"Content-Transfer-Encoding: %s\r\n"%
 							contenttransferencoding)
 
 		bodymsg=email.message.Message()
@@ -3334,9 +3334,9 @@ class gme:
 				params.append(fname)
 
 			if len(params)>0:
-				params="\n\t%s\n"%";\n\t".join(params)
+				params="\r\n\t%s\n"%";\r\n\t".join(params)
 			else:
-				params="\n"
+				params="\r\n"
 				
 			msgheader=('Content-Type: %(ctyp)s;'
 			'%(params)s'%{  "ctyp":contenttype, "params":params})
@@ -3345,12 +3345,12 @@ class gme:
 
 			if contenttransferencoding !=None:
 				msgheader+=(
-					"Content-Transfer-Encoding: %s\n" %contenttransferencoding)
+					"Content-Transfer-Encoding: %s\r\n" %contenttransferencoding)
 
 			if contentdisposition!=None:
-				msgheader+="Content-Disposition: %s\n"%contentdisposition
+				msgheader+="Content-Disposition: %s\r\n"%contentdisposition
 
-			body=msgheader+"\n"+body	
+			body=msgheader+"\r\n"+body	
 		else:
 			self.debug("Payload==Msg")
 
@@ -3486,7 +3486,7 @@ class gme:
 			m_id="Id:%s "%raw_message["Message-Id"]
 
 		self.log("Encrypting email %s to: %s" % (m_id, to_addr) )
-		res= re.search("boundary=.*\n",mailtext,re.IGNORECASE)
+		res= re.search("boundary=.*\r\n",mailtext,re.IGNORECASE)
 
 		if res:
 			_b=mailtext[res.start():res.end()]
@@ -3579,9 +3579,9 @@ class gme:
 				params.append(fname)
 
 			if len(params)>0:
-				params="\n\t%s\n"%";\n\t".join(params)
+				params="\r\n\t%s\n"%";\r\n\t".join(params)
 			else:
-				params="\n"
+				params="\r\n"
 				
 			msgheader="Content-Type: %(ctyp)s;%(params)s"%{ 
 						"ctyp":contenttype,
@@ -3589,13 +3589,13 @@ class gme:
 			self.debug("msgheader:	'%s'"%str(msgheader))
 
 			if contenttransferencoding !=None:
-				msgheader+=("Content-Transfer-Encoding: %s\n" %
+				msgheader+=("Content-Transfer-Encoding: %s\r\n" %
 								contenttransferencoding)
 
 			if contentdisposition!=None:
-				msgheader+="Content-Disposition: %s\n"%contentdisposition
+				msgheader+="Content-Disposition: %s\r\n"%contentdisposition
 
-			body=msgheader+"\n"+body	
+			body=msgheader+"\r\n"+body	
 		else:
 			self.debug("Payload==Msg")
 
