@@ -779,7 +779,7 @@ class gme:
 				pass
 
 			try:
-				s=_cfg.get('spam','spamscanner').upper().trim()
+				s=_cfg.get('spam','spamscanner').upper().strip()
 				if s in spamscanners.get_spamscannerlist():
 					self._SPAMSCANNER=s
 			except:
@@ -2220,7 +2220,7 @@ class gme:
 		if len(res)<2:
 			return None
 
-		charset=str(res[1]).replace('"','').replace("'","")
+		charset=str(res[1]).replace('"','').replace("'","").strip()
 		self.debug("_find_charset:`%s` from `%s`"%(charset,res))
 		return charset
 
