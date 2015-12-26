@@ -2206,9 +2206,10 @@ class gme:
 		if not isinstance(msg, str):
 			return None
 
-		find=re.search("^Content-Type:.*charset=[-_\.\'\"0-9A-Za-z]+(?<=$)",
-						msg,
-						re.I|re.MULTILINE|re.S)
+		find=re.search(
+			"^Content-Type:.*charset=[-_\.\'\"0-9A-Za-z]+((?<=$)|(?<=;))",
+			msg,
+			re.I|re.MULTILINE|re.S)
 
 		if find==None:
 			return None
