@@ -2206,7 +2206,7 @@ class gme:
 		if not isinstance(msg, str):
 			return None
 
-		find=re.search("^Content-Type:.*charset=[-_\.\'\"0-9A-Za-z]+",
+		find=re.search("^Content-Type:.*charset=[-_\.\'\"0-9A-Za-z]+(?<=$)",
 						msg,
 						re.I|re.MULTILINE|re.S)
 
@@ -2220,6 +2220,7 @@ class gme:
 			return None
 
 		charset=str(res[1]).replace('"','').replace("'","")
+		self.debug("_find_charset:`%s` from `%s`"%(charset,res))
 		return charset
 
 	################
