@@ -30,8 +30,10 @@ class mydkim(_gmechild):
 	def sign_mail(self,mail):
 	
 		origmail=email.message_from_string(mail)
+
 		if "DKIM-Signature" in origmail:
 			del origmail["DKIM-Signature"]
+
 		try:
 			_res=dkim.sign(	mail.encode("UTF-8",unicodeerror),
 						self.selector.encode("UTF-8",unicodeerror),
