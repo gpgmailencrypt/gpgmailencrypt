@@ -185,6 +185,49 @@ try:
 except:
 	_clamavscan_available=False
 
+########
+#_COMODO
+########
+
+class _COMODO(_basevirusscanner):
+
+	def __init__(self,parent):
+		self.cmd=shutil.which("cmdscan")
+		_basevirusscanner.__init__(self,parent)
+
+	@_dbg					
+	def has_virus(self,directory):
+		cmd=[self.cmd,"-v -s",directory]
+		result=False
+		information=[]
+		
+		try:
+			p = subprocess.Popen(   cmd, 
+									stdin=None, 
+									stdout=subprocess.PIPE, 
+									stderr=subprocess.PIPE )
+			p.wait()
+			
+			for line in p.stdout.readlines():
+				_l=line.decode("UTF-8")
+				found=_l.split(" ---> Found Virus, ",1)
+					
+				if len(found)>1:
+					virusinfo=found[1][:-1]
+					v=virusinfo.split(" is ")
+
+					if len(v)>1:
+						virusinfo=v[1]
+						
+					filename=os.path.split(found[0])[1]
+					information.append(["COMODO",filename,virusinfo])
+					result=True
+
+		except:
+			self.log_traceback()
+		
+		return result,information
+
 #######
 #_DRWEB
 #######
@@ -308,7 +351,15 @@ class _SOPHOS(_basevirusscanner):
 #####################
 
 def get_virusscannerlist():
-	return ["AVAST","AVG","BITDEFENDER","CLAMAV","DRWEB","FPROT","SOPHOS"]
+	return 	[	"AVAST",
+				"AVG",
+				"BITDEFENDER",
+				"CLAMAV",
+				"COMODO",
+				"DRWEB",
+				"FPROT",
+				"SOPHOS"
+			]
 
 #################
 #get_virusscanner
@@ -332,6 +383,12 @@ def get_virusscanner(scanner,parent):
 	if scanner=="CLAMAV" and _clamavscan_available:
 		return _CLAMAV(parent=parent)
 	
+	if scanner=="COMODO":
+		s= _COMODO(parent=parent)
+
+		if  s.cmd and len(s.cmd)>0:
+			return s
+
 	if scanner=="BITDEFENDER":
 		s= _BITDEFENDER(parent=parent)
 
