@@ -193,6 +193,10 @@ class _COMODO(_basevirusscanner):
 
 	def __init__(self,parent):
 		self.cmd=shutil.which("cmdscan")
+
+		if self.cmd==None:
+			self.cmd=shutil.which("cmdscan",path="/opt/COMODO")
+
 		_basevirusscanner.__init__(self,parent)
 
 	@_dbg					
@@ -351,7 +355,8 @@ class _SOPHOS(_basevirusscanner):
 #####################
 
 def get_virusscannerlist():
-	return 	[	"AVAST",
+	return 	[
+				"AVAST",
 				"AVG",
 				"BITDEFENDER",
 				"CLAMAV",
