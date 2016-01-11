@@ -4255,12 +4255,19 @@ class gme:
 
 				if spamlevel==spamscanners.S_SPAM:
 					self._count_spam+=1
+					self.log("SPAM from %s to %s" %(
+										from_addr,
+										",".join(recipients)))
 
 				if spamlevel==spamscanners.S_MAYBESPAM:
 					self._count_maybespam+=1
+					self.log("MAYBE SPAM from %s to %s" %(
+										from_addr,
+										",".join(recipients)))
 
 				self.debug("Spamresult: spamlevel %i, score %f"%(spamlevel,
 																score))
+
 				if self._SPAMADDHEADER:
 
 					h="X-Spam-Score"
