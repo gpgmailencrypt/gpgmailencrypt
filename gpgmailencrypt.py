@@ -1609,10 +1609,10 @@ class gme:
 						filetype,
 						filename):
 		maintype,subtype=filetype.lower().split("/")
-		filename, extension = os.path.splitext(filename)
-		f=filename.lower()
+		f, extension = os.path.splitext(filename.lower())
+		extension=extension[1:]
 
-		if f in ["winmail.dat","win.dat"]:
+		if filename in ["winmail.dat","win.dat","signature.asc"]:
 			return False
 			
 		if maintype=="video":
@@ -1683,7 +1683,7 @@ class gme:
 			#Miscellaneous
 			elif subtype in ["epub+zip","vnd.gov.sk.e-form+zip"]:
 				return False
-			extension=extension.lower()[1:]
+			extension=extension[1:]
 
 			#same as above, just over the file extension
 			if subtype=="octet-stream":
