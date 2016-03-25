@@ -4346,7 +4346,9 @@ class gme:
 
 			newfrom="%s <%s>"%(	self._SENTADDRESS,
 					 			email.utils.parseaddr(from_addr)[1])
+
 			if (self._USE_SENTADDRESS and 
+				spamlevel==spamscanners.S_NOSPAM and
 				newfrom not in from_addr and 
 				maildomain(from_addr) in self._HOMEDOMAINS):
 					 del raw_message['From']
