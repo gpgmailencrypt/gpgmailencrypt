@@ -482,12 +482,13 @@ def decodetxt( text,
 	if not encoding:
 		encoding="8bit"
 
-	try:
-		bytetext=text.encode(charset,unicodeerror)
-	except:
-		charset="UTF8"
-		bytetext=text.encode(charset,unicodeerror)
-	
+	if charset!=None:
+		try:
+			"test".encode(charset)
+		except:
+			charset="UTF-8"
+
+	bytetext=text.encode(charset,unicodeerror)
 	result=bytetext
 	cte=encoding.upper()
 

@@ -1523,6 +1523,12 @@ class gme:
 				is_text=m.get_content_maintype()=="text"
 				charset=m.get_param("charset",header="Content-Type")
 
+				if charset!=None:
+					try:
+						"test".encode(charset)
+					except:
+						charset="UTF-8"
+
 				if (charset==None 
 				or charset.upper()=="ASCII" 
 				or len(charset)==0):
@@ -2921,6 +2927,12 @@ class gme:
 			cte="8bit"
 
 		self.debug("_encrypt_payload: charset %s"%charset)
+
+		if charset!=None:
+			try:
+				"test".encode(charset)
+			except:
+				charset="UTF-8"
 
 		if charset==None or charset.upper()=="ASCII" or len(charset)==0:
 			charset="UTF-8"
