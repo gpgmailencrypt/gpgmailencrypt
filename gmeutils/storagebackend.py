@@ -434,7 +434,7 @@ class _sql_backend(_base_storage):
 	def smimeuser(self, user):
 
 		if not self._USE_SQLSMIME:
-			return self._textbackend.smimuser(user)
+			return self._textbackend.smimeuser(user)
 		
 		if not 	self.execute(self._SMIMEUSERSQL,user):
 			return ""
