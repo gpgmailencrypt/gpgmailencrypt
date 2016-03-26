@@ -3129,6 +3129,7 @@ class gme:
 				if (charset==None 
 				or charset.upper()=="ASCII"):
 					message.set_param("charset",charset)		
+
 				pl=self._encrypt_payload( message ,gpguser,from_addr=from_addr)
 
 				if contenttype=="text/calendar":
