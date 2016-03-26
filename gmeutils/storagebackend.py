@@ -353,14 +353,9 @@ class _sql_backend(_base_storage):
 			self.log("SQL usermap: self._cursor==None","e")
 			raise KeyError(user)
 			
-		try:
-			self.debug(self._USERMAPSQL.replace("?",user))
-			self._cursor.execute(self._USERMAPSQL.replace("?",
-														self.placeholder),
-														(user,))
-		except:
-			self.log_traceback()
-			raise
+		self.debug(self._USERMAPSQL.replace("?",user))
+		if not self.execute(self._USERMAPSQL,user):
+			return None
 			
 		r=self._cursor.fetchone()
 
@@ -375,6 +370,33 @@ class _sql_backend(_base_storage):
 		self.debug("sqlbackend %s usermap %s=>%s"%(self._backend,user,r[0]))
 		return r[0]
 
+	########
+	#execute
+	########
+	
+	@_dbg
+	def execute(self, sql,fields=None):
+		
+		if self._cursor== None:
+			self.connect()
+			self.log("Try to reconnect to database server","w")
+
+			if self._cursor== None:
+				raise KeyError(user)
+		
+		try:
+			f=None
+			if fields!=None:
+				f=(fields,)
+			self._cursor.execute(sql.replace("?",self.placeholder),f)
+		except:
+			self.log_traceback()
+			self._cursor=None
+			self._db=None
+			return False
+		
+		return True
+
 	##############
 	#encryptionmap
 	##############
@@ -385,16 +407,8 @@ class _sql_backend(_base_storage):
 		if not self._USE_SQLENCRYPTIONMAP:
 			return self._textbackend.encryptionmap(user)
 			
-		if self._cursor== None:
-			raise KeyError(user)
-			
-		try:
-			self._cursor.execute(self._ENCRYPTIONMAPSQL.replace("?",
-														self.placeholder),
-														(user,))
-		except:
-			self.log_traceback()
-			raise
+		if not	self.execute(self._ENCRYPTIONMAPSQL,user):
+			return None
 			
 		r=self._cursor.fetchone()
 
@@ -421,17 +435,10 @@ class _sql_backend(_base_storage):
 		if not self._USE_SQLSMIME:
 			return self._textbackend.smimuser(user)
 			
-		if self._cursor== None:
-			raise KeyError(user)
-			
-		try:
-			self._cursor.execute(self._SMIMEUSERSQL.replace("?",
-														self.placeholder),
-														(user,))
-		except:
-			self.log_traceback()
-			raise
-			
+		
+		if not 	self.execute(self._SMIMEUSERSQL,user):
+			return None
+						
 		r=self._cursor.fetchone()
 
 		try:
@@ -470,12 +477,9 @@ class _sql_backend(_base_storage):
 			return self._textbackend.smimepublic_keys()
 		rows=list()
 
-		try:
-			self._cursor.execute(self._SMIMEPUBLICKEYSQL)
-		except:
-			self.log_traceback()
-			raise
-			
+		if not 	self.execute(self._SMIMEPUBLICKEYSQL):
+			return rows
+						
 		for r in self._cursor:
 
 			user=r[0]
@@ -505,11 +509,8 @@ class _sql_backend(_base_storage):
 			return self._textbackend.smimepublic_keys()
 		rows=list()
 
-		try:
-			self._cursor.execute(self._SMIMEPRIVATEKEYSQL)
-		except:
-			self.log_traceback()
-			raise
+		if not	self.execute(self._SMIMEPRIVATEKEYSQL):
+			return None
 			
 		for r in self._cursor:
 
