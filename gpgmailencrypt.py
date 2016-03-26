@@ -1331,7 +1331,7 @@ class gme:
 			f=open(os.path.expanduser(pwfile))
 		except:
 			self.log("read_pdfpasswordfile: passwords could not be read","e")
-			#self.log_traceback()
+			self.log_traceback()
 			return
 
 		txt=f.read()
@@ -1891,7 +1891,8 @@ class gme:
 
 				self.debug("smtp.sendmail")
 				message=re.sub(r'(?:\r\n|\n|\r(?!\n))', "\r\n", message)
-				smtp.sendmail( from_addr, to_addr, message.encode("UTF-8") )
+				smtp.sendmail( from_addr, to_addr, message.encode("UTF-8",
+																unicodeerror) )
 				self._remove_mail_from_queue(m_id)
 				return True
 
@@ -3718,10 +3719,10 @@ class gme:
 					if isinstance(m[0],str):
 						result+=m[0]+" "
 					else:
-						result+=m[0].decode("UTF-8")+" "
+						result+=m[0].decode("UTF-8",unicodeerror)+" "
 
 				else:
-					result+=m[0].decode(m[1])+" "
+					result+=m[0].decode(m[1],unicodeerror)+" "
 			except:
 				pass
 
