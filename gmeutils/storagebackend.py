@@ -354,8 +354,9 @@ class _sql_backend(_base_storage):
 			raise KeyError(user)
 			
 		self.debug(self._USERMAPSQL.replace("?",user))
+
 		if not self.execute(self._USERMAPSQL,user):
-			return None
+			return ""
 			
 		r=self._cursor.fetchone()
 
@@ -408,7 +409,7 @@ class _sql_backend(_base_storage):
 			return self._textbackend.encryptionmap(user)
 			
 		if not	self.execute(self._ENCRYPTIONMAPSQL,user):
-			return None
+			return ""
 			
 		r=self._cursor.fetchone()
 
@@ -434,10 +435,9 @@ class _sql_backend(_base_storage):
 
 		if not self._USE_SQLSMIME:
 			return self._textbackend.smimuser(user)
-			
 		
 		if not 	self.execute(self._SMIMEUSERSQL,user):
-			return None
+			return ""
 						
 		r=self._cursor.fetchone()
 
@@ -510,7 +510,7 @@ class _sql_backend(_base_storage):
 		rows=list()
 
 		if not	self.execute(self._SMIMEPRIVATEKEYSQL):
-			return None
+			return rows
 			
 		for r in self._cursor:
 
