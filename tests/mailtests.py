@@ -25,7 +25,7 @@ def send_singlemail(mail):
 		del mail["To"]
 	mail["From"]=TESTFROM
 	mail["To"]=TESTTO[0]
-	g.encrypt_mails(mail.as_string(),TESTTO)
+	g.send_mails(mail.as_string(),TESTTO)
 	#i=input("beenden?")
 	#if i.upper().strip()=="JA":
 	#	exit()
@@ -89,7 +89,7 @@ def servertests():
 #servertests()
 g=gpgmailencrypt.gme()
 
-g.set_debug(True)
+g.set_debug(False)
 
 moduletests()
 print("All testmails via script passed")
