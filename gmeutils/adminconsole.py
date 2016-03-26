@@ -45,7 +45,7 @@ def start_adminconsole(host,port):
 
 			self.smtp.putcmd(cmd,arg)
 			(code, msg) = self.getreply()
-			print(msg.decode("UTF-8"))
+			print(msg.decode("UTF-8",unicodeerror))
 			return (code, msg)
 
 		#########
@@ -89,8 +89,8 @@ def start_adminconsole(host,port):
 										user,
 										password)
 						).encode("UTF-8"))[:-1]
-			code,msg=self._sendcmd("ADMIN",auth.decode("UTF-8"))
-			code,msg=self._sendcmd("AUTH PLAIN",auth.decode("UTF-8"))
+			code,msg=self._sendcmd("ADMIN",auth.decode("UTF-8",unicodeerror))
+			code,msg=self._sendcmd("AUTH PLAIN",auth.decode("UTF-8",unicodeerror))
 
 			if code!=235:
 				print("Authentication failed")

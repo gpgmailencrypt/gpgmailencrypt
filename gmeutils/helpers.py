@@ -559,7 +559,7 @@ def get_certfingerprint(cert):
 	except:
 		return None
 
-	pubkey=bytearray.fromhex(_result[8:-1].decode("UTF-8"))
+	pubkey=bytearray.fromhex(_result[8:-1].decode("UTF-8",unicodeerror))
 	return hashlib.sha512(pubkey).hexdigest()
 
 ###########

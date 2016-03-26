@@ -7,6 +7,7 @@ import shutil
 import subprocess
 from   .child 			import _gmechild 
 from   ._dbg 			import _dbg
+from .version 			import *
 
 ##################
 #_basevirusscanner
@@ -44,7 +45,7 @@ class _AVAST(_basevirusscanner):
 			p.wait()
 			
 			for line in p.stdout.readlines():
-				_l=line.decode("UTF-8")
+				_l=line.decode("UTF-8",unicodeerror)
 
 				if _l.startswith("/"):
 					found=_l.split("\t",1)
@@ -82,7 +83,7 @@ class _AVG(_basevirusscanner):
 			p.wait()
 			
 			for line in p.stdout.readlines():
-				_l=line.decode("UTF-8")
+				_l=line.decode("UTF-8",unicodeerror)
 
 				if _l.startswith(chr(27)):
 					found=_l.split("  Virus identified ",1)
@@ -124,7 +125,7 @@ class _BITDEFENDER(_basevirusscanner):
 			in_virusinfo=False
 
 			for line in p.stdout.readlines():
-				_l=line.decode("UTF-8")
+				_l=line.decode("UTF-8",unicodeerror)
 
 				if not in_virusinfo:
 
@@ -213,7 +214,7 @@ class _COMODO(_basevirusscanner):
 			p.wait()
 			
 			for line in p.stdout.readlines():
-				_l=line.decode("UTF-8")
+				_l=line.decode("UTF-8",unicodeerror)
 				found=_l.split(" ---> Found Virus, ",1)
 					
 				if len(found)>1:
@@ -256,7 +257,7 @@ class _DRWEB(_basevirusscanner):
 			p.wait()
 			
 			for line in p.stdout.readlines():
-				_l=line.decode("UTF-8")
+				_l=line.decode("UTF-8",unicodeerror)
 
 				if _l.startswith("/"):
 					found=_l.split(" infected with ")
@@ -296,7 +297,7 @@ class _FPROT(_basevirusscanner):
 			p.wait()
 			
 			for line in p.stdout.readlines():
-				_l=line.decode("UTF-8")
+				_l=line.decode("UTF-8",unicodeerror)
 
 				if _l.startswith("["):
 					found=(re.search("(?<=\<)(.*)(?=\>)",_l))
@@ -336,7 +337,7 @@ class _SOPHOS(_basevirusscanner):
 			p.wait()
 			
 			for line in p.stdout.readlines():
-				_l=line.decode("UTF-8")
+				_l=line.decode("UTF-8",unicodeerror)
 				virusinfo=_l.split("'")[1]
 				res=_l.split(" ")
 				filename=os.path.split(res[len(res)-1][:-1])[1]

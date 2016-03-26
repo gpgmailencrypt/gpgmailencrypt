@@ -286,7 +286,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 					"UTF-16"]:
 
 			try:
-				encodeddata=data.decode(e)
+				encodeddata=data.decode(e,unicodeerror)
 				break
 			except:
 				pass
