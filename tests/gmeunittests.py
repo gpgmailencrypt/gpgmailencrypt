@@ -828,7 +828,7 @@ class gmetests(unittest.TestCase):
 		with gpgmailencrypt.gme() as gme:
 			gme.set_configfile("./gmetest.conf")
 			self.assertTrue(
-					gme._smimeuser["testaddress@gpgmailencry.pt"][1]=="AES256")
+					gme._backend.smimeuser("testaddress@gpgmailencry.pt")[1]=="AES256")
 			gme.close()
 
 	def test_hasnotsmimekey(self):
