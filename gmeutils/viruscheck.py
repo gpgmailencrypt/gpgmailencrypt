@@ -266,15 +266,22 @@ class _virus_check(_gmechild):
 		
 		for scanner in self.virusscanner:
 			self.debug("Use virus scanner %s ..."%scanner)
-			hasvirus,info=self.virusscanner[scanner].has_virus(directory)
+			try:
+				hasvirus,info=self.virusscanner[scanner].has_virus(directory)
 
-			if hasvirus:	
-				self.debug("_virus_check.has_virus Virus found")
-				result=True
-				description=info
-				break
-			else:
-				self.debug("... %s: no virus found"%scanner)
+				if hasvirus:
+					self.debug("_virus_check.has_virus Virus found")
+					result=True
+					description=info
+					break
+				else:
+					self.debug("... %s: no virus found"%scanner)
+
+			except:
+				self.log("Error while scanning for viruses with scanner %s"
+						%scanner,
+						"e")
+				self.log_traceback()
 
 		try:
 
