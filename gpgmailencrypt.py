@@ -4064,7 +4064,7 @@ class gme:
 				"No virus found, but received the following messages",
 				"w")
 
-				for i in info:
+				for i in virusinfo:
 					self.log("Virusinfo: %s"% i,"w")
 
 		if is_spam!=spamscanners.S_NOSPAM:
