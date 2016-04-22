@@ -348,11 +348,7 @@ class _sql_backend(_base_storage):
 
 		if not self._USE_SQLUSERMAP:
 			return self._textbackend.usermap(user)
-
-		if self._cursor== None:
-			self.log("SQL usermap: self._cursor==None","e")
-			raise KeyError(user)
-			
+		
 		self.debug(self._USERMAPSQL.replace("?",user))
 
 		if not self.execute(self._USERMAPSQL,user):
