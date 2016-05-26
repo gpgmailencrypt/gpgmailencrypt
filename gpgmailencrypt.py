@@ -2214,14 +2214,20 @@ class gme:
 			return None
 
 		find=re.search(
-			"^Content-Type:.*charset=[-_\.\'\"0-9A-Za-z]+((?<=$)|(?<=;))",
+			"^Content-Type:.*(\r)*\n(^\s+.*(\r)*\n)*",
 			msg,
-			re.I|re.MULTILINE|re.S)
+			re.I|re.MULTILINE)
 
 		if find==None:
 			return None
 
-		charset=msg[find.start():find.end()]
+		contenttype=msg[find.start():find.end()]
+		find=re.search(
+					"charset=[-_\.\'\"0-9A-Za-z]+",
+					contenttype,
+					re.I|re.MULTILINE|re.S)
+
+		charset=contenttype[find.start():find.end()]
 		res=charset.split("=")
 
 		if len(res)<2:
