@@ -1384,7 +1384,7 @@ class _ZPAQ(_baseunpacker):
 		self.cmd=shutil.which("zp")
 
 		if self.cmd==None:
-			self.cmd=self.shutil.which("zpaq")
+			self.cmd=shutil.which("zpaq")
 			self.use_zpaqcmd=True
 
 	#################
