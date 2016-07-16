@@ -30,6 +30,7 @@ import email
 import email.message
 import email.mime
 import email.utils 
+from email import header
 from   email.mime.base	  		import MIMEBase
 from   email.mime.multipart 	import MIMEMultipart
 from   email.mime.text	  		import MIMEText
@@ -1541,6 +1542,15 @@ class gme:
 
 				filename = m.get_filename()
 				self.debug("zipping file '%s'"%filename)
+				decfilename=header.decode_header(filename)
+
+				if decfilename and decfilename[0][1]!=None:
+
+					try:
+						filename=decfilename[0][0].decode(decfilename[0][1])
+					except:
+						self.log_traceback()
+					
 				zipFilename = "%s.zip"%filename
 				zipFilenamecD,zipFilenamecT=encodefilename(zipFilename)
 				self.debug("Content-Type=%s"%contenttype)
