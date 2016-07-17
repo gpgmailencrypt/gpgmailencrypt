@@ -516,10 +516,11 @@ class _GPGEncryptedAttachment(email.message.Message,_gmechild):
 
 	def get_filename(self):
 
+		print("\n\nGPGCLASS get_filename\n\n")
 		if self._filename != None:
 			return self._filename
 		else:
-			return email.message.Message.get_filename(self)
+			return decodefilename(email.message.Message.get_filename(self))
 
 	###################
 	#set_masterboundary
@@ -528,22 +529,4 @@ class _GPGEncryptedAttachment(email.message.Message,_gmechild):
 	def set_masterboundary(self,b):
 		self._masterboundary=b
 
-	###############
-	#_write_headers
-	###############
-
-	def _write_headers(self,g):
-		print ("Content-Type: application/pgp-encrypted",file=g._fp)
-		print ("Content-Description: PGP/MIME version identification\r\n"
-				"\r\nVersion: 1\r\n",file=g._fp)
-		print ("--%s"%self._masterboundary,file=g._fp)
-		fname=self.get_filename()
-
-		if fname == None:
-			fname="encrypted.asc"
-
-		print ('Content-Type: application/octet-stream; name="%s"'%fname,
-																file=g._fp)
-		print ('Content-Description: OpenPGP encrypted message',file=g._fp)
-		print ('Content-Disposition: inline; filename="%s"\r\n'%fname,file=g._fp)
 

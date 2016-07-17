@@ -1542,7 +1542,6 @@ class gme:
 
 				filename = m.get_filename()
 				filename=decodefilename(filename)
-				print("\n\nfilename:'%s'\n\n"%filename)
 				self.debug("zipping file '%s'"%filename)
 					
 				zipFilename = "%s.zip"%filename
