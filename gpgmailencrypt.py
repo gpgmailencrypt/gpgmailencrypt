@@ -1541,11 +1541,11 @@ class gme:
 					cte="8bit"
 
 				filename = m.get_filename()
-				filename=decodefilename(filename)
+				filename=decode_filename(filename)
 				self.debug("zipping file '%s'"%filename)
 					
 				zipFilename = "%s.zip"%filename
-				zipFilenamecD,zipFilenamecT=encodefilename(zipFilename)
+				zipFilenamecD,zipFilenamecT=encode_filename(zipFilename)
 				self.debug("Content-Type=%s"%contenttype)
 
 				if  isinstance( m.get_payload() , list ):
@@ -3038,7 +3038,7 @@ class gme:
 				pgpFilename=filename
 				
 			self.debug("Filename:'%s'"%filename)
-			pgpFilenamecD,pgpFilenamecT=encodefilename(pgpFilename)
+			pgpFilenamecD,pgpFilenamecT=encode_filename(pgpFilename)
 			isBinaryattachment=(contentmaintype!="text")
 
 			if addPGPextension:
@@ -3357,7 +3357,7 @@ class gme:
 								"charset: '%s'"%(contenttype,charset))
 
 			if f and len(f)>0:
-				n1,n2=encodefilename(f)
+				n1,n2=encode_filename(f)
 				fname="name=\"%s\""%n2
 				params.append(fname)
 
@@ -3602,7 +3602,7 @@ class gme:
 							charset))
 			
 			if f and len(f)>0:
-				n1,n2=encodefilename(f)
+				n1,n2=encode_filename(f)
 				fname="name=\"%s\""%n2
 				params.append(fname)
 
@@ -3923,7 +3923,7 @@ class gme:
 					self.log("wrong locale '%s'"%self._LOCALE,"w")
 					f=self._LOCALEDB["EN"][3]
 
-				filenamecD,filenamecT=encodefilename("%s.zip"%f)
+				filenamecD,filenamecT=encode_filename("%s.zip"%f)
 				msg.add_header( 'Content-Disposition', 
 								'attachment; filename*="%s"' % filenamecD)
 				msg.set_param( 'name', filenamecT )

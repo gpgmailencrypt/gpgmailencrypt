@@ -520,7 +520,7 @@ class _GPGEncryptedAttachment(email.message.Message,_gmechild):
 		if self._filename != None:
 			return self._filename
 		else:
-			return decodefilename(email.message.Message.get_filename(self))
+			return decode_filename(email.message.Message.get_filename(self))
 
 	###################
 	#set_masterboundary

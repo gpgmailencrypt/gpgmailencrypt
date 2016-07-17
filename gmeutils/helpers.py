@@ -530,22 +530,22 @@ def decodetxt( text,
 
 	return result.decode(charset,unicodeerror)
 
-###############
-#encodefilename
-############### 
+################
+#encode_filename
+################ 
 
-def encodefilename(name):
+def encode_filename(name):
 	n1=(email.utils.encode_rfc2231(name,"UTF-8"))
 	n2="?UTF-8?B?%s"%base64.encodebytes(
 						name.encode("UTF-8",unicodeerror)
 						).decode("UTF-8",unicodeerror)[0:-1]
 	return n1,n2
 
-###############
-#decodefilename
-###############
+################
+#decode_filename
+################
 
-def decodefilename(name):
+def decode_filename(name):
 	decfilename=header.decode_header(name)
 
 	if decfilename and decfilename[0][1]!=None:
@@ -553,7 +553,7 @@ def decodefilename(name):
 		try:
 			name=decfilename[0][0].decode(decfilename[0][1])
 		except:
-			print("\n\n!!!ERROR decodefilename")
+			print("\n\n!!!ERROR decode_filename")
 
 	return name
 
