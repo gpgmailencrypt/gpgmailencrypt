@@ -2,6 +2,7 @@
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 import base64
 import binascii
+from email import header
 import email
 import email.utils 
 import hashlib
@@ -539,6 +540,22 @@ def encodefilename(name):
 						name.encode("UTF-8",unicodeerror)
 						).decode("UTF-8",unicodeerror)[0:-1]
 	return n1,n2
+
+###############
+#decodefilename
+###############
+
+def decodefilename(name):
+	decfilename=header.decode_header(name)
+
+	if decfilename and decfilename[0][1]!=None:
+
+		try:
+			name=decfilename[0][0].decode(decfilename[0][1])
+		except:
+			print("\n\n!!!ERROR decodefilename")
+
+	return name
 
 ####################
 #get_certfingerprint

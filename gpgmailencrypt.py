@@ -1541,15 +1541,9 @@ class gme:
 					cte="8bit"
 
 				filename = m.get_filename()
+				filename=decodefilename(filename)
+				print("\n\nfilename:'%s'\n\n"%filename)
 				self.debug("zipping file '%s'"%filename)
-				decfilename=header.decode_header(filename)
-
-				if decfilename and decfilename[0][1]!=None:
-
-					try:
-						filename=decfilename[0][0].decode(decfilename[0][1])
-					except:
-						self.log_traceback()
 					
 				zipFilename = "%s.zip"%filename
 				zipFilenamecD,zipFilenamecT=encodefilename(zipFilename)

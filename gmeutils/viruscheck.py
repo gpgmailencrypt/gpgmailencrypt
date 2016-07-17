@@ -4,8 +4,7 @@ from 	.child 			import _gmechild
 from 	.				import virusscanners
 from 	.				import archivemanagers
 from   	._dbg 			import _dbg
-from email import header
-
+from	.helpers		import decodefilename
 import email
 import tempfile
 import os
@@ -161,15 +160,7 @@ class _virus_check(_gmechild):
 	@_dbg					
 	def unpack_attachment(self,payload,directory):
 			filename = payload.get_filename()
-			decfilename=header.decode_header(filename)
-
-			if decfilename and decfilename[0][1]!=None:
-
-				try:
-					filename=decfilename[0][0].decode(decfilename[0][1])
-				except:
-					self.log_traceback()
-
+			filename=decodefilename(filename)
 			fname=os.path.join(directory,filename)
 			contenttype = payload.get_content_type()
 
