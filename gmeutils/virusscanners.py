@@ -301,10 +301,12 @@ class _FPROT(_basevirusscanner):
 
 				if _l.startswith("["):
 					found=(re.search("(?<=\<)(.*)(?=\>)",_l))
-					virusinfo=_l[found.start():found.end()]
-					res=_l.split(" ")
-					filename=os.path.split(res[len(res)-1][:-1])[1]
-					information.append(["FPROT",filename,virusinfo])
+
+					if found:
+						virusinfo=_l[found.start():found.end()]
+						res=_l.split(" ")
+						filename=os.path.split(res[len(res)-1][:-1])[1]
+						information.append(["FPROT",filename,virusinfo])
 					result=True
 
 		except:

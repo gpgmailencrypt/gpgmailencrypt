@@ -2230,6 +2230,9 @@ class gme:
 					contenttype,
 					re.I|re.MULTILINE|re.S)
 
+		if not find:
+			return None
+			
 		charset=contenttype[find.start():find.end()]
 		res=charset.split("=")
 
