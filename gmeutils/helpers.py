@@ -15,6 +15,7 @@ import re
 import quopri
 import subprocess
 import sys
+import urllib
 import uu
 
 from 	.child 			import _gmechild
@@ -546,6 +547,10 @@ def encode_filename(name):
 ################
 
 def decode_filename(name):
+
+	if not name:
+		return None
+		
 	decfilename=header.decode_header(name)
 
 	if decfilename and decfilename[0][1]!=None:
@@ -553,9 +558,9 @@ def decode_filename(name):
 		try:
 			name=decfilename[0][0].decode(decfilename[0][1])
 		except:
-			print("\n\n!!!ERROR decode_filename")
+			pass
 
-	return name
+	return name #urllib.parse.unquote(name)
 
 ####################
 #get_certfingerprint
