@@ -560,7 +560,7 @@ def decode_filename(name):
 		except:
 			pass
 
-	return name #urllib.parse.unquote(name)
+	return urllib.parse.unquote(name)
 
 ####################
 #get_certfingerprint
