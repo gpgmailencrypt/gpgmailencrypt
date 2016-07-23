@@ -2146,6 +2146,7 @@ class gme:
  
 	@_dbg
 	def _log_statistics(self):
+		self.log("Version: %s Uptime:  %s"%(VERSION,self.get_uptime()))
 		self.log("Mail statistics: total: %i, encrypt: %i, were encrypted:"
 		" %i" %(
 				self._count_totalmails,
