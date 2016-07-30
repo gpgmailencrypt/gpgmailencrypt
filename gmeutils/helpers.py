@@ -49,7 +49,7 @@ def replace_variables(  text,
 	"embraced with % and consists of capital letters, e.g. %MYVARIABLE%"
 	result=""
 	begin=0
-	dictionary["COPYRIGHT"]="© 2015 Horst Knorr&lt;gpgmailencrypt@gmx.de>"
+	dictionary["COPYRIGHT"]="© 2016 Horst Knorr&lt;gpgmailencrypt@gmx.de>"
 	dictionary["VERSION"]=VERSION
 	dictionary["VERSIONDATE"]=DATE
 

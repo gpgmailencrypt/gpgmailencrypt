@@ -139,6 +139,8 @@ def print_exampleconfig():
 	"#if True the SMIME user definition will be taken from the sql database")
 	print ("".ljust(space)+
 	"#else it will be taken from the config file, section [smimeuser]")
+	print ("use_sqlpdfpasswords=True".ljust(space)+
+	"#if True the PDF passwords will be stored and taken from the sql database")
 
 	print ("")
 	print ("[gpg]")

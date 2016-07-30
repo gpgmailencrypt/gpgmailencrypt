@@ -157,8 +157,7 @@ class gme:
  
 	@_dbg
 	def reset_pdfpasswords(self):
-		self._pdfpasswords=dict()
-		self._read_pdfpasswordfile(self._PDF_PASSWORDFILE)
+		self._backend.reset_pdfpasswords()
 
 	#####################
 	#del_old_pdfpasswords
@@ -166,18 +165,7 @@ class gme:
  
 	@_dbg
 	def del_old_pdfpasswords(self,age):
-		"age in seconds"
-		deluser=[]
-
-		for user in self._pdfpasswords:
-			date=self._pdfpasswords[user][1]
-
-			if date>0 and (date + age < time.time()):
-				deluser.append(user)
-
-		for user in deluser:
-			del self._pdfpasswords[user]
-			self.debug("Password for user '%s' deleted"%user)
+		self._backend.del_old_pdfpasswords(age)
 
 	#########
 	#__exit__
@@ -235,7 +223,6 @@ class gme:
 		#Internal variables
 		self._logfile=None
 		self._tempfiles = list()
-		self._pdfpasswords=dict()
 		self._mailcount=0
 		self._encryptgpgcomment="Encrypted by gpgmailencrypt version %s"%VERSION
 		self._smtpd_passwords=dict()
@@ -320,7 +307,6 @@ class gme:
 		self._PDFSECUREZIPCONTAINER=False
 		self._PDFPASSWORDLENGTH=10
 		self._PDFPASSWORDLIFETIME=48*60*60
-		self._PDF_PASSWORDFILE="/etc/gpgpdfpasswords.pw"
 		self._7ZIPCMD=""
 		self._ZIPCIPHER="ZipCrypto"
 		self._ZIPCOMPRESSION=5
@@ -691,17 +677,6 @@ class gme:
 			except:
 				pass
 
-			try:
-				self._PDF_PASSWORDFILE=_cfg.get('pdf','pdfpasswords')
-			except:
-				pass
-
-			try:
-				self._read_pdfpasswordfile(self._PDF_PASSWORDFILE)
-			except:
-				self.log("File '%s' could not be opened."
-						%self._PDF_PASSWORDFILE)
-				pass
 
 		if _cfg.has_section('zip'):
 
@@ -1295,12 +1270,7 @@ class gme:
 	@_dbg
 	def set_pdfpassword(self,user,password,autodelete=True):
 
-		if autodelete==True:
-			starttime=time.time()
-		else:
-			starttime=0
-		
-		self._pdfpasswords[user]=(password,starttime)
+		self._backend.set_pdfpassword(user,password,autodelete)
 
 	################
 	#get_pdfpassword
@@ -1308,43 +1278,7 @@ class gme:
  
 	@_dbg
 	def get_pdfpassword(self,user):
-		pw=None
-
-		try:
-			pw=self._pdfpasswords[user]
-			return pw[0]
-		except:	
-			pass
-
-		pw= create_password(self._PDFPASSWORDLENGTH)
-		self.set_pdfpassword(user,pw)
-		return pw
-
-	########################
-	#_read_pdfpasswordfile
-	########################
- 
-	@_dbg
-	def _read_pdfpasswordfile( self,pwfile):
-
-		try:
-			f=open(os.path.expanduser(pwfile))
-		except:
-			self.log("read_pdfpasswordfile: passwords could not be read","e")
-			self.log_traceback()
-			return
-
-		txt=f.read()
-		f.close()
-		self._pdfpasswords=dict()
-
-		for l in txt.splitlines():
-
-			try:
-				name,passwd=l.split("=",1)
-				self._pdfpasswords[name.strip()]=(passwd.strip(),0)
-			except:
-				pass
+		return self._backend.get_pdfpassword(user)
 
 	##############
 	#set_zipcipher

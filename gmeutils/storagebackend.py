@@ -1,9 +1,11 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 from gmeutils.child 			import _gmechild 
+from gmeutils.helpers			import *
 from gmeutils.version			import *
 from gmeutils._dbg 				import _dbg
 import os.path
+import time
 
 __all__ =["get_backend","get_backendlist"]
 
@@ -73,6 +75,38 @@ class _base_storage(_gmechild):
 	@_dbg
 	def smimeprivate_keys(self):
 		raise NotImplementedError
+	
+	################
+	#set_pdfpassword
+	################
+
+	@_dbg
+	def set_pdfpassword(self,user,password,autodelete=True):
+		raise NotImplementedError
+
+	################
+	#get_pdfpassword
+	################
+ 
+	@_dbg
+	def get_pdfpassword(self,user):
+		raise NotImplementedError
+
+	###################
+	#reset_pdfpasswords
+	###################
+ 
+	@_dbg
+	def reset_pdfpasswords(self):
+		raise NotImplementedError
+
+	#####################
+	#del_old_pdfpasswords
+	#####################
+ 
+	@_dbg
+	def del_old_pdfpasswords(self,age):
+		raise NotImplementedError
 
 ##############
 #_TEXT_BACKEND
@@ -89,6 +123,8 @@ class _TEXT_BACKEND(_base_storage):
 		self._addressmap = dict()
 		self._encryptionmap = dict()
 		self._smimeuser = dict()
+		self._pdfpasswords=dict()
+		self._PDF_PASSWORDFILE="/etc/gpgpdfpasswords.pw"
 
 	################
 	#read_configfile
@@ -136,6 +172,21 @@ class _TEXT_BACKEND(_base_storage):
 
 		for u in self._smimeuser:
 			self.debug("SMimeuser: '%s %s'"%(u,self._smimeuser[u]))
+		if cfg.has_section('pdf'):
+
+			try:
+				self._PDF_PASSWORDFILE=cfg.get('pdf','pdfpasswords')
+			except:
+				pass
+
+			try:
+				self._read_pdfpasswordfile(self._PDF_PASSWORDFILE)
+			except:
+				self.log("File '%s' could not be opened."
+						%self._PDF_PASSWORDFILE)
+				self.log_traceback()
+				pass
+
 
 	########
 	#usermap
@@ -221,6 +272,95 @@ class _TEXT_BACKEND(_base_storage):
 
 		return result
 
+	
+	################
+	#set_pdfpassword
+	################
+
+	@_dbg
+	def set_pdfpassword(self,user,password,autodelete=True):
+		if autodelete==True:
+			starttime=time.time()
+		else:
+			starttime=0
+		
+		self._pdfpasswords[user]=(password,starttime)
+
+	################
+	#get_pdfpassword
+	################
+ 
+	@_dbg
+	def get_pdfpassword(self,user):
+		pw=None
+
+		try:
+			pw=self._pdfpasswords[user]
+			return pw[0]
+		except:	
+			pass
+
+		pw= create_password(self.parent._PDFPASSWORDLENGTH)
+		self.set_pdfpassword(user,pw)
+		return pw
+
+	###################
+	#reset_pdfpasswords
+	###################
+ 
+	@_dbg
+	def reset_pdfpasswords(self):
+		self._pdfpasswords=dict()
+		self._read_pdfpasswordfile(self._PDF_PASSWORDFILE)
+
+	#####################
+	#del_old_pdfpasswords
+	#####################
+ 
+	@_dbg
+	def del_old_pdfpasswords(self,age):
+		"age in seconds"
+		deluser=[]
+
+		for user in self._pdfpasswords:
+			date=self._pdfpasswords[user][1]
+
+			if date>0 and (date + age < time.time()):
+				deluser.append(user)
+
+		for user in deluser:
+			del self._pdfpasswords[user]
+			self.debug("Password for user '%s' deleted"%user)
+
+	########################
+	#_read_pdfpasswordfile
+	########################
+ 
+	@_dbg
+	def _read_pdfpasswordfile( self,pwfile):
+
+		try:
+			f=open(os.path.expanduser(pwfile))
+		except:
+			self.log("read_pdfpasswordfile: passwords could not be read","e")
+			self.log_traceback()
+			return
+
+		txt=f.read()
+		f.close()
+		self._pdfpasswords=dict()
+
+		for l in txt.splitlines():
+
+			try:
+				name,passwd=l.split("=",1)
+				self._pdfpasswords[name.strip()]=(passwd.strip(),0)
+			except:
+				pass
+
+
+
+
 #############
 #_sql_backend
 #############
@@ -248,10 +388,26 @@ class _sql_backend(_base_storage):
 		self._USE_SQLUSERMAP=True
 		self._USE_SQLENCRYPTIONMAP=True
 		self._USE_SQLSMIME=True
+		self._USE_SQLPDFPASSWORDS=True
 		self._db=None
 		self._cursor=None
 		self.placeholder="?"
 		self._textbackend=get_backend("TEXT",self.parent)
+		self._tabledefinition={}
+		self._tabledefinition["usermap"]=("create table gpgusermap ("
+					"username varchar (255) not null ,gpguser varchar(255));")
+		self._tabledefinition["encryptionmap"]=("create table encryptionmap ("
+					"username varchar (255) not null ,encrypt varchar(255));")
+		self._tabledefinition["pdfpasswords"]=("create table pdfpasswords ("
+					"username varchar (255) not null ,"
+					"password varchar(255),"
+					"starttime float);")
+		self._tabledefinition["smimeusers"]=("create table smimeuser("
+									"user varchar (255) not null, "
+									"privatekey varchar (255), "
+									"publickey varchar(255) not null, "
+									"cipher varchar (255));")
+		
 
 	########
 	#connect
@@ -333,6 +489,12 @@ class _sql_backend(_base_storage):
 			try:
 				self._USE_SQLSMIME=cfg.getboolean('sql',
 														'use_sqlsmime')
+			except:
+				pass
+
+			try:
+				self._USE_SQLPDFPASSWORDS=cfg.getboolean('sql',
+														'use_sqlpdfpasswords')
 			except:
 				pass
 
@@ -421,6 +583,33 @@ class _sql_backend(_base_storage):
 														user,
 														r[0]))
 		return r[0].split(":")
+
+	#############
+	#create_table
+	#############
+
+	@_dbg
+	def create_table(self,table):
+		sql=""
+
+		try:
+			sql=self._tabledefinition[table]
+		except:
+			self.log("SQL definition for table '%s' not found"%table,"e")
+			return
+
+		return self.execute(sql)
+		
+	##################
+	#create_all_tables
+	##################
+	
+	@_dbg
+	def create_all_tables(self):
+		create_table("usermap")
+		create_table("encryptionmap")
+		create_table("smimeusers")
+		create_table("pdfpasswords")
 
 	##########
 	#smimeuser
@@ -525,6 +714,56 @@ class _sql_backend(_base_storage):
 				rows.append(result)
 
 		return rows
+	
+	################
+	#set_pdfpassword
+	################
+
+	@_dbg
+	def set_pdfpassword(self,user,password,autodelete=True):
+
+		if not self._USE_SQLPDFPASSWORDS:
+			return self._textbackend.set_pdfpassword(user,password,autodelete)
+
+		raise NotImplementedError
+
+	################
+	#get_pdfpassword
+	################
+ 
+	@_dbg
+	def get_pdfpassword(self,user):
+
+		if not self._USE_SQLPDFPASSWORDS:
+			return self._textbackend.get_pdfpassword(user)
+
+		raise NotImplementedError
+
+	###################
+	#reset_pdfpasswords
+	###################
+ 
+	@_dbg
+	def reset_pdfpasswords(self):
+
+		if not self._USE_SQLPDFPASSWORDS:
+			return self._textbackend.reset_pdfpasswords()
+
+		raise NotImplementedError
+
+	#####################
+	#del_old_pdfpasswords
+	#####################
+ 
+	@_dbg
+	def del_old_pdfpasswords(self,age):
+
+		if not self._USE_SQLPDFPASSWORDS:
+			return self._textbackend.del_old_pdfpasswords(age)
+
+		raise NotImplementedError
+
+
 		
 #################
 #_SQLITE3_BACKEND
