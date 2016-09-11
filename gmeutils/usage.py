@@ -58,7 +58,7 @@ def print_exampleconfig():
 	print ("add_header = no".ljust(space)+
 	"#adds a gpgmailencrypt version header to the mail")
 	print ("domains =".ljust(space)+
-	"#comma separated list of domain names,") 
+	"#comma separated list of domain names,")
 	print ("".ljust(space)+
 	"#that should be encrypted, empty is all")
 	print ("homedomains=localhost".ljust(space)+
@@ -134,13 +134,18 @@ def print_exampleconfig():
 	"#if True the encryptionmap will be taken from the sql database else it")
 	print ("".ljust(space)+
 	"#will be taken from the config file, section [encryptionmap]")
-	
+
 	print ("use_sqlsmime=True".ljust(space)+
 	"#if True the SMIME user definition will be taken from the sql database")
 	print ("".ljust(space)+
 	"#else it will be taken from the config file, section [smimeuser]")
+
 	print ("use_sqlpdfpasswords=True".ljust(space)+
 	"#if True the PDF passwords will be stored and taken from the sql database")
+	print ("sqlpdf_passwordtable=pdfpasswords")
+	print ("sqlpdf_userfield=user")
+	print ("sqlpdf_passwordfield=password")
+	print ("sqlpdf_starttimefield=starttime")
 
 	print ("")
 	print ("[gpg]")
@@ -168,7 +173,7 @@ def print_exampleconfig():
 	print ("".ljust(space)+
 	"#don't confuse it with STARTTLS, which will be used automatically")
 	print ("smtpcredential =/etc/gpgmailencrypt.cfg".ljust(space)+
-	"#file that keeps user and password information")    
+	"#file that keeps user and password information")
 	print("".ljust(space)+
 	"#file format 'user=password'")
 	print ("cacerts=/etc/ssl/ca-certificates.crt".ljust(space)+
@@ -187,7 +192,7 @@ def print_exampleconfig():
 	print ("usesmtps2=False".ljust(space)+
 	"#like usesmtps, for server2")
 	print ("smtpcredential2 =/etc/gpgmailencrypt2.cfg".ljust(space)+
-	"#like smtpcredential, for server2")    
+	"#like smtpcredential, for server2")
 	print ("cacerts2=/etc/ssl/ca-certificates.crt".ljust(space)+
 	"#like cacerts, for server2")
 
@@ -222,6 +227,8 @@ def print_exampleconfig():
 
 	print ("")
 	print ("[pdf]")
+	print ("useenryptpdf=False".ljust(space)+
+	"#if True, emails can be encrypted as PDF")
 	print ("passwordlength=10".ljust(space)+
 	"#Length of the automatic created password")
 	print ("passwordlifetime=172800".ljust(space)+
