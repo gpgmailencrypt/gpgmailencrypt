@@ -4,7 +4,7 @@ import base64
 import binascii
 from email import header
 import email
-import email.utils 
+import email.utils
 import hashlib
 import html
 import html.parser
@@ -221,7 +221,7 @@ class _htmldecode(html.parser.HTMLParser,_gmechild):
 			if starttag:
 				self.in_throwaway+=1
 			else:
-				if self.in_throwaway>0:		
+				if self.in_throwaway>0:
 					self.in_throwaway-=1
 
 		if tag=="pre":
@@ -229,7 +229,7 @@ class _htmldecode(html.parser.HTMLParser,_gmechild):
 			if starttag:
 				self.in_keep+=1
 			else:
-				if self.in_keep>0:		
+				if self.in_keep>0:
 					self.in_keep-=1
 
 		if tag=="br":
@@ -279,7 +279,7 @@ class _htmldecode(html.parser.HTMLParser,_gmechild):
 				self.data+="\r\n * "
 
 			if tag=="q":
-				self.data+="\""		
+				self.data+="\""
 
 			if tag=="abbr":
 				self.attrtitle=self.get_attrvalue("title",attrs)
@@ -291,7 +291,7 @@ class _htmldecode(html.parser.HTMLParser,_gmechild):
 							"p",
 							"ol",
 							"ul",
-							"caption") 
+							"caption")
 			and lastchar not in ("\n"," ","\t")):
 				self.data+="\r\n"
 
@@ -318,7 +318,7 @@ class _htmldecode(html.parser.HTMLParser,_gmechild):
 
 #############
 #decode_html
-############# 
+#############
 
 def decode_html(parent,msg):
 	h=_htmldecode(parent)
@@ -327,7 +327,7 @@ def decode_html(parent,msg):
 
 ####################
 #guess_fileextension
-#################### 
+####################
 
 def guess_fileextension(ct):
 	"returns a filetype based on its contenttype/mimetype 'ct'"
@@ -472,7 +472,7 @@ def guess_fileextension(ct):
 
 ##########
 #decodetxt
-########## 
+##########
 
 def decodetxt( text,
 				encoding,
@@ -485,6 +485,7 @@ def decodetxt( text,
 		encoding="8bit"
 
 	if charset!=None:
+
 		try:
 			"test".encode(charset)
 		except:
@@ -533,7 +534,7 @@ def decodetxt( text,
 
 ################
 #encode_filename
-################ 
+################
 
 def encode_filename(name):
 	n1=(email.utils.encode_rfc2231(name,"UTF-8"))
@@ -550,7 +551,7 @@ def decode_filename(name):
 
 	if not name:
 		return None
-		
+
 	decfilename=header.decode_header(name)
 
 	if decfilename and decfilename[0][1]!=None:
@@ -575,7 +576,7 @@ def get_certfingerprint(cert):
 		"-modulus 2>1|grep Modulus")
 
 	try:
-		_result = subprocess.check_output(	cmd, 
+		_result = subprocess.check_output(	cmd,
 											shell=True,
 											input=cert)
 	except:
@@ -591,7 +592,7 @@ def get_certfingerprint(cert):
 def maildomain(mailaddress):
 	addr= email.utils.parseaddr(mailaddress)[1].split('@')
 	domain=""
-	
+
 	if len(addr)==2:
 		domain = addr[1]
 
@@ -600,9 +601,9 @@ def maildomain(mailaddress):
 ################
 #create_password
 ################
- 
+
 def create_password(self,pwlength=10):
-	#prior to pdf 1.7 only ASCII characters are allowed and 
+	#prior to pdf 1.7 only ASCII characters are allowed and
 	#maximum 32 characters
 	_min=5
 	_max=32
@@ -614,16 +615,16 @@ def create_password(self,pwlength=10):
 
 	nonletters="0123456789+-*/@"
 	pwkeys="ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstvwxyz"+nonletters
-	return ''.join(random.SystemRandom().choice(pwkeys) 
+	return ''.join(random.SystemRandom().choice(pwkeys)
 				for _ in range(pwlength))
 
 ##############
 #make_boundary
 ##############
- 
+
 def make_boundary(self,text=None):
 	_width = len(repr(sys.maxsize-1))
-	_fmt = '%%0%dd' % _width	
+	_fmt = '%%0%dd' % _width
 	token = random.randrange(sys.maxsize)
 	boundary = ('=' * 15) + (_fmt % token) + '=='
 
@@ -649,7 +650,9 @@ def make_boundary(self,text=None):
 
 def clean_filename(name):
 	"removes whitespaces and some special characters"
+
 	if name==None:
 		return None
+
 	return re.sub("[\s:\"*?!<>|#{}\[\]'`´\$§%&^°¬²³¹¼½+\(\)~]","_",name)
 

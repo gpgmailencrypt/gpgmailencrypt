@@ -11,7 +11,7 @@ import smtpd
 import socket
 import ssl
 import sys
-from	.child 			import _gmechild 
+from	.child 			import _gmechild
 from	.version		import *
 
 ######################
@@ -33,7 +33,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 					"USERS"]
 	ADMINALLCOMMANDS=ADMINCOMMANDS+["HELP","QUIT"]
 
-	def __init__(self, 
+	def __init__(self,
 			parent,
 			localaddr,
 			sslcertfile=None,
@@ -48,18 +48,17 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 			read_smtpdpasswordfile=None,
 			data_size_limit=smtpd.DATA_SIZE_DEFAULT):
 
-
 		try:
-			smtpd.SMTPServer.__init__(  self, 
-										localaddr, 
+			smtpd.SMTPServer.__init__(  self,
+										localaddr,
 										None,
 										data_size_limit=data_size_limit)
 		except socket.error as e:
 
 			if parent:
 				parent.log("_gpgmailencryptserver: error",e)
-			raise 
-	
+			raise
+
 		smtpd.__version__="gpgmailencrypt smtp server %s"%VERSION
 		self.parent=parent
 		self.sslcertfile=os.path.expanduser(sslcertfile)
@@ -78,7 +77,6 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 		self.write_smtpdpasswordfile=write_smtpdpasswordfile
 		self.read_smtpdpasswordfile=read_smtpdpasswordfile
 		self.authenticate_function=authenticate_function
-
 		_sslpossible=True
 
 		try:
@@ -86,7 +84,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 			f.close()
 		except:
 			_sslpossible=False
-			
+
 		try:
 			f=open(self.sslkeyfile)
 			f.close()
@@ -103,14 +101,14 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 	######
 	#start
 	######
-	
+
 	def start(self):
 		asyncore.loop()
-		
+
 	#####################
 	#create_sslconnection
 	#####################
-	
+
 	def create_sslconnection(self,conn):
 		newconn=None
 
@@ -147,7 +145,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 	##############
 	#handle_accept
 	##############
-	
+
 	def handle_accept(self):
 		pair = self.accept()
 
@@ -163,15 +161,15 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 
 			self.parent.debug("_gpgmailencryptserver: Incoming connection "
 								"from %s" % repr(addr))
-			channel = _hksmtpchannel(self, 
-						conn, 
+			channel = _hksmtpchannel(self,
+						conn,
 						addr,
 						parent=self.parent,
-						use_auth=self.use_authentication, 
+						use_auth=self.use_authentication,
 						use_tls=self.use_tls,
 						force_tls=self.force_tls,
 						authenticate_function=self.authenticate_function,
-						write_smtpdpasswordfile=self.write_smtpdpasswordfile,	
+						write_smtpdpasswordfile=self.write_smtpdpasswordfile,
 						read_smtpdpasswordfile=self.read_smtpdpasswordfile,
 						sslcertfile=self.sslcertfile,
 						sslkeyfile=self.sslkeyfile,
@@ -180,11 +178,11 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 	################
 	#process_message
 	################
-	
-	def process_message(	self, 
-							peer, 
-							mailfrom, 
-							recipient, 
+
+	def process_message(	self,
+							peer,
+							mailfrom,
+							recipient,
 							data):
 		self.parent.debug("_gpgmailencryptserver: _gpgmailencryptserver "
 						"from '%s' to '%s'"%(mailfrom,recipient))
@@ -205,10 +203,10 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 	"helper class for _gpgmailencryptserver"
 	#can't be member of _gmechild because smtpd.SMTPChannel uses the name debug
 
-	def __init__(self, 
-				smtp_server, 
-				newsocket,	 
-				fromaddr,					
+	def __init__(self,
+				smtp_server,
+				newsocket,
+				fromaddr,
 				use_auth,
 				parent,
 				authenticate_function=None,
@@ -230,7 +228,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		self.force_tls=force_tls
 		self.tls_active=False
 		self.authenticate_function=authenticate_function
-		self.write_smtpdpasswordfile=write_smtpdpasswordfile  
+		self.write_smtpdpasswordfile=write_smtpdpasswordfile
 		self.read_smtpdpasswordfile=read_smtpdpasswordfile
 		self.is_authenticated=False
 		self.is_admin=False
@@ -249,13 +247,13 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			f.close()
 		except:
 			_sslpossible=False
-			
+
 		try:
 			f=open(self.sslkeyfile)
 			f.close()
 		except:
 			_sslpossible=False
-			
+
 		if _sslpossible and self.sslversion:
 			self.starttls_available=True
 
@@ -263,8 +261,8 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 	#collect_incoming_data
 	######################
 
-	#the following method is taken from SMTPChannel and is corrected to not 
-	#throw an encoding error if something else than unciode comes 
+	#the following method is taken from SMTPChannel and is corrected to not
+	#throw an encoding error if something else than unciode comes
 	#through the line
 	def collect_incoming_data(self, data):
 		limit = None
@@ -368,7 +366,6 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				_gpgmailencryptserver.ADMINCOMMANDS):
 				self.parent.log("STARTTLS before authentication required."
 								" Command was '%s'"%command)
-
 				self.push("530 STARTTLS before authentication required.")
 				self._SMTPChannel__line=[]
 				return
@@ -404,7 +401,6 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 
 	def handle_error(self):
 		self.parent.debug("handle_error")
-		#self.parent.log_traceback()
 		self.handle_close()
 
 	#SMTP Commands
@@ -446,8 +442,8 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 
 		_starttls=self.use_tls and not self.tls_active
 		_size=self.data_size_limit>0
-		_auth=(self.use_authentication 
-				   and (not self.force_tls 
+		_auth=(self.use_authentication
+				   and (not self.force_tls
 				   or (self.force_tls and self.tls_active))
 			  )
 		countentries=  _starttls+_size+_auth
@@ -486,7 +482,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		if not self.use_authentication and not self.adminmode:
 			self.push("503 Error: authentication not enabled")
 			return
-			
+
 		if not arg:
 			self.push("501 Syntax error: AUTH PLAIN")
 			return
@@ -504,7 +500,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 						self.username=binascii.a2b_base64(
 										res[1]).decode("UTF-8",unicodeerror)
 						self.in_loginauth=2
-					else:   
+					else:
 						 self.push('334 %s'%binascii.b2a_base64(
 							"Username:".encode("UTF8",
 									unicodeerror)).decode("UTF8",
@@ -516,7 +512,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		   return
 
 		command=res[0]
-		command,encoded=res	
+		command,encoded=res
 
 		if "PLAIN" in command.upper():
 			self.parent.debug("_gpgmailencryptserver: PLAIN decoding")
@@ -545,7 +541,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			  self.parent.debug("_gpgmailencryptserver: "
 							"self.authenticate_function=None")
 
-			if (self.authenticate_function 
+			if (self.authenticate_function
 			and self.authenticate_function(self.parent,user,password)):
 				self.push("235 Authentication successful.")
 				self.is_authenticated=True
@@ -575,11 +571,11 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				self.push("454 TLS not available due to temporary reason")
 				self.parent.log("STARTTLS called, but is not active","w")
 				return
- 
+
 		if arg:
 			self.push("501 Syntax error: no arguments allowed")
 			return
- 
+
 		self.push("220 Go ahead")
 		conn=self.smtp_server.create_sslconnection(self.conn)
 		self.conn=conn
@@ -588,7 +584,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		self.tls_active=True
 
 	#ADMIN functions
-	
+
 	###########
 	#smtp_DEBUG
 	###########
@@ -672,7 +668,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				self.push("250 OK")
 			else:
 				self.push("501 Couldn't release %s"%str(v_id))
-			
+
 		elif command=="FORWARD":
 
 			try:
@@ -685,8 +681,8 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				self.push("250 OK")
 			else:
 				self.push("501 Couldn't forward %s"%str(v_id))
-			
-		else:	
+
+		else:
 			self.push(syntaxerror)
 
 
@@ -892,6 +888,7 @@ def file_auth(  parent,
 				password):
 	"checks user authentication against a password file"
 	parent.debug("_gpgmailencryptserver: file_auth")
+
 	try:
 		pw=parent._smtpd_passwords[user]
 

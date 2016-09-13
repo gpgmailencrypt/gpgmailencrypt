@@ -272,7 +272,6 @@ class _TEXT_BACKEND(_base_storage):
 
 		return result
 
-
 	################
 	#set_pdfpassword
 	################
@@ -358,9 +357,6 @@ class _TEXT_BACKEND(_base_storage):
 				self._pdfpasswords[name.strip()]=(passwd.strip(),0)
 			except:
 				pass
-
-
-
 
 #############
 #_sql_backend
@@ -575,7 +571,6 @@ class _sql_backend(_base_storage):
 	def execute(self, sql,fields=None):
 
 		self.debug(sql)
-
 		self.connect()
 
 		if self._cursor== None:
@@ -628,7 +623,6 @@ class _sql_backend(_base_storage):
 
 		self._cursor=None
 		self._db=None
-
 		return result
 
 	##############
@@ -723,7 +717,6 @@ class _sql_backend(_base_storage):
 
 		upath=os.path.join(self.parent._SMIMEKEYHOME,r[0])
 		publicpath=os.path.expanduser(upath)
-
 		result= [publicpath,cipher]
 		self.debug("sqlbackend %s smimuser %s=>%s"%(self._backend,
 														user,
@@ -830,7 +823,6 @@ class _sql_backend(_base_storage):
 		updatesql=(	"UPDATE %(fdlm)s%(table)s%(fdlm)s"
 		" SET %(fdlm)s%(passwordfield)s%(fdlm)s = %(tdlm)s%(password)s%(tdlm)s"
 		" WHERE %(fdlm)s%(userfield)s%(fdlm)s = %(tdlm)s%(user)s%(tdlm)s"
-
 		%{	"passwordfield":self._PDFPASSWORDPASSWORDFIELD,
 			"table":self._PDFPASSWORDTABLE,
 			"userfield":self._PDFPASSWORDUSERFIELD,
@@ -853,7 +845,6 @@ class _sql_backend(_base_storage):
 		if not self._USE_SQLPDFPASSWORDS:
 			return self._textbackend.get_pdfpassword(user)
 
-
 		sql=("SELECT %(fdlm)s%(password)s%(fdlm)s "
 				"FROM %(fdlm)s%(table)s%(fdlm)s "
 				"WHERE %(fdlm)s%(userfield)s%(fdlm)s =%(tdlm)s%(user)s%(tdlm)s"
@@ -864,6 +855,7 @@ class _sql_backend(_base_storage):
 			"tdlm":self._textdelimiter,
 			"user":user})
 		self.debug(sql)
+
 		if not 	self.execute(sql):
 			return None
 
@@ -1176,7 +1168,7 @@ def get_backend(backend,parent):
 			except:
 				parent.log("Storage backend %s could not be loaded"%backend,"e")
 
-		if backend=="POSTGRESQL":
+		elif backend=="POSTGRESQL":
 
 			try:
 				return _POSTGRESQL_BACKEND(parent=parent,backend="POSTGRESQL")

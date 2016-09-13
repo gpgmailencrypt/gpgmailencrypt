@@ -10,38 +10,38 @@ import time
 
 class _mytimer(_gmechild):
 	"""
-	Timer class that can act either as a countdown timer or a periodic revolving 
+	Timer class that can act either as a countdown timer or a periodic revolving
 	timer.
-	
+
 	The class will return timer.is_running() == False in case the timer expired.
-	
+
 	Additionally you can set a your own alarmfunction to do whatever you want
 	when the timer is fired.
-	
-	
+
+
 	case 1: A countdown timer
-	
-	timer.set_timer(10,60) 
-	
+
+	timer.set_timer(10,60)
+
 	(10 times multiplicated with 60 seconds = 10 minutes)
 	will be called once after 10 minutes
-	
-	
+
+
 	case 2: a revolving timer
-	
+
 	timer.set_timer(0,600,your_alarmfunction)
-	
+
 	will  your_alarmfunction every 600 seconds
-	
-	
+
+
 	case 3: A timer to check for inactivity
-	
+
 	To get a timer to check inactivity you can do the following:
-	mytimer.start(10,60) 
-	
-	and then in your useraction function call timer.set_alive() in case of 
+	mytimer.start(10,60)
+
+	and then in your useraction function call timer.set_alive() in case of
 	user activity.
-	
+
 	To check if the the timer already expired check timer.is_running()
 	"""
 
@@ -60,14 +60,18 @@ class _mytimer(_gmechild):
 	########
 
 	def _action(self):
+
 		if self.counter==1:
 			self._alert()
 		else:
+
 			if self.counter>0:
 				self.counter-=1
 			else:
+
 				if self.alarmfunc:
 					self.alarmfunc(*self.alarmfuncargs,**self.kwalarmfuncargs)
+
 			self._create_timer()
 
 	#######
@@ -75,8 +79,10 @@ class _mytimer(_gmechild):
 	#######
 
 	def _alert(self):
+
 		if self.alarmfunc:
 			self.alarmfunc(*self.alarmfuncargs,**self.kwalarmfuncargs)
+
 		self.running=False
 
 	##############
@@ -89,13 +95,13 @@ class _mytimer(_gmechild):
 		self.running=True
 		self.alarm.start()
 
-	
+
 	###########
 	#is_running
 	###########
 
 	def is_running(self):
-		"""returns True if the timer is running, 
+		"""returns True if the timer is running,
 		returns False after the timer expired"""
 		return self.running
 
@@ -117,19 +123,19 @@ class _mytimer(_gmechild):
 
 	def start(  self,
 				alarmtime=10,
-				timerinterval=1, 
+				timerinterval=1,
 				alarmfunction=None,
 				alarmargs=(),
 				kwalarmargs={}):
 		"""
 		The timer will be fired after "alarmtime" multiplicated with
-		"timerintervall" in seconds. 
-	
-		if alarmtime is set to 0, it will be an eternal loop, until stop() 
-		is called.You have to set a user defined alarmfunction to use this 
+		"timerintervall" in seconds.
+
+		if alarmtime is set to 0, it will be an eternal loop, until stop()
+		is called.You have to set a user defined alarmfunction to use this
 		option.
-		
-		alarmargs and kwalarmargs are the values for the user defined alarm 
+
+		alarmargs and kwalarmargs are the values for the user defined alarm
 		function.
 		"""
 		self.alarmtime=alarmtime

@@ -5,7 +5,7 @@ import os
 import re
 import shutil
 import subprocess
-from   .child 			import _gmechild 
+from   .child 			import _gmechild
 from   ._dbg 			import _dbg
 from .version 			import *
 
@@ -31,19 +31,19 @@ class _AVAST(_basevirusscanner):
 		self.cmd=shutil.which("scan")
 		_basevirusscanner.__init__(self,parent)
 
-	@_dbg					
+	@_dbg
 	def has_virus(self,directory):
 		cmd=[self.cmd,"-u",directory]
 		result=False
 		information=[]
-		
+
 		try:
-			p = subprocess.Popen(   cmd, 
-									stdin=None, 
-									stdout=subprocess.PIPE, 
+			p = subprocess.Popen(   cmd,
+									stdin=None,
+									stdout=subprocess.PIPE,
 									stderr=subprocess.PIPE )
 			p.wait()
-			
+
 			for line in p.stdout.readlines():
 				_l=line.decode("UTF-8",unicodeerror)
 
@@ -56,7 +56,7 @@ class _AVAST(_basevirusscanner):
 
 		except:
 			self.log_traceback()
-		
+
 		return result,information
 
 #####
@@ -69,25 +69,25 @@ class _AVG(_basevirusscanner):
 		self.cmd=shutil.which("avgscan")
 		_basevirusscanner.__init__(self,parent)
 
-	@_dbg					
+	@_dbg
 	def has_virus(self,directory):
 		cmd=[self.cmd,"-a",directory]
 		result=False
 		information=[]
-		
+
 		try:
-			p = subprocess.Popen(   cmd, 
-									stdin=None, 
-									stdout=subprocess.PIPE, 
+			p = subprocess.Popen(   cmd,
+									stdin=None,
+									stdout=subprocess.PIPE,
 									stderr=subprocess.PIPE )
 			p.wait()
-			
+
 			for line in p.stdout.readlines():
 				_l=line.decode("UTF-8",unicodeerror)
 
 				if _l.startswith(chr(27)):
 					found=_l.split("  Virus identified ",1)
-					
+
 					if len(found)>1:
 						virusinfo=found[1][:-1]
 						filename=os.path.split(found[0])[1]
@@ -96,7 +96,7 @@ class _AVG(_basevirusscanner):
 
 		except:
 			self.log_traceback()
-		
+
 		return result,information
 
 #############
@@ -109,17 +109,17 @@ class _BITDEFENDER(_basevirusscanner):
 		self.cmd=shutil.which("bdscan")
 		_basevirusscanner.__init__(self,parent)
 
-	@_dbg					
+	@_dbg
 	def has_virus(self,directory):
 		cmd=[self.cmd,"--no-list","--action=ignore",directory]
 		result=False
 		information=[]
 		skip_header=2
-		
+
 		try:
-			p = subprocess.Popen(   cmd, 
-									stdin=None, 
-									stdout=subprocess.PIPE, 
+			p = subprocess.Popen(   cmd,
+									stdin=None,
+									stdout=subprocess.PIPE,
 									stderr=subprocess.PIPE )
 			p.wait()
 			in_virusinfo=False
@@ -137,7 +137,7 @@ class _BITDEFENDER(_basevirusscanner):
 
 				if skip_header>0:
 					skip_header-=1
-					continue	
+					continue
 
 				if _l=="\n":
 					break
@@ -151,7 +151,7 @@ class _BITDEFENDER(_basevirusscanner):
 
 		except:
 			self.log_traceback()
-		
+
 		return result,information
 
 ########
@@ -160,14 +160,14 @@ class _BITDEFENDER(_basevirusscanner):
 
 try:
 	import pyclamd
-	
+
 	class _CLAMAV(_basevirusscanner):
 
 		def __init__(self,parent):
 			self.clamd=pyclamd.ClamdAgnostic()
 			_basevirusscanner.__init__(self,parent)
 
-		@_dbg					
+		@_dbg
 		def has_virus(self,directory):
 			result=False
 			scanresult=self.clamd.scan_file(directory)
@@ -179,9 +179,9 @@ try:
 				for a in scanresult:
 					filename=os.path.split(a)[1]
 					information.append(["CLAMAV",filename,scanresult[a][1]])
-			
+
 			return result,information
-	
+
 	_clamavscan_available=True
 except:
 	_clamavscan_available=False
@@ -200,37 +200,37 @@ class _COMODO(_basevirusscanner):
 
 		_basevirusscanner.__init__(self,parent)
 
-	@_dbg					
+	@_dbg
 	def has_virus(self,directory):
 		cmd=[self.cmd,"-v -s",directory]
 		result=False
 		information=[]
-		
+
 		try:
-			p = subprocess.Popen(   cmd, 
-									stdin=None, 
-									stdout=subprocess.PIPE, 
+			p = subprocess.Popen(   cmd,
+									stdin=None,
+									stdout=subprocess.PIPE,
 									stderr=subprocess.PIPE )
 			p.wait()
-			
+
 			for line in p.stdout.readlines():
 				_l=line.decode("UTF-8",unicodeerror)
 				found=_l.split(" ---> Found Virus, ",1)
-					
+
 				if len(found)>1:
 					virusinfo=found[1][:-1]
 					v=virusinfo.split(" is ")
 
 					if len(v)>1:
 						virusinfo=v[1]
-						
+
 					filename=os.path.split(found[0])[1]
 					information.append(["COMODO",filename,virusinfo])
 					result=True
 
 		except:
 			self.log_traceback()
-		
+
 		return result,information
 
 #######
@@ -243,19 +243,19 @@ class _DRWEB(_basevirusscanner):
 		self.cmd=shutil.which("drweb")
 		_basevirusscanner.__init__(self,parent)
 
-	@_dbg					
+	@_dbg
 	def has_virus(self,directory):
 		cmd=[self.cmd,"-lng=en_scanner.dwl","-sd","-al","-ha",directory]
 		result=False
 		information=[]
-		
+
 		try:
-			p = subprocess.Popen(   cmd, 
-									stdin=None, 
-									stdout=subprocess.PIPE, 
+			p = subprocess.Popen(   cmd,
+									stdin=None,
+									stdout=subprocess.PIPE,
 									stderr=subprocess.PIPE )
 			p.wait()
-			
+
 			for line in p.stdout.readlines():
 				_l=line.decode("UTF-8",unicodeerror)
 
@@ -270,7 +270,7 @@ class _DRWEB(_basevirusscanner):
 
 		except:
 			self.log_traceback()
-		
+
 		return result,information
 
 #######
@@ -283,19 +283,19 @@ class _FPROT(_basevirusscanner):
 		self.cmd=shutil.which("fpscan")
 		_basevirusscanner.__init__(self,parent)
 
-	@_dbg					
+	@_dbg
 	def has_virus(self,directory):
 		cmd=[self.cmd,"--report","--mount","--adware",directory]
 		result=False
 		information=[]
-		
+
 		try:
-			p = subprocess.Popen(   cmd, 
-									stdin=None, 
-									stdout=subprocess.PIPE, 
+			p = subprocess.Popen(   cmd,
+									stdin=None,
+									stdout=subprocess.PIPE,
 									stderr=subprocess.PIPE )
 			p.wait()
-			
+
 			for line in p.stdout.readlines():
 				_l=line.decode("UTF-8",unicodeerror)
 
@@ -307,11 +307,12 @@ class _FPROT(_basevirusscanner):
 						res=_l.split(" ")
 						filename=os.path.split(res[len(res)-1][:-1])[1]
 						information.append(["FPROT",filename,virusinfo])
+
 					result=True
 
 		except:
 			self.log_traceback()
-		
+
 		return result,information
 
 ########
@@ -324,20 +325,20 @@ class _SOPHOS(_basevirusscanner):
 		self.cmd=shutil.which("savscan")
 		_basevirusscanner.__init__(self,parent)
 
-	@_dbg					
+	@_dbg
 	def has_virus(self,directory):
 		cmd=[self.cmd,"-ss","-nb","-f","-all","-rec","-sc",directory]
-		
+
 		result=False
 		information=[]
-		
+
 		try:
-			p = subprocess.Popen(   cmd, 
-									stdin=None, 
-									stdout=subprocess.PIPE, 
+			p = subprocess.Popen(   cmd,
+									stdin=None,
+									stdout=subprocess.PIPE,
 									stderr=subprocess.PIPE )
 			p.wait()
-			
+
 			for line in p.stdout.readlines():
 				_l=line.decode("UTF-8",unicodeerror)
 				virusinfo=_l.split("'")[1]
@@ -348,7 +349,7 @@ class _SOPHOS(_basevirusscanner):
 
 		except:
 			self.log_traceback()
-		
+
 		return result,information
 
 ################################################################################
@@ -390,7 +391,7 @@ def get_virusscanner(scanner,parent):
 
 	if scanner=="CLAMAV" and _clamavscan_available:
 		return _CLAMAV(parent=parent)
-	
+
 	if scanner=="COMODO":
 		s= _COMODO(parent=parent)
 
@@ -414,13 +415,13 @@ def get_virusscanner(scanner,parent):
 
 		if  s.cmd and len(s.cmd)>0:
 			return s
-			
+
 	if scanner=="SOPHOS":
 		s= _SOPHOS(parent=parent)
 
 		if  s.cmd and len(s.cmd)>0:
 			return s
-			
+
 	return None
 
 

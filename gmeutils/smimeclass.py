@@ -5,7 +5,7 @@ import os
 import re
 import subprocess
 import tempfile
-from	.child 			import _gmechild 
+from	.child 			import _gmechild
 from	.version		import *
 from	._dbg 			import _dbg
 
@@ -18,9 +18,8 @@ class _SMIME(_gmechild):
 	Don't call this class directly, use gme.smime_factory() instead!
 	"""
 
-
 	def __init__(   self,
-					parent, 
+					parent,
 					keyhome=None):
 		_gmechild.__init__(self,parent,filename=__file__)
 		self.debug("_SMIME.__init__ %s"%self.parent._SMIMEKEYHOME)
@@ -31,32 +30,31 @@ class _SMIME(_gmechild):
 			self._keyhome=os.path.expanduser(self.parent._SMIMEKEYHOME)
 
 		self._recipient = ''
-		self._filename=''	
+		self._filename=''
 		self._recipient=None
 		self.debug("_SMIME.__init__ end")
- 
+
 	############
 	#public_keys
-	############ 
+	############
 
 	@_dbg
 	def public_keys(self):
 		"returns a list of all available public keys"
-
 		return self.parent._backend.smimepublic_keys()
- 
+
 	#############
 	#private_keys
-	############# 
+	#############
 
 	@_dbg
 	def private_keys(self):
 		"returns a list of all available private keys"
 		return self.parent._backend.smimeprivate_keys()
- 
+
 	#############
 	#set_filename
-	############# 
+	#############
 
 	@_dbg
 	def set_filename(self, fname):
@@ -66,10 +64,10 @@ class _SMIME(_gmechild):
 			self._filename=fname.strip()
 		else:
 			self._filename=''
- 
+
 	############
 	#set_keyhome
-	############ 
+	############
 
 	@_dbg
 	def set_keyhome(self,keyhome):
@@ -82,7 +80,7 @@ class _SMIME(_gmechild):
 
  	##############
 	#set_recipient
-	############## 
+	##############
 
 	@_dbg
 	def set_recipient(self, recipient):
@@ -90,25 +88,26 @@ class _SMIME(_gmechild):
 
 		if isinstance(recipient, str):
 			self._recipient=recipient
- 
+
 	##########
 	#recipient
-	########## 
+	##########
 
 	@_dbg
 	def recipient(self):
 		"returns the recipient address"
-		return self._recipient	
- 
+		return self._recipient
+
 	###############
 	#has_public_key
-	############### 
+	###############
 
 	@_dbg
 	def has_public_key(self,key):
 		"""returns True if a public key for e-mail address 'key' exists,
 			else False
 		"""
+
 		if not isinstance(key,str):
 			self.debug("smime has_public_key, key not of type str")
 			return False
@@ -120,19 +119,19 @@ class _SMIME(_gmechild):
 		   return False
 
 		return True
- 
+
 	#############
 	#encrypt_file
-	############# 
+	#############
 
 	@_dbg
 	def encrypt_file(   self,
 						filename=None,
-						binary=False, 
+						binary=False,
 						recipient=None):
 		"""
 		encrypts the content of a file.
-		
+
 		return values:
 		result: True if success, else False
 		encdata: If 'result' is True, a (binary) string with the encrypted data
@@ -157,10 +156,10 @@ class _SMIME(_gmechild):
 		f=self.parent._new_tempfile()
 		self.debug("_SMIME.encrypt_file _new_tempfile %s"%f.name)
 		f.close()
-		_result = subprocess.call( 
+		_result = subprocess.call(
 				' '.join(self._command_encrypt_fromfile( f.name,
 														 binary))
-			   ,shell=True ) 
+			   ,shell=True )
 		self.debug("Encryption command: '%s'" %
 						' '.join(self._command_encrypt_fromfile(f.name,binary)))
 
@@ -177,10 +176,10 @@ class _SMIME(_gmechild):
 		self.parent._del_tempfile(f.name)
 		m=email.message_from_string(encdata)
 		return result,m.get_payload()
- 
+
 	##########################
 	#_command_encrypt_fromfile
-	########################## 
+	##########################
 
 	@_dbg
 	def _command_encrypt_fromfile(  self,
@@ -196,18 +195,18 @@ class _SMIME(_gmechild):
 		elif _recipient[1]=="AES192":
 			encrypt="aes-192-cbc"
 
-		cmd=[   self.parent._SMIMECMD, 
-				"smime", 
+		cmd=[   self.parent._SMIMECMD,
+				"smime",
 				"-%s" %encrypt,
-				"-encrypt", 
+				"-encrypt",
 				"-in",self._filename,
-				"-out", sourcefile,  
+				"-out", sourcefile,
 				_recipient[0] ]
 		return cmd
 
 	#############
 	#decrypt_file
-	############# 
+	#############
 
 	@_dbg
 	def decrypt_file(   self,
@@ -216,7 +215,7 @@ class _SMIME(_gmechild):
 						recipient=None):
 		"""
 		decrypts the content of a file.
-		
+
 		return values:
 		result: True if success, else False
 		encdata: If 'result' is True, a (binary) string with the decrypted data
@@ -237,10 +236,10 @@ class _SMIME(_gmechild):
 		f=self.parent._new_tempfile()
 		self.debug("_SMIME.decrypt_file _new_tempfile %s"%f.name)
 		f.close()
-		_result = subprocess.call( 
+		_result = subprocess.call(
 				' '.join(self._command_decrypt_fromfile(f.name,
 														binary))
-				,shell=True ) 
+				,shell=True )
 		self.debug("Decryption command: '%s'" %
 				' '.join(self._command_decrypt_fromfile(f.name,binary)))
 
@@ -258,7 +257,7 @@ class _SMIME(_gmechild):
 		self.parent._del_tempfile(f.name)
 		m=email.message_from_string(encdata)
 		return result,m.get_payload()
- 
+
 	###########################
 	#_command_decrypt_from_file
 	###########################
@@ -268,35 +267,35 @@ class _SMIME(_gmechild):
 									sourcefile,
 									binary):
 		_recipient=self.parent._backend.smimeuser(self._recipient)
-		cmd=[self.parent._SMIMECMD, 
+		cmd=[self.parent._SMIMECMD,
 				"smime",
-				"-decrypt", 
+				"-decrypt",
 				"-in",self._filename,
 				"-out", sourcefile,
 				"-inkey" , _recipient[2] ]
 		return cmd
- 
+
 	############
 	#_opensslcmd
-	############ 
+	############
 
 	@_dbg
 	def _opensslcmd(self,cmd):
 		result=""
-		p = subprocess.Popen(   cmd.split(" "), 
-								stdin=None, 
-								stdout=subprocess.PIPE, 
+		p = subprocess.Popen(   cmd.split(" "),
+								stdin=None,
+								stdout=subprocess.PIPE,
 								stderr=subprocess.PIPE )
 		result=p.stdout.read()
 		return result, p.returncode
- 
+
 	#######################
 	#get_certemailaddresses
 	#######################
 
 	@_dbg
 	def get_certemailaddresses(self,certfile):
-		"""returns a list of all e-mail addresses the 'certfile' for which 
+		"""returns a list of all e-mail addresses the 'certfile' for which
 		is valid."""
 		cmd=[   self.parent._SMIMECMD,
 				"x509",
@@ -327,7 +326,7 @@ class _SMIME(_gmechild):
 				pass
 
 		return email
- 
+
 	####################
 	#get_certfingerprint
 	####################
@@ -354,7 +353,7 @@ class _SMIME(_gmechild):
 				pass
 
 		return fingerprint
- 
+
 	############################
 	#extract_publickey_from_mail
 	############################
@@ -365,7 +364,7 @@ class _SMIME(_gmechild):
 									targetdir):
 		"""
 		smime messages usually contain the public key of the sender address.
-		This function extracts the key and stores it in the directory 
+		This function extracts the key and stores it in the directory
 		'targetdir'.
 		"""
 		self.debug("extract_publickey_from_mail to '%s'"%targetdir)
@@ -380,14 +379,14 @@ class _SMIME(_gmechild):
 				"-in", mail,
 				"-pk7out",
 				"2>/dev/null","|",
-				
+
 				self.parent._SMIMECMD,
 				"pkcs7",
 				"-print_certs",
 				"-out",f.name,
 				"2>/dev/null"]
 		self.debug("extractcmd :'%s'"%" ".join(cmd))
-		_result = subprocess.call( " ".join(cmd) ,shell=True) 
+		_result = subprocess.call( " ".join(cmd) ,shell=True)
 		f.close()
 		size=os.path.getsize(fname)
 
@@ -400,7 +399,7 @@ class _SMIME(_gmechild):
 		self._copyfile(fname,targetname)
 		os.remove(fname)
 		return targetname
- 
+
 	###############
 	#create_keylist
 	###############
@@ -409,7 +408,7 @@ class _SMIME(_gmechild):
 	def create_keylist(self,directory):
 		"""
 		returns a dictonary of e-mail addresses with its key, automatically
-		created from the files in 'directory' 
+		created from the files in 'directory'
 		"""
 		result={}
 		directory=os.path.expanduser(directory)
@@ -435,7 +434,7 @@ class _SMIME(_gmechild):
 						  result[e] = [f,self.parent._SMIMECIPHER]
 
 		return result
- 
+
 	###################
 	#verify_certificate
 	###################
@@ -448,9 +447,9 @@ class _SMIME(_gmechild):
 		"""
 		cmd=[   self._SMIMECMD,
 				"verify",cert,"&>/dev/null"]
-		_result = subprocess.call( " ".join(cmd) ,shell=True) 
+		_result = subprocess.call( " ".join(cmd) ,shell=True)
 		return _result==0
- 
+
 	##########
 	#_copyfile
 	##########

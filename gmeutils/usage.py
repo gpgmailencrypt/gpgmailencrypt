@@ -104,7 +104,7 @@ def print_exampleconfig():
 	print ("port=3306".ljust(space)+
 	"#sql server port")
 	print ("usermapsql=select x_gpg from gpgusermap where "
-			"username=?".ljust(space)+
+			"username=? ".ljust(space)+
 	"#SQL command that returns one row with the alternatve e-mail address")
 	print ("encryptionmapsql=SELECT encrypt FROM encryptionmap WHERE user= ?")
 	print ("".ljust(space)+
