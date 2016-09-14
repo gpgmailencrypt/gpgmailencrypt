@@ -103,8 +103,8 @@ def print_exampleconfig():
 	"#sql server")
 	print ("port=3306".ljust(space)+
 	"#sql server port")
-	print ("usermapsql=select x_gpg from gpgusermap where "
-			"username=? ".ljust(space)+
+	print ("usermapsql=select gpguser from gpgusermap where "
+			"user=? ".ljust(space)+
 	"#SQL command that returns one row with the alternatve e-mail address")
 	print ("encryptionmapsql=SELECT encrypt FROM encryptionmap WHERE user= ?")
 	print ("".ljust(space)+
@@ -238,7 +238,7 @@ def print_exampleconfig():
 
 	print ("")
 	print ("[zip]")
-	print ("7zipcommand=/usr/bin7za".ljust(space)+
+	print ("7zipcommand=/usr/bin/7za".ljust(space)+
 	"#path where to find 7za")
 	print ("defaultcipher=ZipCrypto".ljust(space)+
 	"#ZipCrypto|AES128||AES192|AES256")
