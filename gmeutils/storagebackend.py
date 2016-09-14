@@ -371,7 +371,7 @@ class _sql_backend(_base_storage):
 	@_dbg
 	def init(self):
 		self._DATABASE="gpgmailencrypt"
-		self._USERMAPSQL="SELECT x_gpg FROM gpgusermap WHERE username=?"
+		self._USERMAPSQL="SELECT gpguser FROM gpgusermap WHERE user=?"
 		self._ENCRYPTIONMAPSQL="SELECT encrypt FROM encryptionmap WHERE user= ?"
 		self._SMIMEUSERSQL=("SELECT publickey,cipher FROM smimeusers "
 							"WHERE user= ?")
@@ -912,7 +912,7 @@ class _sql_backend(_base_storage):
 					"tdlm":self._textdelimiter,
 					"table":self._PDFPASSWORDTABLE,
 					"starttime":self._PDFPASSWORDSTARTTIMEFIELD,
-					"age":age
+					"age":(time.time()-age)
 					})
 		self.debug(sql)
 		self.execute_action(sql)
@@ -1175,7 +1175,6 @@ def get_backend(backend,parent):
 			except:
 				parent.log("Storage backend %s could not be loaded"%backend,"e")
 
-		else:
-			# default backend=="TEXT":
-			return _TEXT_BACKEND(parent=parent,backend="TEXT")
+		# default backend=="TEXT":
+		return _TEXT_BACKEND(parent=parent,backend="TEXT")
 
