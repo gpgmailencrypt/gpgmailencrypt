@@ -13,6 +13,7 @@ import ssl
 import sys
 from	.child 			import _gmechild
 from	.version		import *
+from .storagebackend import _sql_backend
 
 ######################
 #_gpgmailencryptserver
@@ -21,7 +22,8 @@ from	.version		import *
 class _gpgmailencryptserver(smtpd.SMTPServer):
 	"encryption smtp server based on smtpd"
 	#can't be member of _gmechild because smtpd.SMTPServer uses the name debug
-	ADMINCOMMANDS=[ "DEBUG",
+	ADMINCOMMANDS=[ "CREATETABLE",
+					"DEBUG",
 					"DELUSER",
 					"FLUSH",
 					"MESSAGES",
@@ -879,6 +881,34 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		self.push("250 OK")
 		return
 
+	#################
+	#smtp_CREATETABLE
+	#################
+
+	def smtp_CREATETABLE(self,arg):
+
+		if not arg:
+			self.push("501 Syntax error: CREATETABLE table")
+			return
+
+		res=arg.split(" ")
+		print("ARG",arg)
+
+		if len(res)!=1:
+			self.push("501 Syntax error: CREATETABLE table")
+			return
+
+		try:
+			r=self.parent._backend.create_table(res[0].lower(),logerror=False)
+		except:
+			self.push("454 Table definition '%s' not found" % res[0].lower())
+			return
+
+		if r:
+			self.push("250 OK")
+		else:
+			self.push("454 Table '%s' could not be created" % res[0].lower())
+
 ##########
 #file_auth
 ##########
@@ -904,9 +934,9 @@ def file_auth(  parent,
 
 	return False
 
-##########
+#########
 #get_hash
-##########
+#########
 
 def get_hash(txt):
 	i=0

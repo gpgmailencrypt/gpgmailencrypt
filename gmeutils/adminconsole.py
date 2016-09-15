@@ -1,6 +1,6 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
-from gmeutils.child 			import _gmechild 
+from gmeutils.child 			import _gmechild
 from gmeutils.version			import *
 from gmeutils._dbg 				import _dbg
 from gmeutils.mytimer       	import _mytimer
@@ -16,7 +16,7 @@ except:
 
 ###################
 #start_adminconsole
-################### 
+###################
 
 def start_adminconsole(host,port):
 	"starts the admin console"
@@ -24,7 +24,7 @@ def start_adminconsole(host,port):
 	#########
 	#gmeadmin
 	#########
-	
+
 	class gmeadmin(_gmechild):
 
 		def __init__(self,parent=None):
@@ -37,7 +37,7 @@ def start_adminconsole(host,port):
 		#########
 		#_sendcmd
 		#########
-		
+
 		def _sendcmd(self, cmd,arg=""):
 
 			if self.smtp==None:
@@ -51,18 +51,18 @@ def start_adminconsole(host,port):
 		#########
 		#getreply
 		#########
-		
+
 		def getreply(self):
 
 			if self.smtp==None:
 					return None
 
-			return self.smtp.getreply()	
+			return self.smtp.getreply()
 
 		######
 		#start
 		######
-		
+
 		def start(self,host="localhost",port=0):
 			self.host=host
 			self.port=port
@@ -81,7 +81,7 @@ def start_adminconsole(host,port):
 			except:
 				print("WARNING. Connection is not encrypted. "
 					"STARTTLS was not possible")
-			
+
 			user=input("User: ")
 			password=getpass.getpass("Password: ")
 			auth=binascii.b2a_base64(
@@ -149,7 +149,7 @@ def start_adminconsole(host,port):
 		###########
 		#print_help
 		###########
-		
+
 		def print_help(self):
 			space=18
 			print("\nAllowed commands:")
@@ -183,6 +183,8 @@ def start_adminconsole(host,port):
 			print("".ljust(space)+"example: 'setuser john johnspassword'")
 			print("statistics".ljust(space)+"print statistic information")
 			print("users".ljust(space)+"print users")
+			print("createtable xxx".ljust(space)+"creates a specific SQL table")
+			print("".ljust(space)+"valid tablenames: @TODO")
 
 #class taken from http://stackoverflow.com/questions/20625642/\
 #				 autocomplete-with-readline-in-python3
@@ -194,9 +196,9 @@ def start_adminconsole(host,port):
 		#########
 		#complete
 		#########
-		
-		def complete(   self, 
-						text, 
+
+		def complete(   self,
+						text,
 						state):
 
 			if state == 0:  # on first trigger, build possible matches
@@ -204,8 +206,8 @@ def start_adminconsole(host,port):
 				if not text:
 					self.matches = self.options[:]
 				else:
-					self.matches = [s for s in self.options 
-									  if (s 
+					self.matches = [s for s in self.options
+									  if (s
 									  and s.upper().startswith(text.upper() ))
 								   ]
 
@@ -217,10 +219,10 @@ def start_adminconsole(host,port):
 		################
 		#display_matches
 		################
-		
-		def display_matches(	self, 
-								substitution, 
-								matches, 
+
+		def display_matches(	self,
+								substitution,
+								matches,
 								longest_match_length):
 			print()
 			print(matches)

@@ -658,16 +658,16 @@ class _sql_backend(_base_storage):
 	#############
 
 	@_dbg
-	def create_table(self,table):
+	def create_table(self,table, logerror=True):
 		sql=""
 
 		try:
 			sql=self._tabledefinition[table]
 		except:
 			self.log("SQL definition for table '%s' not found"%table,"e")
-			return
+			return False
 
-		return self.execute_action(sql)
+		return self.execute_action(sql,logerror=logerror)
 
 	##################
 	#create_all_tables
