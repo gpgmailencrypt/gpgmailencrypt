@@ -582,7 +582,11 @@ class _sql_backend(_base_storage):
 			if fields!=None:
 				f=(fields,)
 
-			self._cursor.execute(sql.replace("?",self.placeholder),f)
+			if fields:
+				self._cursor.execute(sql.replace("?",self.placeholder),f)
+			else:
+				self._cursor.execute(sql.replace("?",self.placeholder))
+
 		except:
 			self.log_traceback()
 			self._cursor=None
