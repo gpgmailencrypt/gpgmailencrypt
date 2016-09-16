@@ -489,7 +489,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			self.push("501 Syntax error: AUTH PLAIN")
 			return
 
-		res=arg.split(" ")
+		res=arg.split()
 
 		if self.in_loginauth==0:
 
@@ -623,7 +623,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			self.push(syntaxerror)
 			return
 
-		res=arg.split(" ")
+		res=arg.split()
 		command=res[0].upper()
 
 		if ((command=="SHOW" and len(res)!=1)
@@ -819,7 +819,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			self.push("501 Syntax error: SETUSER user password")
 			return
 
-		res=arg.split(" ")
+		res=arg.split()
 
 		if len(res)!=2:
 			self.push("501 Syntax error: SETUSER user password")
@@ -846,7 +846,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			self.push("501 Syntax error: DELUSER user")
 			return
 
-		res=arg.split(" ")
+		res=arg.split()
 
 		if len(res)!=1:
 			self.push("501 Syntax error: DELUSER user")
@@ -891,8 +891,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			self.push("501 Syntax error: CREATETABLE table")
 			return
 
-		res=arg.split(" ")
-		print("ARG",arg)
+		res=arg.split()
 
 		if len(res)!=1:
 			self.push("501 Syntax error: CREATETABLE table")

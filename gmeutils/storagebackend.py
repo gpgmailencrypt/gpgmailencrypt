@@ -653,12 +653,12 @@ class _sql_backend(_base_storage):
 														r[0]))
 		return r[0].split(":")
 
-	#############
-	#create_table
-	#############
+	####################
+	#create_single_table
+	####################
 
 	@_dbg
-	def create_table(self,table, logerror=True):
+	def create_single_table(self,table, logerror=True):
 		sql=""
 
 		try:
@@ -669,20 +669,75 @@ class _sql_backend(_base_storage):
 
 		return self.execute_action(sql,logerror=logerror)
 
+	#############
+	#create_table
+	#############
+
+	@_dbg
+	def create_table(self,table, logerror=True):
+
+		if table=="all":
+
+			try:
+				if not self.create_table("usermap",logerror=logerror):
+					raise Exception
+				if not self.create_table("encryptionmap",logerror=logerror):
+					raise Exception
+				if not self.create_table("smime",logerror=logerror):
+					raise Exception
+				if not self.create_table("pdf",logerror=logerror):
+					raise Exception
+			except:
+				return False
+
+			return True
+
+		if table=="usermap":
+			r=self.create_single_table("usermap",logerror=logerror)
+
+			if r==True:
+				return self.create_single_table("usermapindex",
+												logerror=logerror)
+			else:
+				return False
+
+		if table=="encryptionmap":
+			r=self.create_single_table("encryptionmap",logerror=logerror)
+
+			if r==True:
+				return self.create_single_table("encryptionmapindex",
+												logerror=logerror)
+			else:
+				return False
+
+		if table=="smime":
+			r=self.create_single_table("smimeusers",logerror=logerror)
+
+			if r==True:
+				return self.create_single_table("smimeusersindex",
+												logerror=logerror)
+			else:
+				return False
+
+		if table=="pdf":
+			r=self.create_single_table("pdfpasswords",logerror=logerror)
+
+			if r==True:
+				return self.create_single_table("pdfpasswordsindex",
+												logerror=logerror)
+
+		return False
+
 	##################
 	#create_all_tables
 	##################
 
 	@_dbg
-	def create_all_tables(self):
-		self.create_table("usermap")
-		self.create_table("encryptionmap")
-		self.create_table("smimeusers")
-		self.create_table("pdfpasswords")
-		self.create_table("usermapindex")
-		self.create_table("encryptionmapindex")
-		self.create_table("smimeusersindex")
-		self.create_table("pdfpasswordsindex")
+	def create_all_tables(self,logerror=True):
+		self.create_table("usermap",logerror=logerror)
+		self.create_table("encryptionmap",logerror=logerror)
+		self.create_table("smime",logerror=logerror)
+		self.create_table("pdf",logerror=logerror)
 
 	##########
 	#smimeuser
