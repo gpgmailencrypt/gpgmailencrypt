@@ -399,11 +399,11 @@ class _sql_backend(_base_storage):
 		self._tabledefinition={}
 		self._tabledefinition["usermap"]=("create table gpgusermap ("
 					"user varchar (255) not null ,gpguser varchar(255));")
-		self._tabledefinition["usermapindex"]=("create unique index pindex"
+		self._tabledefinition["usermapindex"]=("create unique index uindex"
 					" on gpgusermap (user);")
 		self._tabledefinition["encryptionmap"]=("create table encryptionmap ("
 					"user varchar (255) not null ,encrypt varchar(255));")
-		self._tabledefinition["encryptionmapindex"]=("create unique index pindex"
+		self._tabledefinition["encryptionmapindex"]=("create unique index eindex"
 					" on encryptionmap (user);")
 		self._tabledefinition["pdfpasswords"]=("create table pdfpasswords ("
 					"user varchar (255) not null ,"
@@ -416,7 +416,7 @@ class _sql_backend(_base_storage):
 									"privatekey varchar (255), "
 									"publickey varchar(255) not null, "
 									"cipher varchar (255));")
-		self._tabledefinition["smimeusersindex"]=("create unique index pindex"
+		self._tabledefinition["smimeusersindex"]=("create unique index sindex"
 					" on smimeuser (user);")
 
 	########
@@ -612,14 +612,20 @@ class _sql_backend(_base_storage):
 			if fields!=None:
 				f=(fields,)
 
-			self._cursor.execute(sql.replace("?",self.placeholder),f)
+			if fields:
+				self._cursor.execute(sql.replace("?",self.placeholder),f)
+			else:
+				self._cursor.execute(sql.replace("?",self.placeholder))
+
 			self._db.commit()
+			self.debug("execute_action successful")
 		except:
 
 			if logerror:
 				self.log_traceback()
 
 			result=False
+			self.debug("execute_action failed")
 
 		self._cursor=None
 		self._db=None
@@ -666,7 +672,7 @@ class _sql_backend(_base_storage):
 		except:
 			self.log("SQL definition for table '%s' not found"%table,"e")
 			return False
-
+		self.debug("table definition for '%s' found"%table)
 		return self.execute_action(sql,logerror=logerror)
 
 	#############
@@ -675,6 +681,7 @@ class _sql_backend(_base_storage):
 
 	@_dbg
 	def create_table(self,table, logerror=True):
+		self.debug("create_table %s"%table)
 
 		if table=="all":
 
@@ -982,8 +989,10 @@ class _SQLITE3_BACKEND(_sql_backend):
 	#connect
 	########
 
+	@_dbg
 	def connect(self):
 		result=False
+		self.debug("sqlite3 connect")
 
 		try:
 			import sqlite3
@@ -992,12 +1001,15 @@ class _SQLITE3_BACKEND(_sql_backend):
 			self.log_traceback()
 			return result
 
-		if os.path.exists(self._DATABASE):
+		try:
 			self._db=sqlite3.connect(self._DATABASE)
 			self._cursor=self._db.cursor()
 			result=True
-		else:
-			self.log("Database '%s' does not exist"%self._DATABASE,"e")
+		except:
+			self.log("Database '%s' could not be opened"%self._DATABASE,"e")
+			self.log_traceback()
+			self._db=None
+			self._cursor=None
 
 		return result
 
@@ -1022,8 +1034,10 @@ class _MYSQL_BACKEND(_sql_backend):
 	#connect
 	########
 
+	@_dbg
 	def connect(self):
 		result=False
+		self.debug("mysql connect")
 
 		try:
 			import mysql.connector as mysql
@@ -1074,8 +1088,10 @@ class _ODBC_BACKEND(_sql_backend):
 	#connect
 	########
 
+	@_dbg
 	def connect(self):
 		result=False
+		self.debug("odbc connect")
 
 		try:
 			import pydodbc as odbc
@@ -1113,8 +1129,10 @@ class _POSTGRESQL_BACKEND(_sql_backend):
 	#connect
 	########
 
+	@_dbg
 	def connect(self):
 		result=False
+		self.debug("postgres connect")
 
 		try:
 			import psycopg2 as pg
@@ -1156,8 +1174,10 @@ class _MSSQL_BACKEND(_sql_backend):
 	#connect
 	########
 
+	@_dbg
 	def connect(self):
 		result=False
+		self.debug("mssql connect")
 
 		try:
 			import pymssql

@@ -897,16 +897,12 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			self.push("501 Syntax error: CREATETABLE table")
 			return
 
-		try:
-			r=self.parent._backend.create_table(res[0].lower(),logerror=False)
-		except:
-			self.push("454 Table definition '%s' not found" % res[0].lower())
+		if not self.parent._backend.create_table(res[0].lower(),logerror=True):
+			self.push("454 Table definition '%s' could not be created"
+				% res[0].lower())
 			return
 
-		if r:
-			self.push("250 OK")
-		else:
-			self.push("454 Table '%s' could not be created" % res[0].lower())
+		self.push("250 OK")
 
 ##########
 #file_auth
