@@ -126,21 +126,21 @@ def print_exampleconfig():
 	"#SQL command that returns a list with information about all "
 	"SMIME users and their private keys")
 
-	print ("use_sqlusermap=True".ljust(space)+
+	print ("use_sqlusermap=False".ljust(space)+
 	"#if True the usermap will be taken from the sql database else it will")
 	print ("".ljust(space)+
 	"#be taken from the config file, section [usermap]")
-	print ("use_sqlencryptionmap=True".ljust(space)+
+	print ("use_sqlencryptionmap=False".ljust(space)+
 	"#if True the encryptionmap will be taken from the sql database else it")
 	print ("".ljust(space)+
 	"#will be taken from the config file, section [encryptionmap]")
 
-	print ("use_sqlsmime=True".ljust(space)+
+	print ("use_sqlsmime=False".ljust(space)+
 	"#if True the SMIME user definition will be taken from the sql database")
 	print ("".ljust(space)+
 	"#else it will be taken from the config file, section [smimeuser]")
 
-	print ("use_sqlpdfpasswords=True".ljust(space)+
+	print ("use_sqlpdfpasswords=False".ljust(space)+
 	"#if True the PDF passwords will be stored and taken from the sql database")
 	print ("sqlpdf_passwordtable=pdfpasswords")
 	print ("sqlpdf_userfield=user")

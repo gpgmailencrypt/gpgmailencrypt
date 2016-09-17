@@ -386,10 +386,10 @@ class _sql_backend(_base_storage):
 		self._PASSWORD=""
 		self._HOST="127.0.0.1"
 		self._PORT=4711
-		self._USE_SQLUSERMAP=True
-		self._USE_SQLENCRYPTIONMAP=True
-		self._USE_SQLSMIME=True
-		self._USE_SQLPDFPASSWORDS=True
+		self._USE_SQLUSERMAP=False
+		self._USE_SQLENCRYPTIONMAP=False
+		self._USE_SQLSMIME=False
+		self._USE_SQLPDFPASSWORDS=False
 		self._db=None
 		self._cursor=None
 		self.placeholder="?"
@@ -397,27 +397,27 @@ class _sql_backend(_base_storage):
 		self._fielddelimiter="\""
 		self._textbackend=get_backend("TEXT",self.parent)
 		self._tabledefinition={}
-		self._tabledefinition["usermap"]=("create table gpgusermap ("
-					"user varchar (255) not null ,gpguser varchar(255));")
+		self._tabledefinition["usermap"]=("create table \"gpgusermap\" ("
+					"\"user\" varchar (255) not null ,\"gpguser\" varchar(255));")
 		self._tabledefinition["usermapindex"]=("create unique index uindex"
-					" on gpgusermap (user);")
-		self._tabledefinition["encryptionmap"]=("create table encryptionmap ("
-					"user varchar (255) not null ,encrypt varchar(255));")
+					" on gpgusermap (\"user\");")
+		self._tabledefinition["encryptionmap"]=("create table \"encryptionmap\" ("
+					"\"user\" varchar (255) not null ,\"encrypt\" varchar(255));")
 		self._tabledefinition["encryptionmapindex"]=("create unique index eindex"
-					" on encryptionmap (user);")
-		self._tabledefinition["pdfpasswords"]=("create table pdfpasswords ("
-					"user varchar (255) not null ,"
-					"password varchar(255),"
-					"starttime float);")
+					" on encryptionmap (\"user\");")
+		self._tabledefinition["pdfpasswords"]=("create table \"pdfpasswords\" ("
+					"\"user\" varchar (255) not null ,"
+					"\"password\" varchar(255),"
+					"\"starttime\" float);")
 		self._tabledefinition["pdfpasswordsindex"]=("create unique index pindex"
-					" on pdfpasswords (user);")
-		self._tabledefinition["smimeusers"]=("create table smimeuser("
-									"user varchar (255) not null, "
-									"privatekey varchar (255), "
-									"publickey varchar(255) not null, "
-									"cipher varchar (255));")
+					" on pdfpasswords (\"user\");")
+		self._tabledefinition["smimeusers"]=("create table \"smimeuser\"("
+									"\"user\" varchar (255) not null, "
+									"\"privatekey\" varchar (255), "
+									"\"publickey\" varchar(255) not null, "
+									"\"cipher\" varchar (255));")
 		self._tabledefinition["smimeusersindex"]=("create unique index sindex"
-					" on smimeuser (user);")
+					" on smimeuser (\"user\");")
 
 	########
 	#connect
@@ -602,7 +602,6 @@ class _sql_backend(_base_storage):
 	@_dbg
 	def execute_action(self, sql,fields=None,logerror=True):
 
-		self.debug(sql)
 		self.connect()
 
 		if self._cursor== None:
@@ -610,6 +609,7 @@ class _sql_backend(_base_storage):
 
 		result=True
 
+		self.debug(sql.replace("?",self.placeholder))
 		try:
 			f=None
 
@@ -663,6 +663,18 @@ class _sql_backend(_base_storage):
 														r[0]))
 		return r[0].split(":")
 
+
+	@_dbg
+	def _replace_sql_delimiters(self,sql):
+		t=sql.replace("\"","\\#").replace("'","\\§")
+		self.debug("t1=%s"%t)
+		sql=t.replace(	"\\#",
+						self._fielddelimiter).replace(
+												"\\§",
+												self._textdelimiter)
+		self.debug("t2=%s"%sql)
+		return sql
+
 	####################
 	#create_single_table
 	####################
@@ -677,7 +689,9 @@ class _sql_backend(_base_storage):
 			self.log("SQL definition for table '%s' not found"%table,"e")
 			return False
 		self.debug("table definition for '%s' found"%table)
-		return self.execute_action(sql,logerror=logerror)
+
+		return self.execute_action(	self._replace_sql_delimiters(sql),
+									logerror=logerror)
 
 	#############
 	#create_table
@@ -1109,7 +1123,10 @@ class _ODBC_BACKEND(_sql_backend):
 			self._cursor=self._db.cursor()
 			result=True
 		except :
+			self.log("Database '%s' could not be opened"%self._DATABASE,"e")
 			self.log_traceback()
+			self._db=None
+			self._cursor=None
 
 		return result
 
@@ -1154,7 +1171,11 @@ class _POSTGRESQL_BACKEND(_sql_backend):
 			self._cursor=self._db.cursor()
 			result=True
 		except:
+			self.log("Database '%s' could not be opened"%self._DATABASE,"e")
+			raise
 			self.log_traceback()
+			self._db=None
+			self._cursor=None
 
 		return result
 
@@ -1199,7 +1220,10 @@ class _MSSQL_BACKEND(_sql_backend):
 			self._cursor=self._db.cursor()
 			result=True
 		except:
+			self.log("Database '%s' could not be opened"%self._DATABASE,"e")
 			self.log_traceback()
+			self._db=None
+			self._cursor=None
 
 		return result
 
