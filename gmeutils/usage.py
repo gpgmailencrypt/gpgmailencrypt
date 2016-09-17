@@ -110,18 +110,18 @@ def print_exampleconfig():
 	print ("".ljust(space)+
 	"#SQL command that returns one row with the preferred encryption method")
 
-	print ("smimeusersql=SELECT publickey,cipher FROM smimeusers "
+	print ("smimeusersql=SELECT publickey,cipher FROM smimeuser "
 							"WHERE user= ?".ljust(space)+"")
 	print ("".ljust(space)+
 	"#SQL command that returns one row with information about an SMIME user")
 
-	print ("smimepublickeysql=SELECT user,publickey,cipher FROM smimeusers")
+	print ("smimepublickeysql=SELECT user,publickey,cipher FROM smimeuser")
 	print ("".ljust(space)+
 	"#SQL command that returns a list with information about all "
 	"SMIME users and their public keys")
 
 	print ("smimeprivatekeysql=SELECT user,privatekey,cipher FROM "
-	"smimeusers WHERE privatekey is not NULL")
+	"smimeuser WHERE privatekey is not NULL")
 	print("".ljust(space)+
 	"#SQL command that returns a list with information about all "
 	"SMIME users and their private keys")

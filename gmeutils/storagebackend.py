@@ -5,6 +5,7 @@ from gmeutils.helpers			import *
 from gmeutils.version			import *
 from gmeutils._dbg 				import _dbg
 import os.path
+import re
 import time
 
 __all__ =["get_backend","get_backendlist"]
@@ -373,11 +374,11 @@ class _sql_backend(_base_storage):
 		self._DATABASE="gpgmailencrypt"
 		self._USERMAPSQL="SELECT gpguser FROM gpgusermap WHERE user=?"
 		self._ENCRYPTIONMAPSQL="SELECT encrypt FROM encryptionmap WHERE user= ?"
-		self._SMIMEUSERSQL=("SELECT publickey,cipher FROM smimeusers "
+		self._SMIMEUSERSQL=("SELECT publickey,cipher FROM smimeuser "
 							"WHERE user= ?")
-		self._SMIMEPUBLICKEYSQL="SELECT user,publickey,cipher FROM smimeusers"
+		self._SMIMEPUBLICKEYSQL="SELECT user,publickey,cipher FROM smimeuser"
 		self._SMIMEPRIVATEKEYSQL=("SELECT user,privatekey,cipher FROM "
-									"smimeusers WHERE privatekey IS NOT NULL")
+									"smimeuser WHERE privatekey IS NOT NULL")
 		self._PDFPASSWORDTABLE="pdfpasswords"
 		self._PDFPASSWORDUSERFIELD="user"
 		self._PDFPASSWORDPASSWORDFIELD="password"
@@ -394,7 +395,8 @@ class _sql_backend(_base_storage):
 		self._cursor=None
 		self.placeholder="?"
 		self._textdelimiter="'"
-		self._fielddelimiter="\""
+		self._fieldbegindelimiter="\""
+		self._fieldenddelimiter="\""
 		self._textbackend=get_backend("TEXT",self.parent)
 		self._tabledefinition={}
 		self._tabledefinition["usermap"]=("create table \"gpgusermap\" ("
@@ -581,8 +583,7 @@ class _sql_backend(_base_storage):
 
 			if fields!=None:
 				f=(fields,)
-
-			if fields:
+				#print("\n\n%s\n\n%s\n\n"%(sql.replace("?",self.placeholder),f))
 				self._cursor.execute(sql.replace("?",self.placeholder),f)
 			else:
 				self._cursor.execute(sql.replace("?",self.placeholder))
@@ -663,13 +664,16 @@ class _sql_backend(_base_storage):
 														r[0]))
 		return r[0].split(":")
 
+	########################
+	#_replace_sql_delimiters
+	########################
 
 	@_dbg
 	def _replace_sql_delimiters(self,sql):
 		t=sql.replace("\"","\\#").replace("'","\\§")
 		self.debug("t1=%s"%t)
 		sql=t.replace(	"\\#",
-						self._fielddelimiter).replace(
+						self._fieldbegindelimiter).replace(
 												"\\§",
 												self._textdelimiter)
 		self.debug("t2=%s"%sql)
@@ -882,10 +886,10 @@ class _sql_backend(_base_storage):
 		else:
 			starttime=0
 
-		insertsql=(	"INSERT INTO %(fdlm)s%(table)s%(fdlm)s"
-				" (%(fdlm)s%(userfield)s%(fdlm)s,"
-				"%(fdlm)s%(passwordfield)s%(fdlm)s, "
-				"%(fdlm)s%(starttimefield)s%(fdlm)s) "
+		insertsql=(	"INSERT INTO %(fbdlm)s%(table)s%(fedlm)s"
+				" (%(fbdlm)s%(userfield)s%(fedlm)s,"
+				"%(fbdlm)s%(passwordfield)s%(fedlm)s, "
+				"%(fbdlm)s%(starttimefield)s%(fedlm)s) "
 				"VALUES (%(tdlm)s%(user)s%(tdlm)s,"
 				"%(tdlm)s%(password)s%(tdlm)s,"
 				"%(tdlm)s%(starttime)s%(tdlm)s)"
@@ -894,19 +898,21 @@ class _sql_backend(_base_storage):
 			"userfield":self._PDFPASSWORDUSERFIELD,
 			"starttimefield":self._PDFPASSWORDSTARTTIMEFIELD,
 			"starttime":starttime,
-			"fdlm":self._fielddelimiter,
+			"fbdlm":self._fieldbegindelimiter,
+			"fedlm":self._fieldenddelimiter,
 			"tdlm":self._textdelimiter,
 			"user":user,
 			"password":password
 		})
 
-		updatesql=(	"UPDATE %(fdlm)s%(table)s%(fdlm)s"
-		" SET %(fdlm)s%(passwordfield)s%(fdlm)s = %(tdlm)s%(password)s%(tdlm)s"
-		" WHERE %(fdlm)s%(userfield)s%(fdlm)s = %(tdlm)s%(user)s%(tdlm)s"
+		updatesql=(	"UPDATE %(fbdlm)s%(table)s%(fedlm)s"
+		" SET %(fbdlm)s%(passwordfield)s%(fedlm)s = %(tdlm)s%(password)s%(tdlm)s"
+		" WHERE %(fbdlm)s%(userfield)s%(fedlm)s = %(tdlm)s%(user)s%(tdlm)s"
 		%{	"passwordfield":self._PDFPASSWORDPASSWORDFIELD,
 			"table":self._PDFPASSWORDTABLE,
 			"userfield":self._PDFPASSWORDUSERFIELD,
-			"fdlm":self._fielddelimiter,
+			"fbdlm":self._fieldbegindelimiter,
+			"fedlm":self._fieldenddelimiter,
 			"tdlm":self._textdelimiter,
 			"user":user,
 			"password":password
@@ -925,13 +931,14 @@ class _sql_backend(_base_storage):
 		if not self._USE_SQLPDFPASSWORDS:
 			return self._textbackend.get_pdfpassword(user)
 
-		sql=("SELECT %(fdlm)s%(password)s%(fdlm)s "
-				"FROM %(fdlm)s%(table)s%(fdlm)s "
-				"WHERE %(fdlm)s%(userfield)s%(fdlm)s =%(tdlm)s%(user)s%(tdlm)s"
+		sql=("SELECT %(fbdlm)s%(password)s%(fedlm)s "
+				"FROM %(fbdlm)s%(table)s%(fedlm)s "
+				"WHERE %(fbdlm)s%(userfield)s%(fedlm)s =%(tdlm)s%(user)s%(tdlm)s"
 		%{	"password":self._PDFPASSWORDPASSWORDFIELD,
 			"table":self._PDFPASSWORDTABLE,
 			"userfield":self._PDFPASSWORDUSERFIELD,
-			"fdlm":self._fielddelimiter,
+			"fbdlm":self._fieldbegindelimiter,
+			"fedlm":self._fieldenddelimiter,
 			"tdlm":self._textdelimiter,
 			"user":user})
 		self.debug(sql)
@@ -963,10 +970,11 @@ class _sql_backend(_base_storage):
 		if not self._USE_SQLPDFPASSWORDS:
 			return self._textbackend.reset_pdfpasswords()
 
-		sql=("DELETE FROM %(fdlm)s%(table)s%(fdlm)s "
-				"WHERE %(fdlm)s%(starttime)s%(fdlm)s >0"
+		sql=("DELETE FROM %(fbdlm)s%(table)s%(fedlm)s "
+				"WHERE %(fbdlm)s%(starttime)s%(fedlm)s >0"
 				%	{
-					"fdlm":self._fielddelimiter,
+					"fbdlm":self._fieldbegindelimiter,
+					"fedlm":self._fieldenddelimiter,
 					"tdlm":self._textdelimiter,
 					"table":self._PDFPASSWORDTABLE,
 					"starttime":self._PDFPASSWORDSTARTTIMEFIELD
@@ -984,11 +992,12 @@ class _sql_backend(_base_storage):
 		if not self._USE_SQLPDFPASSWORDS:
 			return self._textbackend.del_old_pdfpasswords(age)
 
-		sql=("DELETE FROM %(fdlm)s%(table)s%(fdlm)s "
-				"WHERE %(fdlm)s%(starttime)s%(fdlm)s >0 "
-					"AND %(fdlm)s%(starttime)s%(fdlm)s<%(age)s"
+		sql=("DELETE FROM %(fbdlm)s%(table)s%(fedlm)s "
+				"WHERE %(fbdlm)s%(starttime)s%(fedlm)s >0 "
+					"AND %(fbdlm)s%(starttime)s%(fedlm)s<%(age)s"
 				%	{
-					"fdlm":self._fielddelimiter,
+					"fbdlm":self._fieldbegindelimiter,
+					"fedlm":self._fieldenddelimiter,
 					"tdlm":self._textdelimiter,
 					"table":self._PDFPASSWORDTABLE,
 					"starttime":self._PDFPASSWORDSTARTTIMEFIELD,
@@ -1046,7 +1055,8 @@ class _MYSQL_BACKEND(_sql_backend):
 		_sql_backend.init(self)
 		self._PORT=3306
 		self.placeholder="%s"
-		self._fielddelimiter="`"
+		self._fieldbegindelimiter="`"
+		self._fieldenddelimiter="`"
 
 	########
 	#connect
@@ -1226,6 +1236,15 @@ class _MSSQL_BACKEND(_sql_backend):
 			self._cursor=None
 
 		return result
+
+	@_dbg
+	def _replace_sql_delimiters(self,sql):
+		#MSSQL supports [field name]
+		p=re.compile("\"(?=[a-zA-Z0-9]+)")
+		sql=p.sub("[",sql)
+		p=re.compile("(?<!\b)\"")
+		sql=p.sub("]",sql)
+		return sql
 
 ################################################################################
 

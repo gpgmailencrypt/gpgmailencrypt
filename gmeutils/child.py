@@ -7,7 +7,7 @@
 
 class _gmechild:
 	"base class of all classes that will be used from class gme"
-	
+
 	def __init__(self,parent,filename):
 		self.parent=parent
 		self._level=0

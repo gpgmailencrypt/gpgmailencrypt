@@ -33,7 +33,7 @@ def _dbg(func):
 		lineno=0
 		endlineno=0
 		filename=inspect.getfile(func)
-		
+
 		try:
 			source=inspect.getsourcelines(func)
 			lineno=source[1]
