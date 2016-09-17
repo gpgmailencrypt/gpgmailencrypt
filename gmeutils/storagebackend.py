@@ -400,12 +400,15 @@ class _sql_backend(_base_storage):
 		self._textbackend=get_backend("TEXT",self.parent)
 		self._tabledefinition={}
 		self._tabledefinition["usermap"]=("create table \"gpgusermap\" ("
-					"\"user\" varchar (255) not null ,\"gpguser\" varchar(255));")
+					"\"user\" varchar (255) not null ,"
+					"\"gpguser\" varchar(255));")
 		self._tabledefinition["usermapindex"]=("create unique index uindex"
 					" on gpgusermap (\"user\");")
-		self._tabledefinition["encryptionmap"]=("create table \"encryptionmap\" ("
-					"\"user\" varchar (255) not null ,\"encrypt\" varchar(255));")
-		self._tabledefinition["encryptionmapindex"]=("create unique index eindex"
+		self._tabledefinition["encryptionmap"]=("create table \"encryptionmap\""
+					" (\"user\" varchar (255) not null ,"
+					"\"encrypt\" varchar(255));")
+		self._tabledefinition["encryptionmapindex"]=(
+					"create unique index eindex"
 					" on encryptionmap (\"user\");")
 		self._tabledefinition["pdfpasswords"]=("create table \"pdfpasswords\" ("
 					"\"user\" varchar (255) not null ,"
@@ -583,7 +586,6 @@ class _sql_backend(_base_storage):
 
 			if fields!=None:
 				f=(fields,)
-				#print("\n\n%s\n\n%s\n\n"%(sql.replace("?",self.placeholder),f))
 				self._cursor.execute(sql.replace("?",self.placeholder),f)
 			else:
 				self._cursor.execute(sql.replace("?",self.placeholder))
@@ -671,12 +673,10 @@ class _sql_backend(_base_storage):
 	@_dbg
 	def _replace_sql_delimiters(self,sql):
 		t=sql.replace("\"","\\#").replace("'","\\§")
-		self.debug("t1=%s"%t)
 		sql=t.replace(	"\\#",
 						self._fieldbegindelimiter).replace(
 												"\\§",
 												self._textdelimiter)
-		self.debug("t2=%s"%sql)
 		return sql
 
 	####################
