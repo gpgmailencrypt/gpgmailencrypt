@@ -26,16 +26,16 @@ def install_dir(fromdir,todir):
 
 	d,b=os.path.split(fromdir)
 	todir=os.path.join(todir,b)
-	
+
 	try:
-	
+
 		if not os.path.exists(todir):
 			os.makedirs(todir)
 
-		for root, directories, files in os.walk(fromdir):  
+		for root, directories, files in os.walk(fromdir):
 			to=root.replace(fromdir,todir)
 
-			for d in directories:  
+			for d in directories:
 				pathd=os.path.join(todir,d)
 
 				if not os.path.exists(pathd):
@@ -68,6 +68,7 @@ def _post_install(dir):
 
 	install_dir(os.path.join(dir,"mailtemplates"),_templatepath)
 	initscript="/etc/init.d/gpgmailencrypt"
+
 	try:
 		shutil.copyfile(os.path.join(dir,"/misc/gpgmailencrypt.init"),initscript)
 		os.chmod(initscript,0o755)
@@ -76,7 +77,7 @@ def _post_install(dir):
 
 	try:
 		cmd="gme.py -l none -x > /etc/gpgmailencrypt.conf.example"
-		_result = subprocess.check_output(	cmd, 
+		_result = subprocess.check_output(	cmd,
 											shell=True)
 	except:
 		pass
@@ -96,6 +97,7 @@ class install(_install):
 here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the relevant file
+
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 	long_description = f.read()
 
@@ -131,19 +133,23 @@ setup(
 	'Intended Audience :: System Administrators',
 	'Intended Audience :: Information Technology',
 	"Environment :: No Input/Output (Daemon)",
+	'Environment :: Console',
 	'Topic :: Software Development :: Build Tools',
 	'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+	'Programming Language :: Python :: 3',
 	'Programming Language :: Python :: 3.4',
 	'Programming Language :: Python :: 3.5',
+	'Programming Language :: Python :: 3.6',
 	"Topic :: Communications :: Email :: Mail Transport Agents",
 	"Topic :: Communications :: Email",
+	"Topic :: Database",
 	"Topic :: Security :: Cryptography",
 	"Topic :: Software Development :: Libraries :: Python Modules",
 	"Operating System :: OS Independent",
    ],
 
 	#zip_safe=False,
-	keywords='Email encryption daemon gateway  gpg pgp smime pdf spam spamassassin bogofilter virus clamav drwatson avast f-prot fprot sophos bitdefender',
+	keywords='Email encryption daemon gateway  gpg pgp smime pdf spam spamassassin bogofilter virus clamav drwatson avast f-prot fprot sophos bitdefender mysql sqlite postgres',
 	scripts =["scripts/gme_admin.py","scripts/encryptmaildir.py","scripts/gme.py"],
 	packages=["gmeutils","mailtemplates","documentation","misc","gmeutils/thirdparty","gmeutils/thirdparty/dkim"],
 	py_modules=["gpgmailencrypt"],
