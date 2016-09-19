@@ -27,7 +27,8 @@ class _baseunpacker(_gmechild):
 
 	def uncompresscommand( 	self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 		raise NotImplementedError
 
 	def unpackingformats(self):
@@ -48,11 +49,15 @@ class _baseunpacker(_gmechild):
 	################
 
 	@_dbg
-	def uncompress_file(self, filename,directory=None):
+	def uncompress_file(self, filename,directory=None,password=None):
 		result=False
 
 		if not os.path.exists(filename):
 			self.log("file %s does not exist"%filename,"w")
+
+		if self.is_encrypted(filename) and password==None:
+			self.log("Encrypted file, but no password given")
+			return False,None
 
 		if directory==None:
 			directory = tempfile.mkdtemp()
@@ -62,7 +67,9 @@ class _baseunpacker(_gmechild):
 			os.chdir(directory)
 			self.debug("os.chdir(%s)"%_origdir)
 
-		uncompresscmd=self.uncompresscommand(filename,directory)
+		uncompresscmd=self.uncompresscommand(	filename,
+												directory,
+												password=password)
 		self.debug("uncompresscommand:'%s'"%uncompresscmd)
 		_result = subprocess.call(" ".join(uncompresscmd), shell=True)
 
@@ -139,7 +146,8 @@ class _ACE(_baseunpacker):
 	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 		cmd=[   self.cmd,
 				"x",
 				"-y",
@@ -171,7 +179,8 @@ class _AR(_baseunpacker):
 	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 		cmd=[   self.cmd,
 				"-x",
 				"\"%s\""%sourcefile,
@@ -202,7 +211,8 @@ class _ARC(_baseunpacker):
 	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 		cmd=[   self.cmd,
 				"x",
 				"\"%s\""%sourcefile,
@@ -233,7 +243,8 @@ class _ARJ(_baseunpacker):
 	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 		cmd=[   self.cmd,
 				"x","\"%s\""%sourcefile,
 				"\"-ht%s\""%directory,
@@ -267,7 +278,8 @@ class _BZ2(_baseunpacker):
 	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 		format=""
 		path,origname=os.path.split(sourcefile)
 		fname, extension = os.path.splitext(origname)
@@ -310,7 +322,8 @@ class _CAB(_baseunpacker):
 	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 		cmd=[   self.cmd,
 				"-d%s"%directory,
 				"\"%s\""%sourcefile,
@@ -340,8 +353,9 @@ class _CPIO(_baseunpacker):
 
 	@_dbg
 	def uncompresscommand(  self,
-									sourcefile,
-									directory):
+							sourcefile,
+							directory,
+							password=None):
 		cmd=[   self.cmd,
 				"-i",
 				"--quiet",
@@ -373,7 +387,8 @@ class _DAR(_baseunpacker):
 	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 		f,ext=os.path.splitext(sourcefile)
 
 		if ext==".dar":
@@ -418,8 +433,9 @@ class _FREEZE(_basedeleteunpacker):
 
 	@_dbg
 	def uncompresscommand(  self,
-									sourcefile,
-									directory):
+							sourcefile,
+							directory,
+							password=None):
 		cmd=[   self.cmd,
 				"\"%s\""%sourcefile,
 				">/dev/null"]
@@ -449,7 +465,8 @@ class _GZIP(_baseunpacker):
 	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 		format=""
 		path,origname=os.path.split(sourcefile)
 		fname, extension = os.path.splitext(origname)
@@ -492,7 +509,8 @@ class _KGB(_baseunpacker):
 	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 		cmd=[   self.cmd,
 				"\"%s\""%sourcefile,
 				">/dev/null"]
@@ -522,7 +540,8 @@ class _LHA(_baseunpacker):
 	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 		cmd=[   self.cmd,
 				"-w=%s"%directory,
 				"-e",
@@ -554,7 +573,8 @@ class _LRZIP(_baseunpacker):
 	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 		cmd=[   self.cmd,
 				"-O \"%s\""%directory,
 				"\"%s\""%sourcefile,
@@ -584,8 +604,9 @@ class _LZIP(_basedeleteunpacker):
 
 	@_dbg
 	def uncompresscommand(  self,
-									sourcefile,
-									directory):
+							sourcefile,
+							directory,
+							password=None):
 		cmd=[   self.cmd,
 				"-d",
 				"\"%s\""%sourcefile,
@@ -616,7 +637,8 @@ class _LZO(_baseunpacker):
 	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 		cmd=[   self.cmd,
 				"-p%s"%directory,
 				"-d",
@@ -645,6 +667,32 @@ class _RAR(_baseunpacker):
 	def unpackingformats(self):
 		return ["RAR"]
 
+	#############
+	#is_encrypted
+	#############
+
+	def is_encrypted(self, zipfile):
+		#unrar x -p- -y -o+
+		cmd=[  	self.cmd,
+				"x",
+				"-p-",
+				"-y",
+				"-o+",
+				zipfile,
+			]
+		p=subprocess.Popen(	cmd,
+							stdin=None,
+							stdout=subprocess.PIPE,
+							stderr=subprocess.PIPE )
+		res=p.wait()
+
+		for line in p.stderr.readlines():
+
+			if "wrong password" in line.decode("UTF-8","replace"):
+				return True
+
+		return False
+
 	##################
 	#uncompresscommand
 	##################
@@ -652,7 +700,8 @@ class _RAR(_baseunpacker):
 	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 		format=""
 		extension=os.path.splitext(sourcefile)[1].lower()
 		cmd=[   self.cmd,
@@ -660,6 +709,10 @@ class _RAR(_baseunpacker):
 				directory,
 				">/dev/null"
 			]
+
+		if password!=None:
+			cmd.insert(2,"-p%s"%password)
+
 		return cmd
 
 ########
@@ -686,7 +739,8 @@ class _RIPOLE(_baseunpacker):
 	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 		format=""
 		extension=os.path.splitext(sourcefile)[1].lower()
 		cmd=[   self.cmd,
@@ -731,7 +785,8 @@ class _RPM(_baseunpacker):
 	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 		cmd=[   self.cmd,
 				"\"%s\""%sourcefile,
 				"| %s -dium"%self.cmdcpio]
@@ -760,8 +815,9 @@ class _RZIP(_basedeleteunpacker):
 
 	@_dbg
 	def uncompresscommand(  self,
-									sourcefile,
-									directory):
+							sourcefile,
+							directory,
+							password=None):
 		cmd=[   self.cmd,
 				"-d",
 				"\"%s\""%sourcefile,
@@ -792,7 +848,8 @@ class _SHAR(_baseunpacker):
 	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 		cmd=[   self.cmd,
 				"\"%s\""%sourcefile,
 				">/dev/null"]
@@ -858,7 +915,8 @@ class _SNAPPY(_baseunpacker):
 	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 		cmd=[   "python",
 				"-m",
 				"snappy",
@@ -892,7 +950,8 @@ class _TAR(_baseunpacker):
 	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 		format=""
 		extension=os.path.splitext(sourcefile)[1].lower()
 
@@ -941,7 +1000,8 @@ class _TNEF(_baseunpacker):
 	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 		cmd=[   self.cmd,
 				"-C \"%s\""%directory,
 				"-f","\"%s\""%sourcefile,
@@ -972,7 +1032,8 @@ class _XZ(_baseunpacker):
 	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 		format=""
 		path,origname=os.path.split(sourcefile)
 		fname, extension = os.path.splitext(origname)
@@ -1370,7 +1431,8 @@ class _ZIP2(_baseunpacker):
 	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 		cmd=[   self.cmd,
 				"\"%s\""%sourcefile,
 				"-d",directory,
@@ -1401,8 +1463,9 @@ class _ZOO(_baseunpacker):
 
 	@_dbg
 	def uncompresscommand(  self,
-									sourcefile,
-									directory):
+							sourcefile,
+							directory,
+							password=None):
 		cmd=[   self.cmd,
 				"-extract","\"%s\""%sourcefile,
 				">/dev/null"]
@@ -1437,7 +1500,8 @@ class _ZPAQ(_baseunpacker):
 	@_dbg
 	def uncompresscommand(  self,
 							sourcefile,
-							directory):
+							directory,
+							password=None):
 
 		if self.use_zpaqcmd:
 			 extract="x"
