@@ -183,11 +183,14 @@ def start_adminconsole(host,port):
 			print("".ljust(space)+"example: 'setuser john johnspassword'")
 			print("statistics".ljust(space)+"print statistic information")
 			print("users".ljust(space)+"print users")
-			print("createtable all/usermap/encryptionmap/smime/pdf".ljust(space)
+			print("createtable".ljust(space)
 			+"creates a specific SQL table")
+			print("".ljust(space)+"allowed values:")
+			print("".ljust(space)+"all/usermap/encryptionmap/smime/pdf")
 
 #class taken from http://stackoverflow.com/questions/20625642/\
 #				 autocomplete-with-readline-in-python3
+
 	class MyCompleter(object):  # Custom completer
 
 		def __init__(self, options):
