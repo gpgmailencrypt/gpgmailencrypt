@@ -236,6 +236,29 @@ class _ARJ(_baseunpacker):
 	def unpackingformats(self):
 		return ["ARJ"]
 
+	#############
+	#is_encrypted
+	#############
+
+	def is_encrypted(self, zipfile):
+		#unrar x -p- -y -o+
+		cmd=[  	self.cmd,
+				"t",
+				zipfile,
+			]
+		p=subprocess.Popen(	cmd,
+							stdin=None,
+							stdout=subprocess.PIPE,
+							stderr=subprocess.PIPE )
+		res=p.wait()
+
+		for line in p.stdout.readlines():
+
+			if "File is password encrypted" in line.decode("UTF-8","replace"):
+				return True
+
+		return False
+
 	##################
 	#uncompresscommand
 	##################
@@ -252,6 +275,10 @@ class _ARJ(_baseunpacker):
 				"-y",
 				"-r",
 				">/dev/null"]
+
+		if password!=None:
+			cmd.insert(5,"-g%s"%password)
+
 		return cmd
 
 #####
