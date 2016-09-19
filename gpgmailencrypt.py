@@ -93,17 +93,17 @@ class gme:
 	_LOCALEDB={
 	#"CN":("审读","文件","内容","文件附件"),
 	"DA":("aftale","fil","indhold","bilag"),
-	"DE":("Termin","Datei","Inhalt","Anhang"),
-	"EN":("appointment","file","content","attachment"),
-	"ES":("cita","fichero","contenido","apéndice"),
+	"DE":("Termin","Datei","Inhalt","Anhang","Passwort für"),
+	"EN":("appointment","file","content","attachment","Password for"),
+	"ES":("cita","fichero","contenido","apéndice","Contraseña por"),
 	"FI":("tapaaminen","tiedosto","sisältö","liite"),
-	"FR":("rendez-vous","fichier","contenu","attachement"),
-	"IT":("appuntamento","file","capacità","allegato"),
+	"FR":("rendez-vous","fichier","contenu","attachement","mot de passe pour"),
+	"IT":("appuntamento","file","capacità","allegato","Password per"),
 	"NL":("Termijn","Bestand","inhoud","e-mailbijlage"),
 	"NO":("avtale","fil","innhold","vedlegg"),
-	"PL":("termin","plik","zawartość","załącznik"),
-	"PT":("hora","ficheiro","conteúdo","anexo"),
-	"RU":("срок","файл","содержа́ние","прикрепление"),
+	"PL":("termin","plik","zawartość","załącznik","Hasło dla"),
+	"PT":("hora","ficheiro","conteúdo","anexo","Palavra-passe por"),
+	"RU":("срок","файл","содержа́ние","прикрепление","шифр для"),
 	"SV":("möte","fil","innehåll","bilaga"),
 	}
 	_encryptheader="X-GPGMailencrypt"
@@ -3746,8 +3746,15 @@ class gme:
 				plainmsg=MIMEText(htmlbody)
 				msg.attach(plainmsg)
 				msg.attach(htmlmsg)
-				msg['Subject'] = ('Password for: %s' %
-									self._decode_header(newmsg["To"]))
+
+				try:
+					pwheader=self._LOCALEDB[self._LOCALE][4]
+				except:
+					self.log("wrong locale '%s'"%self._LOCALE,"w")
+					pwheader=self._LOCALEDB["EN"][4]
+
+				msg['Subject'] = ('%s: %s' %(pwheader,
+									self._decode_header(newmsg["To"])))
 				msg['To'] = from_addr
 				msg['From'] = self._SYSTEMMAILFROM
 				self.send_mails(msg.as_string(),from_addr)
