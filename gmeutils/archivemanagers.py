@@ -153,6 +153,10 @@ class _ACE(_baseunpacker):
 				"-y",
 				sourcefile,
 				">/dev/null"]
+
+		if password!=None:
+			cmd.insert(2,"p%s"%password)
+
 		return cmd
 
 ####
