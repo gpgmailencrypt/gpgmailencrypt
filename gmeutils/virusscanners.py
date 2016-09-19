@@ -299,7 +299,7 @@ class _FPROT(_basevirusscanner):
 			for line in p.stdout.readlines():
 				_l=line.decode("UTF-8",unicodeerror)
 
-				if _l.startswith("["):
+				if _l.startswith("[") and ("File is encrypted" not in _l):
 					found=(re.search("(?<=\<)(.*)(?=\>)",_l))
 
 					if found:

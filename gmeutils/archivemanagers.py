@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from .child 			import _gmechild 
+from .child 			import _gmechild
 from .version 			import *
 from   ._dbg 			import _dbg
 
@@ -36,6 +36,13 @@ class _baseunpacker(_gmechild):
 	def keep_for_viruscheck(self):
 		return False
 
+	#############
+	#is_encrypted
+	#############
+
+	def is_encrypted(self, sourcefile):
+		return False
+
 	################
 	#uncompress_file
 	################
@@ -43,13 +50,13 @@ class _baseunpacker(_gmechild):
 	@_dbg
 	def uncompress_file(self, filename,directory=None):
 		result=False
-		
+
 		if not os.path.exists(filename):
 			self.log("file %s does not exist"%filename,"w")
-			
+
 		if directory==None:
 			directory = tempfile.mkdtemp()
-		
+
 		if self.chdir:
 			_origdir=os.getcwd()
 			os.chdir(directory)
@@ -57,7 +64,7 @@ class _baseunpacker(_gmechild):
 
 		uncompresscmd=self.uncompresscommand(filename,directory)
 		self.debug("uncompresscommand:'%s'"%uncompresscmd)
-		_result = subprocess.call(" ".join(uncompresscmd), shell=True) 
+		_result = subprocess.call(" ".join(uncompresscmd), shell=True)
 
 		if self.chdir:
 			os.chdir(_origdir)
@@ -85,7 +92,7 @@ class _basedeleteunpacker(_baseunpacker):
 
 		if directory==None:
 			directory = tempfile.mkdtemp()
-		
+
 		if self.chdir:
 			_origdir=os.getcwd()
 			os.chdir(directory)
@@ -95,7 +102,7 @@ class _basedeleteunpacker(_baseunpacker):
 		shutil.move(filename,targetname)
 		uncompresscmd=self.uncompresscommand(targetname,directory)
 		self.debug("uncompresscommand:'%s'"%uncompresscmd)
-		_result = subprocess.call(' '.join(uncompresscmd), shell=True) 
+		_result = subprocess.call(' '.join(uncompresscmd), shell=True)
 
 		if self.chdir:
 			os.chdir(_origdir)
@@ -124,7 +131,7 @@ class _ACE(_baseunpacker):
 
 	def unpackingformats(self):
 		return ["ACE"]
- 
+
 	##################
 	#uncompresscommand
 	##################
@@ -133,7 +140,7 @@ class _ACE(_baseunpacker):
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
-		cmd=[   self.cmd, 
+		cmd=[   self.cmd,
 				"x",
 				"-y",
 				sourcefile,
@@ -156,7 +163,7 @@ class _AR(_baseunpacker):
 
 	def unpackingformats(self):
 		return ["AR","DEB"]
- 
+
 	##################
 	#uncompresscommand
 	##################
@@ -165,7 +172,7 @@ class _AR(_baseunpacker):
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
-		cmd=[   self.cmd, 
+		cmd=[   self.cmd,
 				"-x",
 				"\"%s\""%sourcefile,
 				">/dev/null"]
@@ -187,7 +194,7 @@ class _ARC(_baseunpacker):
 
 	def unpackingformats(self):
 		return ["ARC"]
- 
+
 	##################
 	#uncompresscommand
 	##################
@@ -196,7 +203,7 @@ class _ARC(_baseunpacker):
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
-		cmd=[   self.cmd, 
+		cmd=[   self.cmd,
 				"x",
 				"\"%s\""%sourcefile,
 				">/dev/null"]
@@ -218,7 +225,7 @@ class _ARJ(_baseunpacker):
 
 	def unpackingformats(self):
 		return ["ARJ"]
- 
+
 	##################
 	#uncompresscommand
 	##################
@@ -227,7 +234,7 @@ class _ARJ(_baseunpacker):
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
-		cmd=[   self.cmd, 
+		cmd=[   self.cmd,
 				"x","\"%s\""%sourcefile,
 				"\"-ht%s\""%directory,
 				"-u",
@@ -271,9 +278,9 @@ class _BZ2(_baseunpacker):
 			new_ext=".tar"
 		elif extension not in [".bz2",".bz"]:
 			new_ext=".out"
-		
-		directory=os.path.join(directory,fname+new_ext)	
-		cmd=[   self.cmd, 
+
+		directory=os.path.join(directory,fname+new_ext)
+		cmd=[   self.cmd,
 				"-cd","\"%s\""%sourcefile,
 				"> \"%s\""%directory,
 			]
@@ -295,7 +302,7 @@ class _CAB(_baseunpacker):
 
 	def unpackingformats(self):
 		return ["CAB"]
- 
+
 	##################
 	#uncompresscommand
 	##################
@@ -304,7 +311,7 @@ class _CAB(_baseunpacker):
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
-		cmd=[   self.cmd, 
+		cmd=[   self.cmd,
 				"-d%s"%directory,
 				"\"%s\""%sourcefile,
 				">/dev/null"]
@@ -326,7 +333,7 @@ class _CPIO(_baseunpacker):
 
 	def unpackingformats(self):
 		return ["CPIO"]
- 
+
 	##################
 	#uncompresscommand
 	##################
@@ -335,7 +342,7 @@ class _CPIO(_baseunpacker):
 	def uncompresscommand(  self,
 									sourcefile,
 									directory):
-		cmd=[   self.cmd, 
+		cmd=[   self.cmd,
 				"-i",
 				"--quiet",
 				"-F","\"%s\""%sourcefile,
@@ -358,7 +365,7 @@ class _DAR(_baseunpacker):
 
 	def unpackingformats(self):
 		return ["DAR"]
- 
+
 	##################
 	#uncompresscommand
 	##################
@@ -378,7 +385,7 @@ class _DAR(_baseunpacker):
 			except:
 				pass
 
-		cmd=[   self.cmd, 
+		cmd=[   self.cmd,
 				"-O",
 				"-q",
 				"-wa",
@@ -404,7 +411,7 @@ class _FREEZE(_basedeleteunpacker):
 
 	def unpackingformats(self):
 		return ["FREEZE"]
- 
+
 	##################
 	#uncompresscommand
 	##################
@@ -413,7 +420,7 @@ class _FREEZE(_basedeleteunpacker):
 	def uncompresscommand(  self,
 									sourcefile,
 									directory):
-		cmd=[   self.cmd, 
+		cmd=[   self.cmd,
 				"\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
@@ -453,9 +460,9 @@ class _GZIP(_baseunpacker):
 			new_ext=".tar"
 		elif extension not in [".gz"]:
 			new_ext=".out"
-		
-		directory=os.path.join(directory,fname+new_ext)	
-		cmd=[   self.cmd, 
+
+		directory=os.path.join(directory,fname+new_ext)
+		cmd=[   self.cmd,
 				"-cd","\"%s\""%sourcefile,
 				"> \"%s\""%directory,
 			]
@@ -477,7 +484,7 @@ class _KGB(_baseunpacker):
 
 	def unpackingformats(self):
 		return ["KGB"]
- 
+
 	##################
 	#uncompresscommand
 	##################
@@ -486,7 +493,7 @@ class _KGB(_baseunpacker):
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
-		cmd=[   self.cmd, 
+		cmd=[   self.cmd,
 				"\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
@@ -507,7 +514,7 @@ class _LHA(_baseunpacker):
 
 	def unpackingformats(self):
 		return ["LHA"]
- 
+
 	##################
 	#uncompresscommand
 	##################
@@ -516,7 +523,7 @@ class _LHA(_baseunpacker):
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
-		cmd=[   self.cmd, 
+		cmd=[   self.cmd,
 				"-w=%s"%directory,
 				"-e",
 				"\"%s\""%sourcefile,
@@ -539,7 +546,7 @@ class _LRZIP(_baseunpacker):
 
 	def unpackingformats(self):
 		return ["LRZIP"]
- 
+
 	##################
 	#uncompresscommand
 	##################
@@ -548,7 +555,7 @@ class _LRZIP(_baseunpacker):
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
-		cmd=[   self.cmd, 
+		cmd=[   self.cmd,
 				"-O \"%s\""%directory,
 				"\"%s\""%sourcefile,
 				">/dev/null"]
@@ -570,7 +577,7 @@ class _LZIP(_basedeleteunpacker):
 
 	def unpackingformats(self):
 		return ["LZIP"]
- 
+
 	##################
 	#uncompresscommand
 	##################
@@ -579,7 +586,7 @@ class _LZIP(_basedeleteunpacker):
 	def uncompresscommand(  self,
 									sourcefile,
 									directory):
-		cmd=[   self.cmd, 
+		cmd=[   self.cmd,
 				"-d",
 				"\"%s\""%sourcefile,
 				">/dev/null"]
@@ -601,7 +608,7 @@ class _LZO(_baseunpacker):
 
 	def unpackingformats(self):
 		return ["LZO"]
- 
+
 	##################
 	#uncompresscommand
 	##################
@@ -610,7 +617,7 @@ class _LZO(_baseunpacker):
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
-		cmd=[   self.cmd, 
+		cmd=[   self.cmd,
 				"-p%s"%directory,
 				"-d",
 				"-P",
@@ -630,7 +637,7 @@ class _RAR(_baseunpacker):
 
 		if self.cmd==None:
 			self.cmd=shutil.which("rar")
-	
+
 	#################
 	#unpackingformats
 	#################
@@ -648,7 +655,7 @@ class _RAR(_baseunpacker):
 							directory):
 		format=""
 		extension=os.path.splitext(sourcefile)[1].lower()
-		cmd=[   self.cmd, 
+		cmd=[   self.cmd,
 				"x","\"%s\""%sourcefile,
 				directory,
 				">/dev/null"
@@ -682,7 +689,7 @@ class _RIPOLE(_baseunpacker):
 							directory):
 		format=""
 		extension=os.path.splitext(sourcefile)[1].lower()
-		cmd=[   self.cmd, 
+		cmd=[   self.cmd,
 				"-i","\"%s\""%sourcefile,
 				"-d",directory,
 				">/dev/null"
@@ -716,7 +723,7 @@ class _RPM(_baseunpacker):
 
 	def unpackingformats(self):
 		return ["RPM"]
- 
+
 	##################
 	#uncompresscommand
 	##################
@@ -725,7 +732,7 @@ class _RPM(_baseunpacker):
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
-		cmd=[   self.cmd, 
+		cmd=[   self.cmd,
 				"\"%s\""%sourcefile,
 				"| %s -dium"%self.cmdcpio]
 		return cmd
@@ -746,7 +753,7 @@ class _RZIP(_basedeleteunpacker):
 
 	def unpackingformats(self):
 		return ["RZIP"]
- 
+
 	##################
 	#uncompresscommand
 	##################
@@ -755,7 +762,7 @@ class _RZIP(_basedeleteunpacker):
 	def uncompresscommand(  self,
 									sourcefile,
 									directory):
-		cmd=[   self.cmd, 
+		cmd=[   self.cmd,
 				"-d",
 				"\"%s\""%sourcefile,
 				">/dev/null"]
@@ -777,7 +784,7 @@ class _SHAR(_baseunpacker):
 
 	def unpackingformats(self):
 		return ["SHAR"]
- 
+
 	##################
 	#uncompresscommand
 	##################
@@ -786,7 +793,7 @@ class _SHAR(_baseunpacker):
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
-		cmd=[   self.cmd, 
+		cmd=[   self.cmd,
 				"\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
@@ -826,7 +833,7 @@ class _SNAPPY(_baseunpacker):
 		py2=shutil.which("python2")
 
 		if py2!=None:
-			_result = subprocess.call("%s %s "%(py2,f.name), shell=True) 
+			_result = subprocess.call("%s %s "%(py2,f.name), shell=True)
 
 			if _result==0:
 				self.cmd="snappyexists"
@@ -843,7 +850,7 @@ class _SNAPPY(_baseunpacker):
 
 	def unpackingformats(self):
 		return ["SNAPPY"]
- 
+
 	##################
 	#uncompresscommand
 	##################
@@ -852,7 +859,7 @@ class _SNAPPY(_baseunpacker):
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
-		cmd=[   "python", 
+		cmd=[   "python",
 				"-m",
 				"snappy",
 				"-d",
@@ -870,7 +877,7 @@ class _TAR(_baseunpacker):
 	def __init__(self,parent):
 		_baseunpacker.__init__(self,parent)
 		self.cmd=shutil.which("tar")
-	
+
 	#################
 	#unpackingformats
 	#################
@@ -895,8 +902,8 @@ class _TAR(_baseunpacker):
 			format="J"
 		elif extension in ["gz","tgz"]:
 			format="x"
-		
-		cmd=[   self.cmd, 
+
+		cmd=[   self.cmd,
 				"-x%s"%format,
 				"-f","\"%s\""%sourcefile,
 				"-C%s"%directory,
@@ -926,7 +933,7 @@ class _TNEF(_baseunpacker):
 
 	def unpackingformats(self):
 		return ["TNEF"]
- 
+
 	##################
 	#uncompresscommand
 	##################
@@ -935,7 +942,7 @@ class _TNEF(_baseunpacker):
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
-		cmd=[   self.cmd, 
+		cmd=[   self.cmd,
 				"-C \"%s\""%directory,
 				"-f","\"%s\""%sourcefile,
 				">/dev/null"]
@@ -977,9 +984,9 @@ class _XZ(_baseunpacker):
 			new_ext=".tar"
 		elif extension not in [".xz",".lzma"]:
 			new_ext=".out"
-		
-		directory=os.path.join(directory,fname+new_ext)	
-		cmd=[   self.cmd, 
+
+		directory=os.path.join(directory,fname+new_ext)
+		cmd=[   self.cmd,
 				"-cd","\"%s\""%sourcefile,
 				"> \"%s\""%directory,
 			]
@@ -1012,7 +1019,7 @@ class _ZIP(_baseunpacker):
 	def set_zipcipher(self,cipher):
 		"valid ciphers are ZipCrypto,AES128,AES256"
 		self.zipcipher=cipher.upper()
- 
+
 	###############
 	#create_zipfile
 	###############
@@ -1025,19 +1032,19 @@ class _ZIP(_baseunpacker):
 		"""to create a zipfile put all files, that should be included in the
 		directory 'directory'.
 		if you want to have the zipfile password secured set the password.
-	
+
 		A normal zipfile will always display a list of it contents, even when it
-		is secured with a password. If you want to avoid this set containerfile 
-		to a freely selected name. Then this class creates a password secured 
-		zip-file with the name of "containerfile" and puts it in the zipfile 
-		which will be returned by this routine. So one can just see, that the 
-		zipfile contains another zipfile, but without the password no one can 
+		is secured with a password. If you want to avoid this set containerfile
+		to a freely selected name. Then this class creates a password secured
+		zip-file with the name of "containerfile" and puts it in the zipfile
+		which will be returned by this routine. So one can just see, that the
+		zipfile contains another zipfile, but without the password no one can
 		see what it contains.
 
 		This functions returns 2 values:
-	
+
 		result : True if everything worked correctly, else False
-		encdata: if 'result' is True encdata returns a binary string with the 
+		encdata: if 'result' is True encdata returns a binary string with the
 				 zip-file, else None
 		"""
 		f=self.parent._new_tempfile()
@@ -1053,12 +1060,12 @@ class _ZIP(_baseunpacker):
 					   ' '.join(self._createzipcommand_fromdir(fname,
 															   directory,
 															   password)))
-			_result = subprocess.call( 
+			_result = subprocess.call(
 					   ' '.join(self._createzipcommand_fromdir(fname,
 														directory,
 														None,
 														compress=False)),
-						shell=True ) 
+						shell=True )
 			directory=tempdir
 
 			if _result !=0:
@@ -1084,7 +1091,7 @@ class _ZIP(_baseunpacker):
 									self._createzipcommand_fromdir( f.name,
 																 directory,
 																 password)),
-						shell=True ) 
+						shell=True )
 
 		try:
 			shutil.rmtree(tempdir)
@@ -1108,7 +1115,7 @@ class _ZIP(_baseunpacker):
 		os.rename(f.name+".zip",f.name)
 		self.parent._del_tempfile(f.name)
 		return result,encdata
- 
+
 	##########################
 	#_createzipcommand_fromdir
 	##########################
@@ -1117,7 +1124,7 @@ class _ZIP(_baseunpacker):
 	def _createzipcommand_fromdir(  self,
 									resultfile,
 									directory,
-									password, 
+									password,
 									compress=True):
 		cipher="ZipCrypto"
 
@@ -1128,8 +1135,8 @@ class _ZIP(_baseunpacker):
 		elif self.zipcipher=="AES256":
 			cipher="AES256"
 
-		cmd=[   self.cmd, 
-				"a",resultfile, 
+		cmd=[   self.cmd,
+				"a",resultfile,
 				os.path.join(directory,"*"),
 				"-tzip",
 				"-mem=%s"%cipher,">/dev/null"]
@@ -1152,16 +1159,16 @@ class _ZIP(_baseunpacker):
 						password=None,
 						containerfile=None):
 		"""like ZIP.unzip_file, just the return values are different
-	
+
 		This functions returns 2 values:
-		
+
 		result :	 True if everything worked correctly, else False
-		encdatalist: if 'result' is True it returns a list of 
+		encdatalist: if 'result' is True it returns a list of
 					 'filename'/'binarydata' tuples, else None
 		"""
 		res,directory=self.unzip_file(  zipfile,
 										password=password,
-										containerfile=containerfile)		
+										containerfile=containerfile)
 		if res==False:
 			return False, None
 
@@ -1185,7 +1192,7 @@ class _ZIP(_baseunpacker):
 			shutil.rmtree(directory)
 		except:
 			pass
-					
+
 		return True,encdatalist
 
 	################
@@ -1198,14 +1205,38 @@ class _ZIP(_baseunpacker):
 					directory=None
 					):
 		"universal command for all unpacker classes"
-		self.unzip_file(zipfile=zipfile,directory=directory)
-		
+		self.unzip_file(zipfile=zipfile,
+						directory=directory)
+
 	#################
 	#unpackingformats
 	#################
 
 	def unpackingformats(self):
 		return ["7z","APK","JAR","ZIP","EXE"]
+
+	#############
+	#is_encrypted
+	#############
+
+	def is_encrypted(self, zipfile):
+		#7z l a.7z -slt
+		cmd=[  	self.cmd,
+				"l","%s"%zipfile,
+				"-slt"
+			]
+		p=subprocess.Popen(	cmd,
+							stdin=None,
+							stdout=subprocess.PIPE,
+							stderr=subprocess.PIPE )
+		res=p.wait()
+
+		for line in p.stdout.readlines():
+
+			if "Encrypted = +" in line.decode("UTF-8","replace"):
+				return True
+
+		return False
 
 	###########
 	#unzip_file
@@ -1220,13 +1251,18 @@ class _ZIP(_baseunpacker):
 		"""unzips a zip archive to the directory 'directory'. If none is given
 		a temporary directory will be created. For the variables see function
 		ZIP.create_zipfile().
-	
+
 		This functions returns 2 values:
-		
+
 		result :	True if everything worked correctly, else False
-		directory:  if 'result' is True it returns the directory with the 
+		directory:  if 'result' is True it returns the directory with the
 					content of the zip-file, else None
 		"""
+
+		if self.is_encrypted(zipfile) and password==None:
+			self.log("Encrypted Zipfile but no password given")
+			return False,None
+
 		if directory==None:
 			directory = tempfile.mkdtemp()
 			self.debug("create end directory %s"%directory)
@@ -1237,12 +1273,12 @@ class _ZIP(_baseunpacker):
 															directory1,
 															password)
 		self.debug("UNZIP command: '%s'" % unzipcmd)
-		_result = subprocess.call(" ".join(unzipcmd), shell=True) 
+		_result = subprocess.call(" ".join(unzipcmd), shell=True)
 
 		if _result !=0:
-		  self.log("Error executing command (Error code %d)3"%_result,"e")
-		  self.log("%s"%unzipcmd)
-		  return result,None
+			self.log("Error executing command (Error code %d)"%_result,"e")
+			self.log("%s"%unzipcmd)
+			return result,None
 		else:
 			result=True
 
@@ -1256,7 +1292,7 @@ class _ZIP(_baseunpacker):
 										 directory2,
 										 password)
 			self.debug("UNZIP command2: '%s'" % unzipcmd)
-			_result = subprocess.call(' '.join(unzipcmd), shell=True) 
+			_result = subprocess.call(' '.join(unzipcmd), shell=True)
 
 			if _result==0:
 				self.debug("shutil 1 move %s, %s"%(directory2,directory))
@@ -1272,7 +1308,7 @@ class _ZIP(_baseunpacker):
 
 			for s in source:
 					 shutil.move(os.path.join(directory1,s),directory)
-			
+
 		if _result !=0:
 		  return result,None
 		else:
@@ -1289,7 +1325,7 @@ class _ZIP(_baseunpacker):
 			pass
 
 		return result,directory
- 
+
 	##########################
 	#_createunzipcommand_indir
 	##########################
@@ -1299,7 +1335,7 @@ class _ZIP(_baseunpacker):
 									sourcefile,
 									directory,
 									password):
-		cmd=[  	self.cmd, 
+		cmd=[  	self.cmd,
 				"e","\"%s\""%sourcefile,
 				"-o%s"%directory,
 				"-y",
@@ -1335,7 +1371,7 @@ class _ZIP2(_baseunpacker):
 	def uncompresscommand(  self,
 							sourcefile,
 							directory):
-		cmd=[   self.cmd, 
+		cmd=[   self.cmd,
 				"\"%s\""%sourcefile,
 				"-d",directory,
 				">/dev/null"
@@ -1358,7 +1394,7 @@ class _ZOO(_baseunpacker):
 
 	def unpackingformats(self):
 		return ["ZOO"]
- 
+
 	##################
 	#uncompresscommand
 	##################
@@ -1367,7 +1403,7 @@ class _ZOO(_baseunpacker):
 	def uncompresscommand(  self,
 									sourcefile,
 									directory):
-		cmd=[   self.cmd, 
+		cmd=[   self.cmd,
 				"-extract","\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
@@ -1393,7 +1429,7 @@ class _ZPAQ(_baseunpacker):
 
 	def unpackingformats(self):
 		return ["ZPAQ"]
- 
+
 	##################
 	#uncompresscommand
 	##################
@@ -1408,7 +1444,7 @@ class _ZPAQ(_baseunpacker):
 		else:
 			 extract="e"
 
-		cmd=[   self.cmd, 
+		cmd=[   self.cmd,
 				extract,
 				"\"%s\""%sourcefile,
 				">/dev/null"]
@@ -1479,7 +1515,7 @@ def get_archivemanager(manager, parent):
 		return _ZOO(parent=parent)
 	elif manager=="ZPAQ":
 		return _ZPAQ(parent=parent)
-	
+
 	return None
 
 ################
@@ -1523,7 +1559,7 @@ def get_managerlist():
 
 def get_archivetype(filename,filetype):
 	fname=os.path.split(filename)[1].lower()
-	
+
 	if _use_filecmd:
 		cmd=[_filecmd,
 			"-b",
@@ -1576,7 +1612,7 @@ def get_archivetype(filename,filetype):
 		"zip":							"ZIP",
 		"x-zoo":						"ZOO",
 		}
-					  
+
 	extensions={
 				"7z":	"7Z",
 				"7zip":	"7Z",
@@ -1662,12 +1698,12 @@ def get_archivetype(filename,filetype):
 				archivetype="TARXZ"
 
 			return archivetype
-					
+
 		try:
 			archivetype=extensions[extension]
 			return archivetype
 		except:
-			pass	
+			pass
 
 		try:
 			archivetype=subtypes[subtype]
@@ -1677,6 +1713,6 @@ def get_archivetype(filename,filetype):
 
 		if fname.lower() in ["winmail.dat","win.dat"]:
 			archivetype="TNEF"
-				
+
 	return archivetype
 
