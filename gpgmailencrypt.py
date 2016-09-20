@@ -103,7 +103,7 @@ class gme:
 	"NO":("avtale","fil","innhold","vedlegg","Passord for"),
 	"PL":("termin","plik","zawartość","załącznik","Hasło dla"),
 	"PT":("hora","ficheiro","conteúdo","anexo","Palavra-passe por"),
-	"RU":("срок","файл","содержа́ние","прикрепление","шифр для"),
+	"RU":("срок","файл","содержа́ние","прикрепление","код для"),
 	"SE":("möte","fil","innehåll","bilaga","Lösenord för"),
 	}
 	_encryptheader="X-GPGMailencrypt"
