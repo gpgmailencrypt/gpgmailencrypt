@@ -92,19 +92,19 @@ class gme:
 	m_script=2
 	_LOCALEDB={
 	#"CN":("审读","文件","内容","文件附件"),
-	"DA":("aftale","fil","indhold","bilag"),
+	"DA":("aftale","fil","indhold","bilag","Password til"),
 	"DE":("Termin","Datei","Inhalt","Anhang","Passwort für"),
 	"EN":("appointment","file","content","attachment","Password for"),
 	"ES":("cita","fichero","contenido","apéndice","Contraseña por"),
-	"FI":("tapaaminen","tiedosto","sisältö","liite"),
-	"FR":("rendez-vous","fichier","contenu","attachement","mot de passe pour"),
+	"FI":("tapaaminen","tiedosto","sisältö","liite","Salasana"),
+	"FR":("rendez-vous","fichier","contenu","attachement","Mot de passe pour"),
 	"IT":("appuntamento","file","capacità","allegato","Password per"),
-	"NL":("Termijn","Bestand","inhoud","e-mailbijlage"),
-	"NO":("avtale","fil","innhold","vedlegg"),
+	"NL":("Termijn","Bestand","inhoud","e-mailbijlage","Wachtwoord voor de"),
+	"NO":("avtale","fil","innhold","vedlegg","Passord for"),
 	"PL":("termin","plik","zawartość","załącznik","Hasło dla"),
 	"PT":("hora","ficheiro","conteúdo","anexo","Palavra-passe por"),
 	"RU":("срок","файл","содержа́ние","прикрепление","шифр для"),
-	"SV":("möte","fil","innehåll","bilaga"),
+	"SE":("möte","fil","innehåll","bilaga","Lösenord för"),
 	}
 	_encryptheader="X-GPGMailencrypt"
 	_pdfencryptheader="X-PDFEncrypted"
