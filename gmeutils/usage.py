@@ -68,7 +68,7 @@ def print_exampleconfig():
 	print ("output=mail".ljust(space)+
 	"#valid values are 'mail'or 'stdout'")
 	print ("locale=en".ljust(space)+
-	"#DA|DE|EN|ES|FI|FR|IT|NL|NO|PL|PT|RU|SV")
+	"#DA|DE|EN|ES|FI|FR|IT|NL|NO|PL|PT|RU|SE")
 	print ("mailtemplatedir=/usr/share/gpgmailencrypt"
 			"/mailtemplates".ljust(space)+
 	"#directory where mail templates are stored")
@@ -142,10 +142,15 @@ def print_exampleconfig():
 
 	print ("use_sqlpdfpasswords=False".ljust(space)+
 	"#if True the PDF passwords will be stored and taken from the sql database")
-	print ("sqlpdf_passwordtable=pdfpasswords")
-	print ("sqlpdf_userfield=user")
-	print ("sqlpdf_passwordfield=password")
-	print ("sqlpdf_starttimefield=starttime")
+	print ("sqlpdf_passwordtable=pdfpasswords".ljust(space)+
+	"#table that contains the pdf passwords")
+	print ("sqlpdf_userfield=user".ljust(space)+
+	"#fieldname that contains the user")
+	print ("sqlpdf_passwordfield=password".ljust(space)+
+	"#fieldname that contains the password")
+	print ("sqlpdf_starttimefield=starttime".ljust(space)+
+	"#fieldname that contains the password creation time (needed for automatic"
+	" password deletion)")
 
 	print ("")
 	print ("[gpg]")

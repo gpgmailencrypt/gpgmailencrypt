@@ -188,7 +188,6 @@ class _TEXT_BACKEND(_base_storage):
 						%self._PDF_PASSWORDFILE)
 				self.log_traceback()
 
-
 	########
 	#usermap
 	########
@@ -428,6 +427,7 @@ class _sql_backend(_base_storage):
 	#connect
 	########
 
+	@_dbg
 	def connect(self):
 		raise NotImplementedError
 

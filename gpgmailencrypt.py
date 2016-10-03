@@ -881,6 +881,8 @@ class gme:
 	###################
 	#_parse_commandline
 	###################
+
+	@_dbg
 	def _parse_commandline(self):
 		recipient=[]
 
@@ -1255,6 +1257,7 @@ class gme:
 	#_load_mailmaster
 	#################
 
+	@_dbg
 	def _load_mailmaster(self,identifier,defaulttext):
 		mail=self._load_rawmailmaster("00-template",
 									"<html><body>%EMAILTEXT%</body></html>")
@@ -2248,6 +2251,7 @@ class gme:
 	#set_check_viruses
 	##################
 
+	@_dbg
 	def set_check_viruses(self,c):
 		self._VIRUSCHECK=c
 		self._virus_checker=None
@@ -2256,6 +2260,7 @@ class gme:
 	#get_check_viruses
 	##################
 
+	@_dbg
 	def get_check_viruses(self):
 		return self._VIRUSCHECK
 
@@ -2263,6 +2268,7 @@ class gme:
 	#get_quarantinelist
 	###################
 
+	@_dbg
 	def get_quarantinelist(self):
 		return self._virus_queue
 
@@ -2270,6 +2276,7 @@ class gme:
 	#quarantine_remove
 	##################
 
+	@_dbg
 	def quarantine_remove(self,v_id):
 		res=None
 
@@ -2308,6 +2315,7 @@ class gme:
 	#quarantine_release
 	###################
 
+	@_dbg
 	def quarantine_release(self,v_id):
 		res=None
 
@@ -2339,6 +2347,7 @@ class gme:
 	#quarantine_forward
 	###################
 
+	@_dbg
 	def quarantine_forward(self,v_id,to_addr):
 		res=None
 
@@ -2406,6 +2415,7 @@ class gme:
 	#set_virusquarantine_lifetime
 	#############################
 
+	@_dbg
 	def set_virusquarantine_lifetime(self,lifetime):
 		"""sets the lifetime of infected mails in the quarantine in second
 		0 deactivates automatic deletion
@@ -2416,6 +2426,7 @@ class gme:
 	#get_virusquarantine_lifetime
 	#############################
 
+	@_dbg
 	def get_virusquarantine_lifetime(self):
 		"returns the quarantine lifetime of infected mails"
 		return self._VIRUSLIFETIME
@@ -2424,6 +2435,7 @@ class gme:
 	#set_check_spam
 	###############
 
+	@_dbg
 	def set_check_spam(self,c):
 		self._SPAMCHECK=c
 
@@ -2431,6 +2443,7 @@ class gme:
 	#get_check_spam
 	###############
 
+	@_dbg
 	def get_check_spam(self):
 		return self._SPAMCHECK
 
