@@ -1,7 +1,7 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
-VERSION="3.1.0"
-DATE="03.10.2016"
+VERSION="3.1.1dev"
+DATE="19.10.2016"
 unicodeerror="replace"
 #database improvements
 #create tables
