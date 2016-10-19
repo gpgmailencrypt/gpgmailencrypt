@@ -8,6 +8,7 @@ from	.helpers		import decode_filename
 import email
 import tempfile
 import os
+import re
 import shutil
 
 ###########
@@ -15,7 +16,7 @@ import shutil
 ###########
 
 class _virus_check(_gmechild):
-	
+
 	def __init__(self,parent):
 		_gmechild.__init__(self,parent=parent,filename=__file__)
 		self.debug("viruscheck __init__")
@@ -30,7 +31,7 @@ class _virus_check(_gmechild):
 	#_mktempdir
 	###########
 
-	@_dbg					
+	@_dbg
 	def _mktempdir(self,directory=None):
 		return tempfile.mkdtemp(dir=directory)
 
@@ -38,12 +39,12 @@ class _virus_check(_gmechild):
 	#_chmod
 	#######
 
-	@_dbg					
+	@_dbg
 	def _chmod(self,directory):
 
-		for root, directories, files in os.walk(directory):  
+		for root, directories, files in os.walk(directory):
 
-			for d in directories:  
+			for d in directories:
 				pathd=os.path.join(root,d)
 				os.chmod(pathd,0o770)
 
@@ -55,21 +56,21 @@ class _virus_check(_gmechild):
 
 			if not os.path.islink(directory):
 				os.chmod(directory,0o770)
-				
+
 	#####################
 	#_search_virusscanner
 	#####################
 
-	@_dbg					
+	@_dbg
 	def _search_virusscanner(self):
-		
+
 		for s in virusscanners.get_virusscannerlist():
 			vscanner=virusscanners.get_virusscanner(scanner=s,parent=self)
 
 			if vscanner!=None:
 				self.virusscanner[s]=vscanner
 				self.log("Virusscanner %s activated"%s)
-				
+
 		if len(self.virusscanner)==0:
 			self.log("No virusscanners available!","e")
 
@@ -77,7 +78,7 @@ class _virus_check(_gmechild):
 	#_search_archivemanager
 	#######################
 
-	@_dbg					
+	@_dbg
 	def _search_archivemanager(self):
 
 		for m in archivemanagers.get_managerlist():
@@ -101,22 +102,22 @@ class _virus_check(_gmechild):
 	#print_archivemap
 	#################
 
-	@_dbg					
+	@_dbg
 	def print_archivemap(self):
 
 			for f in self.archivemap:
 				print(("Format %s"%f).ljust(20)+
-					"Unpacker %s"%self.archivemap[f]) 
+					"Unpacker %s"%self.archivemap[f])
 
 	#############################
 	#check_directory_for_archives
 	#############################
-	
+
 	@_dbg
 	def check_directory_for_archives(self,directory):
 		self.debug("check_directory_for_archives '%s'"%directory)
-		
-		for root, directories, files in os.walk(directory):  
+
+		for root, directories, files in os.walk(directory):
 
 			for f in files:
 				pathf=os.path.join(root,f)
@@ -131,7 +132,7 @@ class _virus_check(_gmechild):
 
 				if archivetype!=None and _unpacker!=None:
 					_u=None
-					
+
 					try:
 						_u=self.unpacker[_unpacker]
 					except:
@@ -157,10 +158,10 @@ class _virus_check(_gmechild):
 	#unpack_attachment
 	##################
 
-	@_dbg					
+	@_dbg
 	def unpack_attachment(self,payload,directory):
 			filename = payload.get_filename()
-			filename=decode_filename(filename)
+			filename=re.sub(r"(/|\\)","_",decode_filename(filename))
 			fname=os.path.join(directory,filename)
 			contenttype = payload.get_content_type()
 
@@ -179,13 +180,13 @@ class _virus_check(_gmechild):
 				_unpacker=self.archivemap[archivetype]
 			except:
 				pass
-			
+
 			self.debug("File %s, is archivetype %s,unpacker %s"
 						%(filename,archivetype,_unpacker))
 
 			if archivetype!=None and _unpacker!=None:
 				_u=None
-				
+
 				try:
 					_u=self.unpacker[_unpacker]
 				except:
@@ -203,7 +204,7 @@ class _virus_check(_gmechild):
 						os.remove(fname)
 					except:
 						self.debug("keep archive %s"%fname)
-		
+
 	#############
 	#unpack_email
 	#############
@@ -220,15 +221,15 @@ class _virus_check(_gmechild):
 
 		for payload in mail.walk():
 			_c+=1
-			is_attachment = payload.get_param(   
-								'attachment', 
-								None, 
+			is_attachment = payload.get_param(
+								'attachment',
+								None,
 								'Content-Disposition' ) is not None
-			is_inline = payload.get_param( 
-								'inline', 
-								None, 
+			is_inline = payload.get_param(
+								'inline',
+								None,
 								'Content-Disposition' ) is not None
-			contenttype=payload.get_content_type()				
+			contenttype=payload.get_content_type()
 
 			if is_attachment:
 				self.debug("payload %i"%_c)
@@ -262,10 +263,10 @@ class _virus_check(_gmechild):
 		if len(self.virusscanner)==0:
 			description.append("No virusscanners available")
 			return False,description
-			
-		directory=self.unpack_email(mail)			
+
+		directory=self.unpack_email(mail)
 		result=False
-		
+
 		for scanner in self.virusscanner:
 			self.debug("Use virus scanner %s ..."%scanner)
 			try:
@@ -295,7 +296,7 @@ class _virus_check(_gmechild):
 		except:
 			self.log("temporary directory '%s' could not be deleted"%directory)
 			self.log_traceback()
-	
+
 		return result,description
 
 
