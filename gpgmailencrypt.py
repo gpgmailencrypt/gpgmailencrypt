@@ -135,9 +135,7 @@ class gme:
 	#################
 
 	def reset_statistics(self):
-		self._systemerrors=0
-		self._systemwarnings=0
-		self._systemmessages=[]
+		self.reset_messages()
 		self._count_totalmails=0
 		self._count_encryptedmails=0
 		self._count_deferredmails=0
@@ -150,6 +148,15 @@ class gme:
 		self._count_viruses=0
 		self._count_spam=0
 		self._count_maybespam=0
+
+	###############
+	#reset_messages
+	###############
+
+	def reset_messages(self):
+		self._systemerrors=0
+		self._systemwarnings=0
+		self._systemmessages=[]
 
 	###################
 	#reset_pdfpasswords

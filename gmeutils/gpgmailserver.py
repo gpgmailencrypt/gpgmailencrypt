@@ -28,6 +28,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 					"FLUSH",
 					"MESSAGES",
 					"RELOAD",
+					"RESETMESSAGES",
 					"RESETSTATISTICS",
 					"SETUSER",
 					"STATISTICS",
@@ -687,7 +688,6 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		else:
 			self.push(syntaxerror)
 
-
 	#####################
 	#smtp_RESETSTATISTICS
 	#####################
@@ -699,6 +699,21 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			return
 
 		self.parent.reset_statistics()
+		self.parent.log("smtp_RESETSTATISTICS")
+		self.push("250 OK")
+
+	###################
+	#smtp_RESETMESSAGES
+	###################
+
+	def smtp_RESETMESSAGES(self,arg):
+
+		if arg:
+			self.push("501 Syntax error: no arguments allowed")
+			return
+
+		self.parent.reset_messages()
+		self.parent.log("smtp_RESETMESSAGES")
 		self.push("250 OK")
 
 	################

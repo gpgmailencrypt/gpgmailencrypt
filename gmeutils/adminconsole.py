@@ -176,6 +176,8 @@ def start_adminconsole(host,port):
 			" to 'emailaddress'")
 			print("".ljust(space)+"                        xxx is the id")
 			print("reload".ljust(space)+"reloads the configuration file")
+			print("resetmessages".ljust(space)+
+					"deletes all old systemmessages")
 			print("resetstatistics".ljust(space)+
 					"sets all statistic values to 0")
 			print("setuser".ljust(space)+

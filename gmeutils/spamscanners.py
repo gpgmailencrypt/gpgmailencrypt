@@ -1,10 +1,11 @@
+#!/usr/bin/env python3
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 import os
 import re
 import shutil
 import subprocess
-from	.child 				import _gmechild 
+from	.child 				import _gmechild
 from	._dbg	 			import _dbg
 from	.version 			import *
 
@@ -25,8 +26,8 @@ class _basespamchecker(_gmechild):
 	@_dbg
 	def set_leveldict(self,leveldict):
 		raise NotImplementedError
-	
-	@_dbg					
+
+	@_dbg
 	def is_spam(self,mail):
 		raise NotImplementedError
 
@@ -52,8 +53,8 @@ class _SPAMASSASSIN(_basespamchecker):
 		self._SPAMMAXSIZE=5000000
 		self.cmd=shutil.which("spamc")
 		self.set_leveldict(leveldict)
-		
-	@_dbg					
+
+	@_dbg
 	def set_leveldict(self,leveldict):
 		self.spamlevel=5.0
 		self.spammaybelevel=2.5
@@ -67,7 +68,7 @@ class _SPAMASSASSIN(_basespamchecker):
 		except:
 			self.log_traceback()
 
-	@_dbg					
+	@_dbg
 	def is_spam(self,mail):
 			spamlevel=S_NOSPAM
 			p=subprocess.Popen([self.cmd,
@@ -107,12 +108,12 @@ class _BOGOFILTER(_basespamchecker):
 		_basespamchecker.__init__(self,parent,leveldict)
 		self.cmd=shutil.which("bogofilter")
 		self.set_leveldict(leveldict)
-		
-	@_dbg					
+
+	@_dbg
 	def set_leveldict(self,leveldict):
 		pass
 
-	@_dbg					
+	@_dbg
 	def is_spam(self,mail):
 			self.debug("Spamcheck bogofilter")
 			spamlevel=S_NOSPAM
@@ -166,4 +167,4 @@ def get_spamscanner(scanner,parent,leveldict):
 			return _s
 
 	return None
-	
+
