@@ -6,7 +6,7 @@ from   io 				import StringIO
 import os
 import re
 import subprocess
-from	.child 			import _gmechild 
+from	.child 			import _gmechild
 from   	.helpers 		import *
 
 from	.version		import *
@@ -20,12 +20,12 @@ class _GPG(_gmechild):
 	Don't call this class directly, use gme.gpg_factory() instead!
 	"""
 
-	def __init__(   self, 
+	def __init__(   self,
 					parent,
 					keyhome=None):
 		_gmechild.__init__(self,parent,filename=__file__)
 		self._recipient = ''
-		self._filename=''	
+		self._filename=''
 		self.count=0
 		self.debug("_GPG.__init__")
 		self._localGPGkeys=list()
@@ -75,7 +75,7 @@ class _GPG(_gmechild):
 			self._keyhome=os.path.expanduser(keyhome.strip())
 		else:
 			self._keyhome=''
- 
+
  	##############
  	#set_recipient
  	##############
@@ -87,7 +87,7 @@ class _GPG(_gmechild):
 		if isinstance(recipient, str):
 			self._recipient=recipient
 			self.parent._GPGkeys = list()
- 
+
 	##########
 	#recipient
 	##########
@@ -95,29 +95,29 @@ class _GPG(_gmechild):
 	@_dbg
 	def recipient(self):
 		"returns the recipient address"
-		return self._recipient	
+		return self._recipient
 
 	#############
 	#set_fromuser
 	#############
-	
+
 	@_dbg
 	def set_fromuser(self, user):
 		user=email.utils.parseaddr(user)[1].lower()
 
 		if self._local_from_user!= user:
 			self._get_public_keys_from(from_user=user)
-			
+
 	#########
 	#fromuser
 	#########
-	
+
 	def fromuser(self):
 		return self._local_from_user
-		
+
 	############
 	#public_keys
-	############ 
+	############
 
 	@_dbg
 	def public_keys(self):
@@ -127,7 +127,7 @@ class _GPG(_gmechild):
 			self._get_public_keys()
 
 		return self.parent._GPGkeys
- 
+
 	#############
 	#private_keys
 	#############
@@ -140,7 +140,7 @@ class _GPG(_gmechild):
 			self._get_private_keys()
 
 		return self.parent._GPGprivatekeys
- 
+
 	###############
 	#has_public_key
 	###############
@@ -159,16 +159,16 @@ class _GPG(_gmechild):
 			self.debug("has_public_key, key not of type str")
 			return False
 
-		if key in self._localGPGkeys:	
+		if key in self._localGPGkeys:
 			self.debug("has_publickey, key %s found in _localGPGkeys"%key)
 			return True
-		elif key in self.parent._GPGkeys:	
+		elif key in self.parent._GPGkeys:
 			return True
 		else:
 			self.debug("has_publickey, key not in _GPGkeys")
 			self.debug("_GPGkeys '%s'"%str(self.parent._GPGkeys))
 			return False
- 
+
 	#################
 	#_get_public_keys
 	#################
@@ -176,7 +176,7 @@ class _GPG(_gmechild):
 	@_dbg
 	def _get_public_keys( self):
 		self._get_public_keys_from(from_user=None)
-		
+
 	######################
 	#_get_public_keys_from
 	######################
@@ -184,7 +184,7 @@ class _GPG(_gmechild):
 	@_dbg
 	def _get_public_keys_from( self, from_user=None ):
 		self.debug("_GPG._get_public_keys")
-		
+
 		if from_user==None:
 			self.parent._GPGkeys = list()
 			keys=self.parent._GPGkeys
@@ -208,16 +208,16 @@ class _GPG(_gmechild):
 		self.debug("_GPG.public_keys command: '%s'"%cmd)
 
 		try:
-			p = subprocess.Popen(   cmd.split(' '), 
-									stdin=None, 
-									stdout=subprocess.PIPE, 
+			p = subprocess.Popen(   cmd.split(' '),
+									stdin=None,
+									stdout=subprocess.PIPE,
 									stderr=subprocess.PIPE )
 			p.wait()
 
 			for line in p.stdout.readlines():
 				res=line.decode(self.parent._encoding,unicodeerror).split(":")
 
-				if (res[0]=="pub" 
+				if (res[0]=="pub"
 				or res[0]=="uid"):
 					email=res[9]
 					mail_id=res[4]
@@ -240,7 +240,7 @@ class _GPG(_gmechild):
 
 						email=email.lower()
 
-						if (len(email)>0 
+						if (len(email)>0
 						and keys.count(email) == 0):
 							keys.append(email)
 
@@ -248,7 +248,7 @@ class _GPG(_gmechild):
 			self.log("Error opening keyring (Perhaps wrong "
 							"directory '%s'?)"%keyhome,"e")
 			self.log_traceback()
- 
+
 	##################
 	#_get_private_keys
 	##################
@@ -258,14 +258,14 @@ class _GPG(_gmechild):
 		self.debug("_GPG._get_private_keys")
 		self.parent._GPGprivatekeys = list()
 		cmd = '%s --homedir %s --list-secret-keys --with-colons' % (
-					self.parent._GPGCMD, 
+					self.parent._GPGCMD,
 					self._keyhome.replace("%user",self._recipient))
 		self.debug("_GPG.private_keys command: '%s'"%cmd)
 
 		try:
-			p = subprocess.Popen(   cmd.split(' '), 
-									stdin=None, 
-									stdout=subprocess.PIPE, 
+			p = subprocess.Popen(   cmd.split(' '),
+									stdin=None,
+									stdout=subprocess.PIPE,
 									stderr=subprocess.PIPE )
 			p.wait()
 
@@ -295,7 +295,7 @@ class _GPG(_gmechild):
 
 						email=email.lower()
 
-						if (len(email)>0 
+						if (len(email)>0
 						and self.parent._GPGprivatekeys.count(email) == 0):
 							self.parent._GPGprivatekeys.append(email)
 
@@ -303,7 +303,7 @@ class _GPG(_gmechild):
 			self.log("Error opening keyring (Perhaps wrong "
 							"directory '%s'?)"%self._keyhome,"e")
 			self.log_traceback()
- 
+
 	#############
 	#encrypt_file
 	#############
@@ -311,11 +311,11 @@ class _GPG(_gmechild):
 	@_dbg
 	def encrypt_file(   self,
 						filename=None,
-						binary=False, 
+						binary=False,
 						recipient=None):
 		"""
 		encrypts the content of a file.
-		
+
 		return values:
 		result: True if success, else False
 		encdata: If 'result' is True, a (binary) string with the encrypted data
@@ -340,9 +340,9 @@ class _GPG(_gmechild):
 		f=self.parent._new_tempfile()
 		self.debug("_GPG.encrypt_file _new_tempfile %s"%f.name)
 		f.close()
-		_result = subprocess.call( 
+		_result = subprocess.call(
 					' '.join(self._encryptcommand_fromfile(f.name,binary)),
-					shell=True ) 
+					shell=True )
 		self.debug("Encryption command: '%s'" %
 					' '.join(self._encryptcommand_fromfile(f.name,binary)))
 
@@ -365,7 +365,7 @@ class _GPG(_gmechild):
 		res.close()
 		self.parent._del_tempfile(f.name)
 		return result,encdata
- 
+
 	#########################
 	#_encryptcommand_fromfile
 	#########################
@@ -375,17 +375,18 @@ class _GPG(_gmechild):
 									sourcefile,
 									binary):
 
-		if self._recipient in self._localGPGkeys:	
+		if self._recipient in self._localGPGkeys:
 			keyhome=self._local_gpg_dir
 		else:
 			keyhome=self._keyhome.replace("%user",self._recipient)
-		cmd=[self.parent._GPGCMD, 
-								"--trust-model", "always", 
+
+		cmd=[self.parent._GPGCMD,
+								"--trust-model", "always",
 								"-r",self._recipient,
-								"--homedir", keyhome, 
-								"--batch", 
-								"--yes", 
-								"--pgp7", 
+								"--homedir", keyhome,
+								"--batch",
+								"--yes",
+								"--pgp7",
 								"-q",
 								"--no-secmem-warning",
 								"--output",sourcefile, "-e",self._filename ]
@@ -398,7 +399,7 @@ class _GPG(_gmechild):
 			cmd.insert(1,"-a")
 
 		return cmd
- 
+
 	#############
 	#decrypt_file
 	#############
@@ -410,7 +411,7 @@ class _GPG(_gmechild):
 						recipient=None):
 		"""
 		decrypts the content of a file.
-		
+
 		return values:
 		result: True if success, else False
 		encdata: If 'result' is True, a (binary) string with the decrypted data
@@ -431,8 +432,8 @@ class _GPG(_gmechild):
 		f=self.parent._new_tempfile()
 		self.debug("_GPG.decrypt_file _new_tempfile %s"%f.name)
 		f.close()
-		_result = subprocess.call( 
-			' '.join(self._decryptcommand_fromfile(f.name,binary)),shell=True ) 
+		_result = subprocess.call(
+			' '.join(self._decryptcommand_fromfile(f.name,binary)),shell=True )
 		self.debug("Encryption command: '%s'" %
 			' '.join(self._decryptcommand_fromfile(f.name,binary)))
 
@@ -454,7 +455,7 @@ class _GPG(_gmechild):
 		res.close()
 		self.parent._del_tempfile(f.name)
 		return result,encdata
- 
+
 	#########################
 	#_decryptcommand_fromfile
 	#########################
@@ -463,16 +464,16 @@ class _GPG(_gmechild):
 	def _decryptcommand_fromfile(   self,
 									sourcefile,
 									binary):
-		cmd=[self.parent._GPGCMD, 
-					"--trust-model", "always", 
+		cmd=[self.parent._GPGCMD,
+					"--trust-model", "always",
 					"-q",
 					"-r",self._recipient,
 					"--homedir", self._keyhome.replace("%user",self._recipient),
-					"--batch", 
-					"--yes", 
-					"--pgp7", 
-					"--no-secmem-warning", 
-					"--output",sourcefile, 
+					"--batch",
+					"--yes",
+					"--pgp7",
+					"--no-secmem-warning",
+					"--output",sourcefile,
 					"-d",self._filename ]
 
 		if not binary:

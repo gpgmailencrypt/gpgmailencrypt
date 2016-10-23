@@ -2,6 +2,7 @@
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 VERSION="3.1.1dev"
 DATE="22.10.2016"
+COPYRIGHTYEAR="2016"
 unicodeerror="replace"
 #database improvements
 #create tables

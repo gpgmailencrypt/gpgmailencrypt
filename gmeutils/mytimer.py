@@ -14,7 +14,6 @@ class _mytimer(_gmechild):
 	timer.
 
 	The class will return timer.is_running() == False in case the timer expired.
-
 	Additionally you can set a your own alarmfunction to do whatever you want
 	when the timer is fired.
 
@@ -30,18 +29,17 @@ class _mytimer(_gmechild):
 	case 2: a revolving timer
 
 	timer.set_timer(0,600,your_alarmfunction)
-
 	will  your_alarmfunction every 600 seconds
 
 
 	case 3: A timer to check for inactivity
 
 	To get a timer to check inactivity you can do the following:
+
 	mytimer.start(10,60)
 
 	and then in your useraction function call timer.set_alive() in case of
 	user activity.
-
 	To check if the the timer already expired check timer.is_running()
 	"""
 

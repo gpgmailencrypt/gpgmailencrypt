@@ -49,7 +49,8 @@ def replace_variables(  text,
 	"embraced with % and consists of capital letters, e.g. %MYVARIABLE%"
 	result=""
 	begin=0
-	dictionary["COPYRIGHT"]="© 2016 Horst Knorr&lt;gpgmailencrypt@gmx.de>"
+	dictionary["COPYRIGHT"]="© %s Horst Knorr&lt;gpgmailencrypt@gmx.de>"%(
+							COPYRIGHTYEAR)
 	dictionary["VERSION"]=VERSION
 	dictionary["VERSIONDATE"]=DATE
 
@@ -333,7 +334,7 @@ def guess_fileextension(ct):
 	"returns a filetype based on its contenttype/mimetype 'ct'"
 
 	try:
-		maintype,subtype=ct.split("/")
+		maintype,subtype=ct.lower().split("/")
 	except:
 		maintype=ct
 		subtype="plain"
@@ -455,10 +456,12 @@ def guess_fileextension(ct):
 			return "vcs"
 		elif "x-script" in subtype:
 			r=subtype.split(".")
+
 			if len(r)==2:
 				return r[1]
 			else:
 				return "hlb"
+
 		elif subtype in ("asp","css","html","rtf","xml"):
 			return subtype
 

@@ -209,7 +209,7 @@ class _virus_check(_gmechild):
 	#unpack_email
 	#############
 
-	_dbg
+	@_dbg
 	def unpack_email(self, mail):
 
 		if isinstance(mail,str):
@@ -252,7 +252,7 @@ class _virus_check(_gmechild):
 	#has_virus
 	##########
 
-	_dbg
+	@_dbg
 	def has_virus(self,mail):
 		self.debug("viruscheck has_virus")
 		description=[]

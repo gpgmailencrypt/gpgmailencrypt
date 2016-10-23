@@ -124,6 +124,7 @@ class gme:
 		self._LOGGING=self.l_none
 		self._level=0
 		self.reset_statistics()
+		self.reset_messages()
 		self._DEBUG=False
 		self._GPGkeys=list()
 		self._GPGprivatekeys=list()
@@ -135,7 +136,7 @@ class gme:
 	#################
 
 	def reset_statistics(self):
-		self.reset_messages()
+		#self.reset_messages()
 		self._count_totalmails=0
 		self._count_encryptedmails=0
 		self._count_deferredmails=0

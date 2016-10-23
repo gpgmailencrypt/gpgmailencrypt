@@ -90,7 +90,8 @@ def start_adminconsole(host,port):
 										password)
 						).encode("UTF-8"))[:-1]
 			code,msg=self._sendcmd("ADMIN",auth.decode("UTF-8",unicodeerror))
-			code,msg=self._sendcmd("AUTH PLAIN",auth.decode("UTF-8",unicodeerror))
+			code,msg=self._sendcmd("AUTH PLAIN",auth.decode("UTF-8",
+															unicodeerror))
 
 			if code!=235:
 				print("Authentication failed")
