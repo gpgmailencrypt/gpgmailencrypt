@@ -1247,7 +1247,7 @@ class gme:
 				templatefile=os.path.join(self._MAILTEMPLATEDIR,
 											"EN",
 											"%s.html"%identifier)
-				f=open(templatefile)
+				f=open(templatefile,encoding="UTF-8",error=unicodeerror)
 				self.debug("template found in %s"%templatefile)
 			except:
 				pass
