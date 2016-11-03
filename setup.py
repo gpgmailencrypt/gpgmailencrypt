@@ -44,6 +44,13 @@ def install_dir(fromdir,todir):
 			for f in files:
 				fromfile=os.path.join(root,f)
 				tofile=os.path.join(to,f)
+				tofiledefault=tofile+".default"
+
+
+				with open(tofiledefault,"wb") as to_f:
+					from_f=open(fromfile,"rb")
+					to_f.write(from_f.read())
+					from_f.close()
 
 				if not os.path.exists(tofile):
 
@@ -52,7 +59,7 @@ def install_dir(fromdir,todir):
 						to_f.write(from_f.read())
 						from_f.close()
 	except:
-		print("Error copying directory '%s'",b)
+		print("Error copying directory '%s'"%b)
 
 ##############
 #_post_install
