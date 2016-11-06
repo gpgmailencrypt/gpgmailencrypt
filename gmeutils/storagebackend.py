@@ -340,7 +340,7 @@ class _TEXT_BACKEND(_base_storage):
 	def _read_pdfpasswordfile( self,pwfile):
 
 		try:
-			f=open(os.path.expanduser(pwfile))
+			f=open(os.path.expanduser(pwfile),encoding="UTF-8",errors=unicodeerror)
 		except:
 			self.log("read_pdfpasswordfile: passwords could not be read","e")
 			self.log_traceback()

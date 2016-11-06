@@ -170,7 +170,7 @@ class _SMIME(_gmechild):
 		else:
 			result=True
 
-		res=open(f.name,encoding="UTF-8")
+		res=open(f.name,encoding="UTF-8",errors=unicodeerror)
 		encdata=res.read()
 		res.close()
 		self.parent._del_tempfile(f.name)
@@ -251,7 +251,7 @@ class _SMIME(_gmechild):
 		else:
 			result=True
 
-		res=open(f.name,encoding="UTF-8")
+		res=open(f.name,encoding="UTF-8",errors=unicodeerror)
 		encdata=res.read()
 		res.close()
 		self.parent._del_tempfile(f.name)

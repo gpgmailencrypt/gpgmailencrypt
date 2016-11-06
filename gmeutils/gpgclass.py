@@ -358,7 +358,7 @@ class _GPG(_gmechild):
 			res=open(f.name,mode="br")
 			self.debug("GPG.encrypt_file binary open")
 		else:
-			res=open(f.name)
+			res=open(f.name,encoding="UTF-8",errors=unicodeerror)
 			self.debug("GPG.encrypt_file text open")
 
 		encdata=res.read()

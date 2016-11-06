@@ -1061,7 +1061,7 @@ class gme:
 			return "",""
 
 		try:
-			f=open(pwfile)
+			f=open(pwfile,encoding="UTF-8",errors=unicodeerror)
 		except:
 			self.log("_gpgmailencryptserver: Config file could not be read","e")
 			self.log_traceback()
@@ -1236,7 +1236,7 @@ class gme:
 			templatefile=os.path.join(  self._MAILTEMPLATEDIR,
 										self._LOCALE,
 										"%s.html"%identifier)
-			f=open(templatefile)
+			f=open(templatefile,encoding="UTF-8",errors=unicodeerror)
 			self.debug("template found in %s"%templatefile)
 		except:
 			pass
@@ -1247,7 +1247,7 @@ class gme:
 				templatefile=os.path.join(self._MAILTEMPLATEDIR,
 											"EN",
 											"%s.html"%identifier)
-				f=open(templatefile,encoding="UTF-8",error=unicodeerror)
+				f=open(templatefile,encoding="UTF-8",errors=unicodeerror)
 				self.debug("template found in %s"%templatefile)
 			except:
 				pass
@@ -1319,7 +1319,7 @@ class gme:
 		try:
 
 			if self._LOGGING==self.l_file and len(self._LOGFILE)>0:
-				self._logfile = open(self._LOGFILE, 'a')
+				self._logfile = open(self._LOGFILE, mode='a',encoding="UTF-8",errors=unicodeerror)
 
 		except:
 			self._logfile=None
@@ -1511,7 +1511,7 @@ class gme:
 					m.set_param("charset",charset)
 					raw_payload=raw_payload.encode(charset,unicodeerror)
 
-				fp=open(os.path.join(tempdir,filename),"wb")
+				fp=open(os.path.join(tempdir,filename),mode="wb",encoding="UTF-8",errors=unicodeerror)
 
 				try:
 					fp.write(raw_payload)
@@ -1890,7 +1890,7 @@ class gme:
 		self._virus_queue=[]
 
 		try:
-			f=open(self._viruslist)
+			f=open(self._viruslist,encoding="UTF-8",errors=unicodeerror)
 
 			for l in f:
 				mail=l.split("|")
@@ -1919,7 +1919,7 @@ class gme:
 		self._deferred_emails=[]
 
 		try:
-			f=open(self._deferlist)
+			f=open(self._deferlist,encoding="UTF-8",errors=unicodeerror)
 
 			for l in f:
 				mail=l.split("|")
@@ -1948,7 +1948,7 @@ class gme:
 
 		try:
 			self.debug("store_deferred_list '%s'"%self._deferlist)
-			f=open(self._deferlist,"w")
+			f=open(self._deferlist,mode="w",encoding="UTF-8",errors=unicodeerror)
 
 			for mail in self._deferred_emails:
 				mail[3]=str(mail[3])
@@ -1977,7 +1977,7 @@ class gme:
 
 		try:
 			self.debug("store_virus_list '%s'"%self._viruslist)
-			f=open(self._viruslist,"w")
+			f=open(self._viruslist,mode="w",encoding="UTF-8",errors=unicodeerror)
 
 			for mail in self._virus_queue:
 				mail[3]=str(mail[3])
@@ -2023,7 +2023,7 @@ class gme:
 		for mail in self._deferred_emails:
 
 			try:
-				f=open(mail[0])
+				f=open(mail[0],encoding="UTF-8",errors=unicodeerror)
 				msg=f.read()
 				f.close()
 
@@ -2066,7 +2066,7 @@ class gme:
 			mail=self._email_queue[qid]
 
 			try:
-				f=open(mail[0],"rb")
+				f=open(mail[0],mode="rb",encoding="UTF-8",errors=unicodeerror)
 				m=f.read()
 				f.close()
 				mailtext=m.decode("UTF-8",unicodeerror)
@@ -2340,7 +2340,7 @@ class gme:
 
 		if res:
 
-			with open(res[0]) as f:
+			with open(res[0],encoding="UTF-8",errors=unicodeerror) as f:
 				mail=f.read()
 
 			self._send_textmsg(	m_id=-1,
@@ -2372,7 +2372,7 @@ class gme:
 
 		if res:
 
-			with open(res[0]) as f:
+			with open(res[0],encoding="UTF-8",errors=unicodeerror) as f:
 				mail=f.read()
 
 			m=email.message_from_string(mail)
@@ -3850,7 +3850,7 @@ class gme:
 					payload=m.get_payload(decode=True)
 
 				self.debug("Open write: %s/%s"%(tempdir,filename))
-				fp=open(os.path.join(tempdir,filename),"wb")
+				fp=open(os.path.join(tempdir,filename),mode="wb",encoding="UTF-8",errors=unicodeerror)
 
 				try:
 					fp.write(payload)
@@ -4364,7 +4364,7 @@ class gme:
 			if len(self._INFILE)>0:
 
 				try:
-					f=open(self._INFILE,"rb")
+					f=open(self._INFILE,mode="rb",encoding="UTF-8",errors=unicodeerror)
 					m=email.message_from_binary_file(f)
 					raw=m.as_string()
 					f.close()
@@ -4538,7 +4538,7 @@ class gme:
 	def _read_smtpdpasswordfile( self,pwfile):
 
 		try:
-			f=open(os.path.expanduser(pwfile))
+			f=open(os.path.expanduser(pwfile),encoding="UTF-8",errors=unicodeerror)
 		except:
 			self.log("_gpgmailencryptserver: Config file could not be read","e")
 			self.log_traceback()
@@ -4567,11 +4567,11 @@ class gme:
 		try:
 			pwfile=os.path.expanduser(self._SMTPD_PASSWORDFILE)
 			fileexists=os.path.exists(self._SMTPD_PASSWORDFILE)
-			f=open(pwfile,"w")
+			f=open(pwfile,mode="w",encoding="UTF-8",errors=unicodeerror)
 
 			if not fileexists:
 				self.debug("new pwfile chmod")
-				f=open(self._SMTPD_PASSWORDFILE,"w")
+				f=open(self._SMTPD_PASSWORDFILE,mode="w",encoding="UTF-8",errors=unicodeerror)
 				os.chmod(self._SMTPD_PASSWORDFILE,0o600)
 
 		except:
