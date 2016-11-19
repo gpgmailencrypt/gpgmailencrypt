@@ -2066,7 +2066,7 @@ class gme:
 			mail=self._email_queue[qid]
 
 			try:
-				f=open(mail[0],mode="rb",encoding="UTF-8",errors=unicodeerror)
+				f=open(mail[0],mode="rb")
 				m=f.read()
 				f.close()
 				mailtext=m.decode("UTF-8",unicodeerror)
@@ -4364,7 +4364,7 @@ class gme:
 			if len(self._INFILE)>0:
 
 				try:
-					f=open(self._INFILE,mode="rb",encoding="UTF-8",errors=unicodeerror)
+					f=open(self._INFILE,mode="rb")
 					m=email.message_from_binary_file(f)
 					raw=m.as_string()
 					f.close()
