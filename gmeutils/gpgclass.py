@@ -481,6 +481,52 @@ class _GPG(_gmechild):
 
 		return cmd
 
+	############################
+	#extract_publickey_from_mail
+	############################
+
+	@_dbg
+	def extract_publickey_from_mail(self,
+									mail,
+									targetdir):
+		"""
+		messages can contain the public key of the sender address.
+		This function extracts the key and stores it in the directory
+		'targetdir'. 'mail' is a email.message.Message object
+		"""
+		self.debug("gpgclass extract_publickey_from_mail to '%s'"%targetdir)
+
+		if not isinstance(mail,email.message.Message):
+			self.log("gpgclass mail object of wrong type","e")
+			return None
+
+		for part in mail.walk():
+			contenttype=part.get_content_type()
+
+			if contenttype!="application/pgp-keys":
+				continue
+
+			filename = part.get_filename()
+			payload=part.get_payload(decode=True)
+
+			if not payload:
+				self.log("pgpkey attachment returned None as payload","e")
+				continue
+
+			targetname=os.path.expanduser(os.path.join(targetdir,filename))
+
+			try:
+
+				with open(targetname,"wb") as f:
+					f.write(payload)
+
+				self.debug("write to file %s"%targetname)
+
+			except:
+				self.log("gpg key could not be written","e")
+				self.log_traceback()
+
+
 #############################
 #CLASS GPGENCRYPTEDATTACHMENT
 #############################

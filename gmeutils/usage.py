@@ -159,6 +159,10 @@ def print_exampleconfig():
 	print ("gpgcommand = /usr/bin/gpg2")
 	print ("allowgpgcomment = yes".ljust(space)+
 	"#allow a comment string in the GPG file")
+	print ("extractkey= no".ljust(space)+
+	"#automatically scan emails and extract pgp public keys to "
+	"'keyextractdir'")
+	print ("keyextractdir=~/.gnupg/extract")
 
 	print ("")
 	print ("[logging]")

@@ -292,6 +292,8 @@ class gme:
 		self._GPGKEYHOME="~/.gnupg"
 		self._ALLOWGPGCOMMENT=False
 		self._GPGCMD='/usr/bin/gpg2'
+		self._GPGKEYEXTRACTDIR=os.path.join(self._GPGKEYHOME,"extract")
+		self._GPGAUTOMATICEXTRACTKEYS=False
 		self._SMIMEKEYHOME="~/.smime"
 		self._SMIMEKEYEXTRACTDIR=os.path.join(self._SMIMEKEYHOME,"extract")
 		self._SMIMECMD="/usr/bin/openssl"
@@ -516,6 +518,21 @@ class gme:
 
 			try:
 				self._ALLOWGPGCOMMENT=_cfg.getboolean('gpg','allowgpgcomment')
+			except:
+				pass
+
+			try:
+				self._GPGAUTOMATICEXTRACTKEYS=_cfg.getboolean('gpg',
+															'extractkey')
+			except:
+				pass
+
+			try:
+				k=_cfg.get('gpg','keyextractdir')
+
+				if k!=None:
+					self._GPGKEYEXTRACTDIR=k.strip()
+
 			except:
 				pass
 
@@ -1511,7 +1528,7 @@ class gme:
 					m.set_param("charset",charset)
 					raw_payload=raw_payload.encode(charset,unicodeerror)
 
-				fp=open(os.path.join(tempdir,filename),mode="wb",encoding="UTF-8",errors=unicodeerror)
+				fp=open(os.path.join(tempdir,filename),mode="wb")
 
 				try:
 					fp.write(raw_payload)
@@ -4233,6 +4250,12 @@ class gme:
 				s.extract_publickey_from_mail(  f.name,
 												self._SMIMEKEYEXTRACTDIR)
 				self._del_tempfile(f.name)
+
+			if self._GPGAUTOMATICEXTRACTKEYS:
+				self.debug("_GPGAUTOMATICEXTRACTKEYS")
+				s=self.gpg_factory()
+				s.extract_publickey_from_mail(  raw_message,
+												self._GPGKEYEXTRACTDIR)
 
 			if self._SPAMCHECK and self._spam_checker!=None:
 				self.debug("Spamcheck is_spam")
