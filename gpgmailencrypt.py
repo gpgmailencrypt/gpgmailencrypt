@@ -3867,7 +3867,7 @@ class gme:
 					payload=m.get_payload(decode=True)
 
 				self.debug("Open write: %s/%s"%(tempdir,filename))
-				fp=open(os.path.join(tempdir,filename),mode="wb",encoding="UTF-8",errors=unicodeerror)
+				fp=open(os.path.join(tempdir,filename),mode="wb")
 
 				try:
 					fp.write(payload)
