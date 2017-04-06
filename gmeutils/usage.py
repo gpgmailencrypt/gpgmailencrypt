@@ -90,8 +90,185 @@ def print_exampleconfig():
 	"#the used address looks like 'sent_address <original@fromaddress>'")
 	print ("storagebackend=TEXT".ljust(space)+
 	"#valid values are TEXT|MSSQL|MYSQL|SQLITE3|POSTGRESQL")
-	print ("")
 
+	print ("")
+	print ("[mailserver]")
+	print ("host = 127.0.0.1".ljust(space)+"#smtp host")
+	print ("port = 25".ljust(space)+"#smtp port")
+	print ("authenticate = False".ljust(space)+
+	"#user must authenticate")
+	print ("usesmtps=False".ljust(space)+
+	"#if True, the connection is ssl encrypted from the beginning")
+	print ("".ljust(space)+
+	"#don't confuse it with STARTTLS, which will be used automatically")
+	print ("smtpcredential =/etc/gpgmailencrypt.cfg".ljust(space)+
+	"#file that keeps user and password information")
+	print("".ljust(space)+
+	"#file format 'user=password'")
+	print ("cacerts=/etc/ssl/ca-certificates.crt".ljust(space)+
+	"#the ca certificate storage file used for verifiying smtp connections")
+	print ("#fingerprints=12345".ljust(space)+
+	"#a comma separated list of certificate fingerprints used for certificate ")
+	print ("".ljust(space)+
+	"#pinning, if list is empty, certificate pinning is switched off")
+	print ("useserver2 = False".ljust(space)+
+	"#use a separate server for unencrypted emails")
+	print ("host2 = 127.0.0.1".ljust(space)+"#like host, for server2")
+	print ("port2 = 25".ljust(space)+"#like port, for server2")
+	print ("authenticate2 = False".ljust(space)+
+	"#like authenticate, for server2")
+	print ("usesmtps2=False".ljust(space)+
+	"#like usesmtps, for server2")
+	print ("smtpcredential2 =/etc/gpgmailencrypt2.cfg".ljust(space)+
+	"#like smtpcredential, for server2")
+	print ("cacerts2=/etc/ssl/ca-certificates.crt".ljust(space)+
+	"#like cacerts, for server2")
+
+	print ("")
+	print ("[daemon]")
+	print ("host = 127.0.0.1".ljust(space)+
+	"#smtp host")
+	print ("port = 10025".ljust(space)+
+	"#smtp port")
+	print ("smtps = False".ljust(space)+
+	"#use smtps encryption")
+	print ("starttls = False".ljust(space)+
+	"#use starttls encryption")
+	print ("forcetls = False".ljust(space)+
+	"#communication (e.g. authentication) will be only possible after STARTTLS")
+	print ("sslkeyfile = /etc/gpgsmtp.key".ljust(space)+
+	"#the x509 certificate key file")
+	print ("sslcertfile = /etc/gpgsmtp.crt".ljust(space)+
+	"#the x509 certificate cert file")
+	print ("authenticate = False".ljust(space)+
+	"#users must authenticate")
+	print ("smtppasswords = /etc/gpgmailencrypt.pw".ljust(space)+
+	"#file that includes users and passwords")
+	print ("admins=admin1,admin2".ljust(space)+
+	"#comma separated list of admins, that can use the admin console")
+	print ("statistics=1".ljust(space)+
+	"#how often per day should statistical data be logged (0=none) max is 24")
+
+	print ("")
+	print ("[gpg]")
+	print ("keyhome = /var/lib/gpgmailencrypt/.gnupg".ljust(space)+
+	"#home directory of public  gpgkeyring")
+	print ("gpgcommand = /usr/bin/gpg2")
+	print ("allowgpgcomment = yes".ljust(space)+
+	"#allow a comment string in the GPG file")
+	print ("extractkey= no".ljust(space)+
+	"#automatically scan emails and extract pgp public keys to "
+	"'keyextractdir'")
+	print ("keyextractdir=~/.gnupg/extract")
+
+	print ("")
+	print ("[smime]")
+	print ("keyhome = ~/.smime".ljust(space)+
+	"#home directory of S/MIME public key files")
+	print ("opensslcommand = /usr/bin/openssl")
+	print ("defaultcipher = DES3".ljust(space)+
+	"#DES3|AES128|AES192|AES256")
+	print ("extractkey= no".ljust(space)+
+	"#automatically scan emails and extract smime public keys to "
+	"'keyextractdir'")
+	print ("keyextractdir=~/.smime/extract")
+
+	print ("")
+	print ("[smimeuser]")
+	print ("smime.user@domain.com = user.pem[,cipher]".ljust(space)+
+	"#public S/MIME key file [,used cipher, see defaultcipher "
+	"in the smime section]")
+
+	print ("")
+	print ("[pdf]")
+	print ("useenryptpdf=False".ljust(space)+
+	"#if True, emails can be encrypted as PDF")
+	print ("passwordlength=10".ljust(space)+
+	"#Length of the automatic created password")
+	print ("passwordlifetime=172800".ljust(space)+
+	"#lifetime for autocreated passwords in seconds. Default is 48 hours")
+	print ("pdfpasswords=/etc/gpgpdfpasswords.pw".ljust(space)+
+	"#file that includes users and passwords for permanent pdf passwords")
+
+	print ("")
+	print ("[encryptionmap]")
+	print ("user@domain.com = PGPMIME".ljust(space)+
+	"#PGPMIME|PGPINLINE|SMIME|PDF[:zipencryptionmethod]|NONE")
+
+	print ("")
+	print ("[usermap]")
+	print (""
+	"#user_nokey@domain.com = user_key@otherdomain.com")
+
+	print ("")
+	print ("[zip]")
+	print ("7zipcommand=/usr/bin/7za".ljust(space)+
+	"#path where to find 7za")
+	print ("defaultcipher=ZipCrypto".ljust(space)+
+	"#ZipCrypto|AES128||AES192|AES256")
+	print ("compressionlevel=5".ljust(space)+
+	"#1,3,5,7,9  with 1:lowest compression, but very fast, 9 is ")
+	print ("".ljust(space)+
+	"#highest compression, but very slow, default is 5")
+	print ("securezipcontainer=False".ljust(space)+
+	"#attachments will be stored in an encrypted zip file."
+	" If this option is true,")
+	print ("".ljust(space)+
+	"#the directory will be also encrypted")
+	print ("zipattachments=False".ljust(space)+
+	"#if True all attachments will be zipped, independent "
+	"from the encryption method")
+
+	print ("")
+	print ("[virus]")
+	print ("checkviruses=False".ljust(space)+
+	"#if true,e-mails will be checked for viruses before being encrypted")
+	print ("quarantinelifetime=2419200".ljust(space)+
+	"#how long an infected e-mail exists in the quarantine (in seconds)")
+	print ("".ljust(space)+
+	"#(default is 4 weeks). 0 deactivates automatic deletion")
+
+	print ("")
+	print ("[spam]")
+	print ("spamscanner=spamassassin".ljust(space)+
+	"#spamassassin|bogofilter")
+	print ("checkspam=False".ljust(space)+
+	"#if true, e-mails will be checked if they are spam")
+	print ("sa_host=localhost".ljust(space)+
+	"#server where spamassassin is running")
+	print ("sa_port=783".ljust(space)+
+	"#port of the spamassassin server")
+	print ("sa_spamlevel=6.2".ljust(space)+
+	"#spamassassin threshold for spam, "
+	"values higher than that means the mail is spam")
+	print ("sa_spamsuspectlevel=3.0".ljust(space)+
+	"#spamassassin threshold for spam, values higher "
+	"than that means the mail might be spam")
+	print("".ljust(space)+"#(value must be smaller than 'spamlevel')")
+	print ("maxsize=500000".ljust(space)+
+	"#maximum size of e-mail,that will be checked if it is spam")
+	print ("add_spamheader=False".ljust(space)+
+	"#if True the e-mail gets spam headers")
+	print ("change_subject=False".ljust(space)+
+	"#if True, the subject of the mail will get a prefix")
+	print ("spam_subject=***SPAM***".ljust(space)+
+	"#subject prefix for spam")
+	print ("spamsuspect_subject=***SPAMSUSPICION***".ljust(space)+
+	"#subject prefix for suspected spam")
+
+	print ("")
+	print ("[dkim]")
+	print ("use_dkim=False".ljust(space)+
+	"#if true, the email will be signed,when the senders address is "
+	"in homedomains")
+	print ("dkimdomain=localhost".ljust(space)+
+	"#the dkim domain name")
+	print ("dkimselector=gpgdkim".ljust(space)+
+	"#the dkim selector")
+	print ("dkimkey=~/dkim.key".ljust(space)+
+	"#the private key to be used to sign the mail")
+
+	print ("")
 	print ("[sql]")
 	print ("database=gpgmailencrypt".ljust(space)+
 	"#name of database")
@@ -153,188 +330,11 @@ def print_exampleconfig():
 	" password deletion)")
 
 	print ("")
-	print ("[gpg]")
-	print ("keyhome = /var/lib/gpgmailencrypt/.gnupg".ljust(space)+
-	"#home directory of public  gpgkeyring")
-	print ("gpgcommand = /usr/bin/gpg2")
-	print ("allowgpgcomment = yes".ljust(space)+
-	"#allow a comment string in the GPG file")
-	print ("extractkey= no".ljust(space)+
-	"#automatically scan emails and extract pgp public keys to "
-	"'keyextractdir'")
-	print ("keyextractdir=~/.gnupg/extract")
-
-	print ("")
 	print ("[logging]")
 	print ("log=none".ljust(space)+
 	"#valid values are 'none', 'syslog', 'file' or 'stderr'")
 	print ("file = /tmp/gpgmailencrypt.log")
 	print ("debug = no")
 
-	print ("")
-	print ("[mailserver]")
-	print ("host = 127.0.0.1".ljust(space)+"#smtp host")
-	print ("port = 25".ljust(space)+"#smtp port")
-	print ("authenticate = False".ljust(space)+
-	"#user must authenticate")
-	print ("usesmtps=False".ljust(space)+
-	"#if True, the connection is ssl encrypted from the beginning")
-	print ("".ljust(space)+
-	"#don't confuse it with STARTTLS, which will be used automatically")
-	print ("smtpcredential =/etc/gpgmailencrypt.cfg".ljust(space)+
-	"#file that keeps user and password information")
-	print("".ljust(space)+
-	"#file format 'user=password'")
-	print ("cacerts=/etc/ssl/ca-certificates.crt".ljust(space)+
-	"#the ca certificate storage file used for verifiying smtp connections")
-	print ("#fingerprints=12345".ljust(space)+
-	"#a comma separated list of certificate fingerprints used for certificate ")
-	print ("".ljust(space)+
-	"#pinning, if list is empty, certificate pinning is switched off")
 
-	print ("useserver2 = False".ljust(space)+
-	"#use a separate server for unencrypted emails")
-	print ("host2 = 127.0.0.1".ljust(space)+"#like host, for server2")
-	print ("port2 = 25".ljust(space)+"#like port, for server2")
-	print ("authenticate2 = False".ljust(space)+
-	"#like authenticate, for server2")
-	print ("usesmtps2=False".ljust(space)+
-	"#like usesmtps, for server2")
-	print ("smtpcredential2 =/etc/gpgmailencrypt2.cfg".ljust(space)+
-	"#like smtpcredential, for server2")
-	print ("cacerts2=/etc/ssl/ca-certificates.crt".ljust(space)+
-	"#like cacerts, for server2")
-
-
-	print ("")
-	print ("[encryptionmap]")
-	print ("user@domain.com = PGPMIME".ljust(space)+
-	"#PGPMIME|PGPINLINE|SMIME|PDF[:zipencryptionmethod]|NONE")
-
-	print ("")
-	print ("[usermap]")
-	print (""
-	"#user_nokey@domain.com = user_key@otherdomain.com")
-
-	print ("")
-	print ("[smime]")
-	print ("keyhome = ~/.smime".ljust(space)+
-	"#home directory of S/MIME public key files")
-	print ("opensslcommand = /usr/bin/openssl")
-	print ("defaultcipher = DES3".ljust(space)+
-	"#DES3|AES128|AES192|AES256")
-	print ("extractkey= no".ljust(space)+
-	"#automatically scan emails and extract smime public keys to "
-	"'keyextractdir'")
-	print ("keyextractdir=~/.smime/extract")
-
-	print ("")
-	print ("[smimeuser]")
-	print ("smime.user@domain.com = user.pem[,cipher]".ljust(space)+
-	"#public S/MIME key file [,used cipher, see defaultcipher "
-	"in the smime section]")
-
-	print ("")
-	print ("[pdf]")
-	print ("useenryptpdf=False".ljust(space)+
-	"#if True, emails can be encrypted as PDF")
-	print ("passwordlength=10".ljust(space)+
-	"#Length of the automatic created password")
-	print ("passwordlifetime=172800".ljust(space)+
-	"#lifetime for autocreated passwords in seconds. Default is 48 hours")
-	print ("pdfpasswords=/etc/gpgpdfpasswords.pw".ljust(space)+
-	"#file that includes users and passwords for permanent pdf passwords")
-
-	print ("")
-	print ("[zip]")
-	print ("7zipcommand=/usr/bin/7za".ljust(space)+
-	"#path where to find 7za")
-	print ("defaultcipher=ZipCrypto".ljust(space)+
-	"#ZipCrypto|AES128||AES192|AES256")
-	print ("compressionlevel=5".ljust(space)+
-	"#1,3,5,7,9  with 1:lowest compression, but very fast, 9 is ")
-	print ("".ljust(space)+
-	"#highest compression, but very slow, default is 5")
-	print ("securezipcontainer=False".ljust(space)+
-	"#attachments will be stored in an encrypted zip file."
-	" If this option is true,")
-	print ("".ljust(space)+
-	"#the directory will be also encrypted")
-	print ("zipattachments=False".ljust(space)+
-	"#if True all attachments will be zipped, independent "
-	"from the encryption method")
-
-	print ("")
-	print ("[daemon]")
-	print ("host = 127.0.0.1".ljust(space)+
-	"#smtp host")
-	print ("port = 10025".ljust(space)+
-	"#smtp port")
-	print ("smtps = False".ljust(space)+
-	"#use smtps encryption")
-	print ("starttls = False".ljust(space)+
-	"#use starttls encryption")
-	print ("forcetls = False".ljust(space)+
-	"#communication (e.g. authentication) will be only possible after STARTTLS")
-	print ("sslkeyfile = /etc/gpgsmtp.key".ljust(space)+
-	"#the x509 certificate key file")
-	print ("sslcertfile = /etc/gpgsmtp.crt".ljust(space)+
-	"#the x509 certificate cert file")
-	print ("authenticate = False".ljust(space)+
-	"#users must authenticate")
-	print ("smtppasswords = /etc/gpgmailencrypt.pw".ljust(space)+
-	"#file that includes users and passwords")
-	print ("admins=admin1,admin2".ljust(space)+
-	"#comma separated list of admins, that can use the admin console")
-	print ("statistics=1".ljust(space)+
-	"#how often per day should statistical data be logged (0=none) max is 24")
-
-	print ("")
-	print ("[virus]")
-	print ("checkviruses=False".ljust(space)+
-	"#if true,e-mails will be checked for viruses before being encrypted")
-	print ("quarantinelifetime=2419200".ljust(space)+
-	"#how long an infected e-mail exists in the quarantine (in seconds)")
-	print ("".ljust(space)+
-	"#(default is 4 weeks). 0 deactivates automatic deletion")
-
-	print ("")
-	print ("[spam]")
-	print ("spamscanner=spamassassin".ljust(space)+
-	"#spamassassin|bogofilter")
-	print ("checkspam=False".ljust(space)+
-	"#if true, e-mails will be checked if they are spam")
-	print ("sa_host=localhost".ljust(space)+
-	"#server where spamassassin is running")
-	print ("sa_port=783".ljust(space)+
-	"#port of the spamassassin server")
-	print ("sa_spamlevel=6.2".ljust(space)+
-	"#spamassassin threshold for spam, "
-	"values higher than that means the mail is spam")
-	print ("sa_spamsuspectlevel=3.0".ljust(space)+
-	"#spamassassin threshold for spam, values higher "
-	"than that means the mail might be spam")
-	print("".ljust(space)+"#(value must be smaller than 'spamlevel')")
-	print ("maxsize=500000".ljust(space)+
-	"#maximum size of e-mail,that will be checked if it is spam")
-	print ("add_spamheader=False".ljust(space)+
-	"#if True the e-mail gets spam headers")
-	print ("change_subject=False".ljust(space)+
-	"#if True, the subject of the mail will get a prefix")
-	print ("spam_subject=***SPAM***".ljust(space)+
-	"#subject prefix for spam")
-	print ("spamsuspect_subject=***SPAMSUSPICION***".ljust(space)+
-	"#subject prefix for suspected spam")
-
-	print ("")
-	print ("[dkim]")
-	print ("use_dkim=False".ljust(space)+
-	"#if true, the email will be signed,when the senders address is "
-	"in homedomains")
-	print ("dkimdomain=localhost".ljust(space)+
-	"#the dkim domain name")
-	print ("dkimselector=gpgdkim".ljust(space)+
-	"#the dkim selector")
-	print ("dkimkey=~/dkim.key".ljust(space)+
-	"#the private key to be used to sign the mail")
 
