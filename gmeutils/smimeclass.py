@@ -374,9 +374,17 @@ class _SMIME(_gmechild):
 		if isinstance(mail,email.message.Message):
 			mail=mail.as_string()
 
+		if not isinstance(mail,str):
+			self.log("smimeclass mail object of wrong type","e")
+			return None
+
+		mailfile=self.parent._new_tempfile()
+		mailfile.write(mail.encode("UTF-8",unicodeerror))
+		mailfile.close()
+
 		cmd=[   self.parent._SMIMECMD,
 				"smime",
-				"-in", mail,
+				"-in", mailfile.name,
 				"-pk7out",
 				"2>/dev/null","|",
 
@@ -389,6 +397,7 @@ class _SMIME(_gmechild):
 		_result = subprocess.call( " ".join(cmd) ,shell=True)
 		f.close()
 		size=os.path.getsize(fname)
+		self.parent._del_tempfile(mailfile.name)
 
 		if size==0:
 			os.remove(fname)

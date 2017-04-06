@@ -4243,13 +4243,9 @@ class gme:
 
 			if self._SMIMEAUTOMATICEXTRACTKEYS:
 				self.debug("_SMIMEAUTOMATICEXTRACTKEYS")
-				f=self._new_tempfile()
-				f.write(mailtext.encode("UTF-8",unicodeerror))
-				f.close()
 				s=self.smime_factory()
-				s.extract_publickey_from_mail(  f.name,
+				s.extract_publickey_from_mail(  raw_message,
 												self._SMIMEKEYEXTRACTDIR)
-				self._del_tempfile(f.name)
 
 			if self._GPGAUTOMATICEXTRACTKEYS:
 				self.debug("_GPGAUTOMATICEXTRACTKEYS")

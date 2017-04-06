@@ -496,6 +496,9 @@ class _GPG(_gmechild):
 		"""
 		self.debug("gpgclass extract_publickey_from_mail to '%s'"%targetdir)
 
+		if isinstance(mail,str):
+			mail=email.message_from_string(mail)
+
 		if not isinstance(mail,email.message.Message):
 			self.log("gpgclass mail object of wrong type","e")
 			return None
