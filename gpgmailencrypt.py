@@ -4034,6 +4034,8 @@ class gme:
 		_prefer_smime=False
 		mresult=None
 		self._count_totalmails+=1
+		from_addr=from_addr.lower()
+		to_addr=to_addr.lower()
 
 		if self.is_encrypted(mailtext):
 			m="Email already encrypted"
