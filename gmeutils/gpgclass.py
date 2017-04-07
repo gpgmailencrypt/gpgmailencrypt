@@ -159,6 +159,8 @@ class _GPG(_gmechild):
 			self.debug("has_public_key, key not of type str")
 			return False
 
+		key=key.lower()
+
 		if key in self._localGPGkeys:
 			self.debug("has_publickey, key %s found in _localGPGkeys"%key)
 			return True

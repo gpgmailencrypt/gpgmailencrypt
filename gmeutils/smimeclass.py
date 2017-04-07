@@ -112,6 +112,8 @@ class _SMIME(_gmechild):
 			self.debug("smime has_public_key, key not of type str")
 			return False
 
+		key=key.lower()
+
 		try:
 			_u=self.parent._backend.smimeuser(key)
 		except:
@@ -440,7 +442,7 @@ class _SMIME(_gmechild):
 				  if len(emailaddress)>0:
 
 					  for e in emailaddress:
-						  result[e] = [f,self.parent._SMIMECIPHER]
+						  result[e.lower()] = [f,self.parent._SMIMECIPHER]
 
 		return result
 

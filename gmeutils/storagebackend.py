@@ -137,12 +137,12 @@ class _TEXT_BACKEND(_base_storage):
 		if cfg.has_section('usermap'):
 
 			for (name, value) in cfg.items('usermap'):
-					self._addressmap[name] = value
+					self._addressmap[name.lower()] = value.lower()
 
 		if cfg.has_section('encryptionmap'):
 
 			for (name, value) in cfg.items('encryptionmap'):
-					self._encryptionmap[name] = value.split(":")
+					self._encryptionmap[name.lower()] = value.split(":")
 
 		if cfg.has_section('smimeuser'):
 			self._smimeuser = dict()
@@ -166,7 +166,9 @@ class _TEXT_BACKEND(_base_storage):
 				publicpath=os.path.expanduser(upath)
 
 				if os.path.isfile(publicpath):
-					self._smimeuser[name] = [publicpath,cipher,privatepath]
+					self._smimeuser[name.lower()] = [	publicpath,
+														cipher,
+														privatepath]
 
 		s=self.parent.smime_factory()
 		self._smimeuser.update(s.create_keylist(self.parent._SMIMEKEYHOME))
@@ -197,7 +199,7 @@ class _TEXT_BACKEND(_base_storage):
 		exception=False
 
 		try:
-			to_addr=self._addressmap[user]
+			to_addr=self._addressmap[user.lower()]
 		except:
 			exception=True
 
@@ -216,7 +218,7 @@ class _TEXT_BACKEND(_base_storage):
 
 		try:
 			self.debug("get_preferred encryptionmap %s"%user)
-			encryption=self._encryptionmap[user]
+			encryption=self._encryptionmap[user.lower()]
 		except:
 			self.debug("No encryption map for user '%s' found"%user)
 			raise KeyError(user)
@@ -234,7 +236,7 @@ class _TEXT_BACKEND(_base_storage):
 
 		try:
 			self.debug("smimeuser %s"%user)
-			smime=self._smimeuser[user]
+			smime=self._smimeuser[user.lower()]
 		except:
 			self.debug("No smime user '%s' found"%user)
 			raise KeyError(user)
@@ -266,6 +268,8 @@ class _TEXT_BACKEND(_base_storage):
 		result=list()
 
 		for user in self._smimeuser:
+
+			user=user.lower()
 
 			if self._smimeuser[user][2]!=None:
 				result.append(user)
@@ -552,7 +556,7 @@ class _sql_backend(_base_storage):
 
 		self.debug(self._USERMAPSQL.replace("?",user))
 
-		if not self.execute(self._USERMAPSQL,user):
+		if not self.execute(self._USERMAPSQL,user.lower()):
 			return ""
 
 		r=self._cursor.fetchone()
@@ -648,7 +652,7 @@ class _sql_backend(_base_storage):
 		if not self._USE_SQLENCRYPTIONMAP:
 			return self._textbackend.encryptionmap(user)
 
-		if not	self.execute(self._ENCRYPTIONMAPSQL,user):
+		if not	self.execute(self._ENCRYPTIONMAPSQL,user.lower()):
 			return ""
 
 		r=self._cursor.fetchone()
@@ -864,7 +868,7 @@ class _sql_backend(_base_storage):
 			if len(tmpcipher)>0 and tmpcipher!="DEFAULT":
 				cipher=tmpcipher
 
-			result= [user,privatekey,cipher]
+			result= [user.lower(),privatekey,cipher]
 
 			if privatekey!=None:
 				rows.append(result)
