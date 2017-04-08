@@ -696,6 +696,7 @@ class _sql_backend(_base_storage):
 		except:
 			self.log("SQL definition for table '%s' not found"%table,"e")
 			return False
+
 		self.debug("table definition for '%s' found"%table)
 
 		return self.execute_action(	self._replace_sql_delimiters(sql),
