@@ -1,17 +1,11 @@
 #!/usr/bin/env python3
 
-from PyPDF2 import PdfFileReader, PdfFileWriter
-from PyPDF2.generic import NameObject, createStringObject
-from bs4 import BeautifulSoup
 from datetime import datetime
 from email.header import decode_header
 from itertools import chain
-from requests.exceptions import RequestException
 from subprocess import Popen, PIPE
 from sys import platform as _platform
 import argparse
-import base64
-import binascii
 import email
 import functools
 import html
@@ -19,20 +13,27 @@ import io
 import locale
 import logging
 import logging.handlers
-import magic
 import mimetypes
 import os
 import os.path
 import pprint
-import quopri
 import re
-import requests
 import shutil
 import sys
-import uu
 import tempfile
 import traceback
+
+from PyPDF2 import PdfFileReader, PdfFileWriter
+from PyPDF2.generic import NameObject, createStringObject
+from bs4 import BeautifulSoup
+from requests.exceptions import RequestException
+import magic
+import requests
+
 _unicodeerror="replace"
+
+assert sys.version_info >= (3, 4)
+
 mimetypes.init()
 
 HEADER_MAPPING = {'Author': 'From',
@@ -105,8 +106,8 @@ def main(argv, syslog_handler, syserr_handler):
     logger.debug("Email input data is: " + input_data)
 
     input_email = get_input_email(input_data)
-    (payload, parts_already_used) = handle_message_body(input_email)
-    logger.debug("Payload after handle_message_body: " + payload)
+    (payload, parts_already_used) = handle_message_body(args, input_email)
+    logger.debug("Payload after handle_message_body: " + str(payload))
 
     if args.body:
         payload = remove_invalid_urls(payload)
@@ -149,6 +150,7 @@ def main(argv, syslog_handler, syserr_handler):
 
 def handle_args(argv):
     class ArgumentParser(argparse.ArgumentParser):
+
         def error(self, message):
             raise FatalException(message)
 
@@ -172,14 +174,15 @@ def handle_args(argv):
                         "include the complete path, otherwise it defaults to the current directory. If "
                         "this option is not specified, email2pdf picks a date & time-based filename and puts "
                         "the file in the directory specified by --output-directory.")
-    parser.add_argument("--overwrite",action="store_true",
-                        help="Overwrites the output file, if it already exists")
 
     parser.add_argument("-d", "--output-directory", default=os.getcwd(),
                         help="If --output-file is not specified, the value of this parameter is used as "
                         "the output directory for the body PDF, with a date-and-time based filename attached. "
                         "In either case, this parameter also specifies the directory in which attachments are "
-                        "stored.")
+                        "stored. Defaults to the current directory (i.e. " + os.getcwd() + ").")
+
+    parser.add_argument("--overwrite",action="store_true",
+                        help="Overwrites the output file, if it already exists")
 
     body_attachment_options = parser.add_mutually_exclusive_group()
 
@@ -191,7 +194,8 @@ def handle_args(argv):
                                          help="Don't detach attachments, just print the body of the email to PDF.")
 
     parser.add_argument("--headers", action='store_true',
-                        help="Add basic email headers to the first PDF page. The default is not to do this.")
+                        help="Add basic email headers (" + ", ".join(FORMATTED_HEADERS_TO_INCLUDE) +
+                        ") to the first PDF page. The default is not to do this.")
 
     parser.add_argument("--add-prefix-date", action="store_true",
                         help="Prepend an ISO-8601 prefix date (e.g. YYYY-MM-DD-) to any attachment filename "
@@ -238,55 +242,6 @@ def handle_args(argv):
     else:
         return (True, args)
 
-def _decodetxt(text,encoding,charset):
-#function taken from gpgmailencrypt.py (https://github.com/gpgmailencrypt/gpgmailencrypt)
-#necessary due to a bug in python 3 email module
-
-	if not charset:
-		charset="UTF-8"
-
-	if not encoding:
-		encoding="8bit"
-
-	bytetext=text.encode(charset,_unicodeerror)
-	result=bytetext
-	cte=encoding.upper()
-
-	if cte=="BASE64":
-		pad_err = len(bytetext) % 4
-
-		if pad_err:
-			padded_encoded = bytetext + b'==='[:4-pad_err]
-		else:
-			padded_encoded = bytetext
-
-		try:
-			result= base64.b64decode(padded_encoded, validate=True)
-		except binascii.Error:
-			for i in 0, 1, 2, 3:
-
-				try:
-					result= base64.b64decode(bytetext+b'='*i, validate=False)
-					break
-				except binascii.Error:
-					pass
-			else:
-				raise AssertionError("unexpected binascii.Error")
-
-	elif cte=="QUOTED-PRINTABLE":
-		result=quopri.decodestring(bytetext)
-	elif cte in ('X-UUENCODE', 'UUENCODE', 'UUE', 'X-UUE'):
-		in_file = _BytesIO(bytetext)
-		out_file = _BytesIO()
-
-		try:
-			uu.decode(in_file, out_file, quiet=True)
-			result=out_file.getvalue()
-		except uu.Error:
-			pass
-
-	return result.decode(charset,_unicodeerror)
-
 
 def get_input_data(args):
     logger = logging.getLogger("email2pdf")
@@ -321,9 +276,9 @@ def get_input_email(input_data):
 
 
 def get_output_file_name(args, output_directory):
-    if args.output_file :
+    if args.output_file:
         output_file_name = args.output_file
-        if os.path.isfile(output_file_name)and not args.overwrite:
+        if os.path.isfile(output_file_name):
             raise FatalException("Output file " + output_file_name + " already exists.")
     else:
         output_file_name = get_unique_version(os.path.join(output_directory,
@@ -347,7 +302,7 @@ def get_modified_output_file_name(output_file_name, append):
     return partial_name
 
 
-def handle_message_body(input_email):
+def handle_message_body(args, input_email):
     logger = logging.getLogger("email2pdf")
 
     cid_parts_used = set()
@@ -355,71 +310,110 @@ def handle_message_body(input_email):
     part = find_part_by_content_type(input_email, "text/html")
     if part is None:
         part = find_part_by_content_type(input_email, "text/plain")
-        if not part:
-            return ("",cid_parts_used)
-        is_text=part.get_content_maintype()=="text"
-        payload = html.escape(part.get_payload(decode=not is_text))
-        charset = part.get_content_charset()
-        cte=part["Content-Transfer-Encoding"]
-
-        if part['Content-Transfer-Encoding'] == '8bit':
-           assert isinstance(payload, str)
-           logger.info("Email is pre-decoded because Content-Transfer-Encoding is 8bit")
-        else:
-            is_text=part.get_content_maintype()=="text"
-            if is_text:
-               payload=_decodetxt(payload,cte,charset)
-            charset = part.get_content_charset()
-            if not charset:
-                charset = 'utf-8'
-                logger.info("Determined email is plain text, defaulting to charset utf-8")
+        if part is None:
+            if not args.body:
+                logger.debug("No body parts found, but using --no-body; proceeding.")
+                return (None, cid_parts_used)
             else:
-                logger.info("Determined email is plain text with charset " + str(charset))
-
-        payload = "<html><body><pre>\n" + (payload.decode(charset,_unicodeerror)
-                                           if isinstance(payload, bytes) else payload) + "\n</pre></body></html>"
+                raise FatalException("No body parts found; aborting.")
+        else:
+            payload = handle_plain_message_body(part)
     else:
+        (payload, cid_parts_used) = handle_html_message_body(input_email, part)
+
+    return (payload, cid_parts_used)
+
+
+def handle_plain_message_body(part):
+    logger = logging.getLogger("email2pdf")
+
+    if part['Content-Transfer-Encoding'] == '8bit':
+        payload = part.get_payload(decode=False)
+        assert isinstance(payload, str)
+        logger.info("Email is pre-decoded because Content-Transfer-Encoding is 8bit")
+    else:
+        payload = part.get_payload(decode=True)
+        assert isinstance(payload, bytes)
         is_text=part.get_content_maintype()=="text"
         payload = part.get_payload(decode=not is_text)
-        charset = part.get_content_charset()
-        cte=part["Content-Transfer-Encoding"]
-        if not charset:
-             charset = 'utf-8'
+
         if is_text:
              payload=_decodetxt(payload,cte,charset)
-        logger.info("Determined email is HTML with charset " + str(charset))
 
-        def cid_replace(cid_parts_used, matchobj):
-            logger.debug("Looking for image for cid " + matchobj.group(1))
-            image_part = find_part_by_content_id(input_email, matchobj.group(1))
-            if image_part is not None:
-                assert image_part['Content-Transfer-Encoding'] == 'base64'
-                image_base64 = image_part.get_payload(decode=False)
-                image_base64 = re.sub("[\r\n\t]", "", image_base64)
-                image_decoded = image_part.get_payload(decode=True)
-                mime_type = get_mime_type(image_decoded)
-                cid_parts_used.add(image_part)
-                return "data:" + mime_type + ";base64," + image_base64
-            else:
-                logger.warning("Could not find image cid " + matchobj.group(1) + " in email content.")
-                return "broken"
-
-        if is_text:
-           pl=payload
+        charset = part.get_content_charset()
+        if not charset:
+            charset = 'utf-8'
+            logger.info("Determined email is plain text, defaulting to charset utf-8")
         else:
-           pl= payload.decode(charset,_unicodeerror)
-        payload = re.sub(r'cid:([\w_@.-]+)', functools.partial(cid_replace, cid_parts_used),
-                        pl)
+            logger.info("Determined email is plain text with charset " + str(charset))
+
+        if isinstance(payload, bytes):
+            payload = str(payload, charset)
+
+        payload = html.escape(payload)
+        payload = "<html><body><pre>\n" + payload + "\n</pre></body></html>"
+        payload = "<html><body><pre>\n" + (payload.decode(charset,_unicodeerror)
+          if isinstance(payload, bytes) else payload) + "\n</pre></body></html>"
+
+    return payload
+
+
+def handle_html_message_body(input_email, part):
+    logger = logging.getLogger("email2pdf")
+
+    cid_parts_used = set()
+
+    is_text=part.get_content_maintype()=="text"
+
+    if not is_text:
+    	payload = html.escape(part.get_payload())
+    else:
+    	payload=part.get_payload(decode=True)
+
+    charset = part.get_content_charset()
+
+    if not charset:
+        charset = 'utf-8'
+
+    logger.info("Determined email is HTML with charset " + str(charset))
+
+    def cid_replace(cid_parts_used, matchobj):
+        cid = matchobj.group(1)
+
+        logger.debug("Looking for image for cid " + cid)
+        image_part = find_part_by_content_id(input_email, cid)
+
+        if image_part is None:
+            image_part = find_part_by_content_type_name(input_email, cid)
+
+        if image_part is not None:
+            assert image_part['Content-Transfer-Encoding'] == 'base64'
+            image_base64 = image_part.get_payload(decode=False)
+            image_base64 = re.sub("[\r\n\t]", "", image_base64)
+            image_decoded = image_part.get_payload(decode=True)
+            mime_type = get_mime_type(image_decoded)
+            cid_parts_used.add(image_part)
+            return "data:" + mime_type + ";base64," + image_base64
+        else:
+            logger.warning("Could not find image cid " + cid + " in email content.")
+            return "broken"
+
+    payload = re.sub(r'cid:([\w_@.-]+)', functools.partial(cid_replace, cid_parts_used),
+                     str(payload, charset))
 
     return (payload, cid_parts_used)
 
 
 def output_body_pdf(input_email, payload, output_file_name):
     logger = logging.getLogger("email2pdf")
-    wkh2p_process = Popen([WKHTMLTOPDF_EXTERNAL_COMMAND, '-q', '--load-error-handling', 'ignore', '--load-media-error-handling', 'ignore', 
-                           '--encoding', 'utf-8', '-', output_file_name], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+
+    wkh2p_process = Popen([WKHTMLTOPDF_EXTERNAL_COMMAND, '-q', '--load-error-handling', 'ignore',
+                           '--load-media-error-handling', 'ignore', '--encoding', 'utf-8', '-',
+                           output_file_name], stdin=PIPE, stdout=PIPE, stderr=PIPE)
     output, error = wkh2p_process.communicate(input=payload)
-    stripped_error = error.decode('utf-8',_unicodeerror)
+    assert output == b''
+
+    stripped_error = str(error, 'utf-8')
 
     for error_pattern in WKHTMLTOPDF_ERRORS_IGNORE:
         (stripped_error, number_of_subs_made) = re.subn(error_pattern, '', stripped_error)
@@ -433,7 +427,7 @@ def output_body_pdf(input_email, payload, output_file_name):
         raise FatalException("wkhtmltopdf failed with exit code " + str(wkh2p_process.returncode) + ", no error output.")
     elif wkh2p_process.returncode > 0 and stripped_error != '':
         raise FatalException("wkhtmltopdf failed with exit code " + str(wkh2p_process.returncode) + ", stripped error: " +
-                             stripped_error)
+                             str(stripped_error, 'utf-8'))
     elif stripped_error != '':
         raise FatalException("wkhtmltopdf exited with rc = 0 but produced unknown stripped error output " + stripped_error)
 
@@ -451,9 +445,7 @@ def output_body_pdf(input_email, payload, output_file_name):
 def remove_invalid_urls(payload):
     logger = logging.getLogger("email2pdf")
 
-    soup = BeautifulSoup(payload, "lxml") 
-    # @TODO in future versions change to
-    #soup = BeautifulSoup(payload, "html5lib") 
+    soup = BeautifulSoup(payload, "html5lib")
 
     for img in soup.find_all('img'):
         if img.has_attr('src'):
@@ -471,12 +463,7 @@ def remove_invalid_urls(payload):
                 if not found_blacklist:
                     logger.debug("Getting img URL " + src)
 
-                    try:
-                        request = requests.get(src, headers={'Connection': 'close'}, timeout=10)
-                        # See https://github.com/kennethreitz/requests/issues/1882#issuecomment-44596534
-                        request.connection.close()
-                        request.raise_for_status()
-                    except RequestException:
+                    if not can_url_fetch(src):
                         logger.warning("Could not retrieve img URL " + src + ", replacing with blank.")
                         del img['src']
                 else:
@@ -488,10 +475,22 @@ def remove_invalid_urls(payload):
     return str(soup)
 
 
+def can_url_fetch(src):
+    try:
+        request = requests.get(src, headers={'Connection': 'close'}, timeout=10)
+        # See https://github.com/kennethreitz/requests/issues/1882#issuecomment-44596534
+        request.connection.close()
+        request.raise_for_status()
+        return True
+    except RequestException:
+        return False
+
+
 def handle_attachments(input_email, output_directory, add_prefix_date, ignore_floating_attachments, parts_to_ignore):
     logger = logging.getLogger("email2pdf")
 
     parts = find_all_attachments(input_email, parts_to_ignore)
+    logger.debug("Attachments found by handle_attachments: " + str(len(parts)))
 
     for part in parts:
         filename = extract_part_filename(part)
@@ -552,7 +551,10 @@ def add_update_pdf_metadata(filename, update_dictionary):
             assert full_update_dictionary[key] is not None
             info_dict.update({NameObject(key): createStringObject(full_update_dictionary[key])})
 
-        _, temp_file_name = tempfile.mkstemp(prefix="email2pdf_add_update_pdf_metadata", suffix=".pdf")
+        os_file_out, temp_file_name = tempfile.mkstemp(prefix="email2pdf_add_update_pdf_metadata", suffix=".pdf")
+        # Immediately close the file as created to work around issue on
+        # Windows where file cannot be opened twice.
+        os.close(os_file_out)
 
         with open(temp_file_name, 'wb') as file_out:
             pdf_output.write(file_out)
@@ -561,10 +563,15 @@ def add_update_pdf_metadata(filename, update_dictionary):
 
 
 def extract_part_filename(part):
+    logger = logging.getLogger("email2pdf")
     filename = part.get_filename()
     if filename is not None:
+        logger.debug("Pre-decoded filename: " + filename)
         if decode_header(filename)[0][1] is not None:
-            filename = str(decode_header(filename)[0][0]).decode(decode_header(filename)[0][1])
+            logger.debug("Encoding: " + str(decode_header(filename)[0][1]))
+            logger.debug("Filename in bytes: " + str(decode_header(filename)[0][0]))
+            filename = str(decode_header(filename)[0][0], (decode_header(filename)[0][1]))
+            logger.debug("Post-decoded filename: " + filename)
         return filename
     else:
         return None
@@ -578,6 +585,13 @@ def get_unique_version(filename):
         filename = file_name_parts[0] + '_' + str(counter) + file_name_parts[1]
         counter += 1
     return filename
+
+
+def find_part_by_content_type_name(message, content_type_name):
+    for part in message.walk():
+        if part.get_param('name', header="Content-Type") == content_type_name:
+            return part
+    return None
 
 
 def find_part_by_content_type(message, content_type):
@@ -600,6 +614,18 @@ def get_content_id(part):
         content_id = content_id.lstrip('<').rstrip('>')
 
     return content_id
+
+# part.get_content_disposition() is only available in Python 3.5+, so this is effectively a backport so we can continue to support
+# earlier versions of Python 3. It uses an internal API so is a bit unstable and should be replaced with something stable when we
+# upgrade to a minimum of Python 3.5. See http://bit.ly/2bHzXtz.
+
+
+def get_content_disposition(part):
+    value = part.get('content-disposition')
+    if value is None:
+        return None
+    c_d = email.message._splitparam(value)[0].lower()
+    return c_d
 
 
 def get_type_extension(content_type):
@@ -650,7 +676,12 @@ def get_formatted_header_info(input_email):
 def get_mime_type(buffer_data):
     # pylint: disable=no-member
     if 'from_buffer' in dir(magic):
-        mime_type = str(magic.from_buffer(buffer_data, mime=True), 'utf-8')
+        mime_type = magic.from_buffer(buffer_data, mime=True)
+        if type(mime_type) is not str:
+            # Older versions of python-magic seem to output bytes for the
+            # mime_type name. As of Python 3.6+, it seems to be outputting
+            # strings directly.
+            mime_type = str(magic.from_buffer(buffer_data, mime=True), 'utf-8')
     else:
         m_handle = magic.open(magic.MAGIC_MIME_TYPE)
         m_handle.load()
@@ -677,6 +708,68 @@ def get_utf8_header(header):
             hdr += element[0]
     return hdr
 
+##########
+#decodetxt
+##########
+
+def decodetxt( text,
+				encoding,
+				charset):
+#necessary due to a bug in python 3 email module
+	if not charset:
+		charset="UTF-8"
+
+	if not encoding:
+		encoding="8bit"
+
+	if charset!=None:
+
+		try:
+			"test".encode(charset)
+		except:
+			charset="UTF-8"
+
+	bytetext=text.encode(charset,unicodeerror)
+	result=bytetext
+	cte=encoding.upper()
+
+	if cte=="BASE64":
+		pad_err = len(bytetext) % 4
+
+		if pad_err:
+			padded_encoded = bytetext + b'==='[:4-pad_err]
+		else:
+			padded_encoded = bytetext
+
+		try:
+			result= base64.b64decode(padded_encoded, validate=True)
+		except binascii.Error:
+
+			for i in 0, 1, 2, 3:
+
+				try:
+					result= base64.b64decode(bytetext+b'='*i, validate=False)
+					break
+				except binascii.Error:
+					pass
+
+			else:
+				raise AssertionError("unexpected binascii.Error")
+
+	elif cte=="QUOTED-PRINTABLE":
+		result=quopri.decodestring(bytetext)
+	elif cte in ('X-UUENCODE', 'UUENCODE', 'UUE', 'X-UUE'):
+		in_file = BytesIO(bytetext)
+		out_file =BytesIO()
+
+		try:
+			uu.decode(in_file, out_file, quiet=True)
+			result=out_file.getvalue()
+		except uu.Error:
+			pass
+
+	return result.decode(charset,unicodeerror)
+
 
 class WarningCountFilter(logging.Filter):
     # pylint: disable=too-few-public-methods
@@ -689,6 +782,7 @@ class WarningCountFilter(logging.Filter):
 
 
 class FatalException(Exception):
+
     def __init__(self, value):
         Exception.__init__(self, value)
         self.value = value
