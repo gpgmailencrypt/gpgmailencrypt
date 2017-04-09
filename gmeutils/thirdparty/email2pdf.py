@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
+import sys
+sys.path.insert(1,"../..")
 
 from datetime import datetime
 from email.header import decode_header
 from itertools import chain
 from subprocess import Popen, PIPE
 from sys import platform as _platform
+from gmeutils.helpers import *
 import argparse
 import email
 import functools
@@ -247,56 +250,6 @@ def handle_args(argv):
     else:
         return (True, args)
 
-def _decodetxt(text,encoding,charset):
-#function taken from gpgmailencrypt.py (https://github.com/gpgmailencrypt/gpgmailencrypt)
-#necessary due to a bug in python 3 email module
-
-    if not charset:
-        charset="UTF-8"
-
-    if not encoding:
-        encoding="8bit"
-
-    bytetext=text.encode(charset,_unicodeerror)
-    result=bytetext
-    cte=encoding.upper()
-
-    if cte=="BASE64":
-        pad_err = len(bytetext) % 4
-
-        if pad_err:
-            padded_encoded = bytetext + b'==='[:4-pad_err]
-        else:
-            padded_encoded = bytetext
-
-        try:
-            result= base64.b64decode(padded_encoded, validate=True)
-        except binascii.Error:
-            for i in 0, 1, 2, 3:
-
-                try:
-                    result= base64.b64decode(bytetext+b'='*i, validate=False)
-                    break
-                except binascii.Error:
-                    pass
-            else:
-                raise AssertionError("unexpected binascii.Error")
-
-    elif cte=="QUOTED-PRINTABLE":
-        result=quopri.decodestring(bytetext)
-    elif cte in ('X-UUENCODE', 'UUENCODE', 'UUE', 'X-UUE'):
-        in_file = _BytesIO(bytetext)
-        out_file = _BytesIO()
-
-        try:
-            uu.decode(in_file, out_file, quiet=True)
-            result=out_file.getvalue()
-        except uu.Error:
-            pass
-
-    return result.decode(charset,_unicodeerror)
-
-
 def get_input_data(args):
     logger = logging.getLogger("email2pdf")
     logger.debug("System preferred encoding is: " + locale.getpreferredencoding())
@@ -406,15 +359,12 @@ def handle_plain_message_body(part):
         else:
             logger.info("Determined email is plain text with charset " + str(charset))
 
-        payload=_decodetxt(payload,cte,charset)
-
-        #if isinstance(payload, bytes):
-            #payload = str(payload, charset)
-
+        payload=decodetxt(payload,cte,charset)
         payload = "<html><head><meta charset=\""+charset+ \
         "\"/></head><body><pre>\n" + payload + "\n</pre></body></html>"
 
     return payload
+
 
 def handle_html_message_body(input_email, part):
     logger = logging.getLogger("email2pdf")
@@ -782,67 +732,6 @@ def get_utf8_header(header):
 
     return hdr
 
-##########
-#decodetxt
-##########
-
-def decodetxt( text,
-				encoding,
-				charset):
-#necessary due to a bug in python 3 email module
-	if not charset:
-		charset="UTF-8"
-
-	if not encoding:
-		encoding="8bit"
-
-	if charset!=None:
-
-		try:
-			"test".encode(charset)
-		except:
-			charset="UTF-8"
-
-	bytetext=text.encode(charset,unicodeerror)
-	result=bytetext
-	cte=encoding.upper()
-
-	if cte=="BASE64":
-		pad_err = len(bytetext) % 4
-
-		if pad_err:
-			padded_encoded = bytetext + b'==='[:4-pad_err]
-		else:
-			padded_encoded = bytetext
-
-		try:
-			result= base64.b64decode(padded_encoded, validate=True)
-		except binascii.Error:
-
-			for i in 0, 1, 2, 3:
-
-				try:
-					result= base64.b64decode(bytetext+b'='*i, validate=False)
-					break
-				except binascii.Error:
-					pass
-
-			else:
-				raise AssertionError("unexpected binascii.Error")
-
-	elif cte=="QUOTED-PRINTABLE":
-		result=quopri.decodestring(bytetext)
-	elif cte in ('X-UUENCODE', 'UUENCODE', 'UUE', 'X-UUE'):
-		in_file = BytesIO(bytetext)
-		out_file =BytesIO()
-
-		try:
-			uu.decode(in_file, out_file, quiet=True)
-			result=out_file.getvalue()
-		except uu.Error:
-			pass
-
-	return result.decode(charset,unicodeerror)
 
 
 class WarningCountFilter(logging.Filter):
