@@ -610,6 +610,7 @@ class _LRZIP(_baseunpacker):
 				"-O \"%s\""%directory,
 				"\"%s\""%sourcefile,
 				">/dev/null"]
+		print(cmd)
 		return cmd
 
 ######
@@ -640,6 +641,7 @@ class _LZIP(_basedeleteunpacker):
 							password=None):
 		cmd=[   self.cmd,
 				"-d",
+				"-k",
 				"\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
@@ -851,6 +853,7 @@ class _RZIP(_basedeleteunpacker):
 							password=None):
 		cmd=[   self.cmd,
 				"-d",
+				"-k",
 				"\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
