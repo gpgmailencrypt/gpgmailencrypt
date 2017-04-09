@@ -1313,7 +1313,10 @@ class gme:
 
 	@_dbg
 	def set_zipcipher(self,cipher):
-		cipher=cipher.strip()
+		cipher=cipher.strip().upper()
+		defaultciphers=["ZIPCRYPTO","AES128","AES192","AES256"]
+		if not cipher in defaultciphers:
+			return
 
 		if len(cipher)>0:
 			self._ZIPCIPHER=cipher.upper()
@@ -1577,7 +1580,11 @@ class gme:
 	def is_compressable(self,
 						filetype,
 						filename):
-		maintype,subtype=filetype.lower().split("/")
+		try:
+			maintype,subtype=filetype.lower().split("/")
+		except:
+			return False
+
 		f, extension = os.path.splitext(filename.lower())
 		extension=extension[1:]
 
