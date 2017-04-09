@@ -2,6 +2,33 @@
 import unittest,sys,tempfile
 sys.path.insert(1,"..")
 import gpgmailencrypt
+import gmeutils.helpers
+import gmeutils.archivemanagers
+import os.path
+import shutil
+
+############################################
+#utilites
+############################################
+def is_networkfilesystem(dir):
+	root,tail=os.path.split(os.path.abspath(dir))
+
+	while tail!="":
+
+		if os.path.ismount(root):
+			return True
+		else:
+			root,tail=os.path.split(root)
+
+	return False
+
+def has_app(appname):
+	return shutil.which(appname)!=None
+
+############################################
+htmlbodycontent="test"
+htmlbody="<body>%s</body>"%htmlbodycontent
+htmlheader="<header>meta charset=\"utf-8\""
 
 email_unencrypted="""
 Message-ID: <55D748F3.4020400@from.com>
@@ -11,6 +38,20 @@ User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:31.0) Gecko/20100101 Thunderbird/
 MIME-Version: 1.0
 To: testaddress@gpgmailencry.pt
 Subject: testmail
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+
+test
+
+"""
+email_unencryptedencryptsubject="""
+Message-ID: <55D748F3.4020400@from.com>
+Date: Fri, 21 Aug 2015 17:51:15 +0200
+From: test@from.com
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:31.0) Gecko/20100101 Thunderbird/31.8.0
+MIME-Version: 1.0
+To: testaddress@gpgmailencry.pt
+Subject: #encrypt testmail
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
 
@@ -585,6 +626,14 @@ class gmetests(unittest.TestCase):
 			self.assertTrue(gme.get_default_preferredencryption()=="SMIME")
 			gme.close()
 
+	def test_load_mailmaster(self):
+
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			template=gme._load_mailmaster("03-virusinformation","")
+			self.assertTrue("The following e-mail was stopped" in template)
+			gme.close()
+
 	def test_preferredmethod(self):
 
 		with gpgmailencrypt.gme() as gme:
@@ -668,7 +717,61 @@ class gmetests(unittest.TestCase):
 			self.assertTrue(mapped=="testaddress@gpgmailencry.pt")
 			gme.close()
 
-	#GPGTESTS
+	def test_check_encryptsubject(self):
+
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			success=gme.check_encryptsubject(email_unencryptedencryptsubject)
+			gme.close()
+		self.assertTrue(success)
+
+	def test_check_encryptsubject(self):
+
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			success=gme.check_encryptsubject(email_unencrypted)
+			gme.close()
+		self.assertFalse(success)
+
+	def test_splithtml(self):
+
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+
+			result,header,body,footer=gme._split_html(htmlheader+htmlbody)
+			self.assertTrue(result==True and body==htmlbodycontent)
+			gme.close()
+
+	def test_guessfileextension(self):
+		ext={"image/jpeg":"jpg",
+				"APPLICATIOn/x-pKCs7-signature":"p7a"
+			}
+		result=True
+		for a in ext:
+
+			if gmeutils.helpers.guess_fileextension(a)!=ext[a]:
+				result=False
+
+		self.assertTrue(result)
+
+	def test_iscompressable(self):
+
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			self.assertTrue(gme.is_compressable("plain/text","file.txt"))
+			gme.close()
+
+	def test_isnotcompressable(self):
+
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			self.assertFalse(gme.is_compressable("image/png","file.png"))
+			gme.close()
+
+#########
+#GPGTESTS
+#########
+class gpgtests(unittest.TestCase):
 	def test_GPGpublickeys(self):
 
 		with gpgmailencrypt.gme() as gme:
@@ -683,19 +786,22 @@ class gmetests(unittest.TestCase):
 
 		self.assertTrue(pk.sort()==controllist.sort())
 
-#temporarily deactivated due to a problem with gnupg
-#	def test_GPGprivatekeys(self):
+	@unittest.skipIf(is_networkfilesystem("./gpg"),
+									"gpg directory on network file system")
+	def test_GPGprivatekeys(self):
+		#test fails if the test/gpg directory is on network file system
+		#due to gpg restrictions
 
-#		with gpgmailencrypt.gme() as gme:
-#			gme.set_configfile("./gmetest.conf")
-#			gpg=gme.gpg_factory()
-#			pk=gpg.private_keys()
-#			controllist=list()
-#			controllist.append("testaddress@gpgmailencry.pt")
-#			controllist.append("second.user@gpgmailencry.pt")
-#			gme.close()
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			gpg=gme.gpg_factory()
+			pk=gpg.private_keys()
+			controllist=list()
+			controllist.append("testaddress@gpgmailencry.pt")
+			controllist.append("second.user@gpgmailencry.pt")
+			gme.close()
 
-#		self.assertTrue(pk==controllist)
+		self.assertTrue(pk==controllist)
 
 	def test_hasgpgkey(self):
 
@@ -762,41 +868,48 @@ class gmetests(unittest.TestCase):
 			self.assertFalse(gme.is_encrypted(email_unencrypted))
 			gme.close()
 
-#temporarily deactivated due to a problem with gnupg
-#	def test_encryptdecryptgpg(self):
-#
-#		with gpgmailencrypt.gme() as gme:
-#			gme.set_configfile("./gmetest.conf")
-#			gpg=gme.gpg_factory()
-#			teststring="dies ist ein Täst"
-#			f=tempfile.NamedTemporaryFile(  mode='w',
-#											delete=False,
-#											prefix='unittest-')
-#			f.write(teststring)
-#			f.close()
-#			success=False
-#			_result,encdata=gpg.encrypt_file(
-#										filename=f.name,
-#										recipient="testaddress@gpgmailencry.pt")
-#
-#			if _result==True:
-#				f=tempfile.NamedTemporaryFile(  mode='w',
-#												delete=False,
-#												prefix='unittest-')
-#				f.write(encdata)
-#				f.close()
-#				_result,encdata=gpg.decrypt_file(
-#								filename=f.name,
-#								recipient="testaddress@gpgmailencry.pt")
 
-#				if _result==True:
-#					success=(encdata==teststring)
+	@unittest.skipIf(is_networkfilesystem("./gpg"),
+									"gpg directory on network file system")
+	def test_encryptdecryptgpg(self):
+		#test fails if the test/gpg directory is on network file system
+		#due to gpg restrictions
 
-#			gme.close()
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			gpg=gme.gpg_factory()
+			teststring="dies ist ein Täst"
+			f=tempfile.NamedTemporaryFile(  mode='w',
+											delete=False,
+											prefix='unittest-')
+			f.write(teststring)
+			f.close()
+			success=False
+			_result,encdata=gpg.encrypt_file(
+										filename=f.name,
+										recipient="testaddress@gpgmailencry.pt")
 
-#		self.assertTrue(success)
+			if _result==True:
+				f=tempfile.NamedTemporaryFile(  mode='w',
+												delete=False,
+												prefix='unittest-')
+				f.write(encdata)
+				f.close()
+				_result,encdata=gpg.decrypt_file(
+								filename=f.name,
+								recipient="testaddress@gpgmailencry.pt")
 
-	#SMIMETESTS
+				if _result==True:
+					success=(encdata==teststring)
+
+			gme.close()
+
+		self.assertTrue(success)
+
+###########
+#SMIMETESTS
+###########
+class smimetests(unittest.TestCase):
 	def test_SMIMEpublickeys(self):
 
 		with gpgmailencrypt.gme() as gme:
@@ -898,7 +1011,21 @@ class gmetests(unittest.TestCase):
 
 		self.assertTrue(success)
 
-	#PDFTESTS
+#########
+#PDFTESTS
+#########
+class pdftests(unittest.TestCase):
+	def test_setpdfpassword(self):
+		"test set_pdfpassword"
+
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			pw="test"
+			user="test@gpgmailencry.pt"
+			gme.set_pdfpassword(user,pw)
+			self.assertTrue(gme.get_pdfpassword(user)==pw)
+			gme.close()
+
 	def test_ispdfeencrypted(self):
 		"test is_pdfencrypted"
 
@@ -907,12 +1034,44 @@ class gmetests(unittest.TestCase):
 			self.assertTrue(gme.is_pdfencrypted(email_pdfencrypted))
 			gme.close()
 
-	#ZIPESTS
+#############
+#ARCHIVETESTS
+#############
+def try_uncompress(armanager,expectedfilename,alternateextension=None):
+		with gpgmailencrypt.gme() as gme:
+			originaltxt=""
+
+			with open("./archives/source.txt","r") as rf:
+				originaltxt=rf.read()
+
+			gme.set_configfile("./gmetest.conf")
+			xz=gmeutils.archivemanagers.get_archivemanager(armanager,gme)
+
+			if xz==None:
+				print("kein Archivmanager %s gefunden"%armanager)
+				return False
+
+			result,rfile=xz.uncompress_file(
+						os.path.abspath("./archives/test.%s"%
+							(alternateextension if alternateextension else
+								armanager.lower())))
+			print(result,rfile)
+			contentresult=False
+			data=None
+
+			if result:
+				with open(os.path.join(rfile,expectedfilename),"r") as rf:
+					data=rf.read()
+
+			return (result and data==originaltxt)
+
+#######################
+class archivetests(unittest.TestCase):
 	def test_zipcipher(self):
 
 		with gpgmailencrypt.gme() as gme:
 			gme.set_configfile("./gmetest.conf")
-			gme.set_zipcipher("AES128")
+			gme.set_zipcipher("aes128")
 			self.assertTrue(gme.get_zipcipher()=="AES128")
 			gme.close()
 
@@ -922,6 +1081,15 @@ class gmetests(unittest.TestCase):
 			gme.set_configfile("./gmetest.conf")
 			gme.set_zipcipher("ZipCrypto")
 			self.assertFalse(gme.get_zipcipher()=="AES128")
+			gme.close()
+
+	def test_zipcipher3(self):
+
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			wrongcipher="aes1281"
+			gme.set_zipcipher(wrongcipher)
+			self.assertFalse(gme.get_zipcipher()==wrongcipher)
 			gme.close()
 
 	def test_zipunzip(self):
@@ -949,7 +1117,7 @@ class gmetests(unittest.TestCase):
 				_result,encdata=ZIP.get_zipcontent( zipfile=f.name,
 													password="secret",
 													containerfile="container")
-				self.assertTrue(_result==True)
+				#self.assertTrue(_result==True)
 
 				try:
 					self.assertTrue(encdata[0][0]=="testfile.txt")
@@ -961,6 +1129,74 @@ class gmetests(unittest.TestCase):
 			gme.close()
 
 		self.assertTrue(success)
+
+	@unittest.skipIf(not has_app("xz"),
+		"archive programm xz not installed")
+	def test_xzuncompress(self):
+		self.assertTrue(try_uncompress("xz","test"))
+
+
+	@unittest.skipIf(not has_app("ar"),
+		"archive programm ar not installed")
+	def test_aruncompress(self):
+		self.assertTrue(try_uncompress("ar","source.txt"))
+
+	@unittest.skipIf(not has_app("arc"),
+		"archive programm arc not installed")
+	def test_arcuncompress(self):
+		self.assertTrue(try_uncompress("arc","source.txt"))
+
+	@unittest.skipIf(not has_app("arj"),
+		"archive programm arj not installed")
+	def test_arjuncompress(self):
+		self.assertTrue(try_uncompress("arj","source.txt"))
+
+	@unittest.skipIf(not has_app("bzip2"),
+		"archive programm bzip2 not installed")
+	def test_bzip2uncompress(self):
+		self.assertTrue(try_uncompress("bzip2","test.out"))
+
+	@unittest.skipIf(not has_app("gzip"),
+		"archive programm gzip not installed")
+	def test_gzipuncompress(self):
+		self.assertTrue(try_uncompress("gzip","test.out"))
+
+	@unittest.skipIf(not has_app("kgb"),
+		"archive programm kgb not installed")
+	def test_kgbuncompress(self):
+		self.assertTrue(try_uncompress("kgb","source.txt"))
+
+	@unittest.skipIf(not has_app("lrunzip"),
+		"archive programm lrunzip not installed")
+	def test_lrunzipuncompress(self):
+		self.assertTrue(try_uncompress("lrzip","test.lrzip"))
+
+	@unittest.skipIf(not has_app("lzip"),
+		"archive programm lzip not installed")
+	def test_lzipuncompress(self):
+		shutil.copyfile("./archives/test.lzip.orig","./archives/test.lzip")
+		self.assertTrue(try_uncompress("lzip","test.lzip.out"))
+
+	@unittest.skipIf(not has_app("lzop"),
+		"archive programm lzop not installed")
+	def test_lzopuncompress(self):
+		self.assertTrue(try_uncompress("lzo","source.txt"))
+
+	@unittest.skipIf(not (has_app("unrar") or has_app("rar") ),
+		"archive programm rar/unrar not installed")
+	def test_raruncompress(self):
+		self.assertTrue(try_uncompress("rar","source.txt"))
+
+	@unittest.skipIf(not has_app("rzip"),
+		"archive programm rzip not installed")
+	def test_rzipuncompress(self):
+		shutil.copyfile("./archives/test.rzip","./archives/test.rz")
+		self.assertTrue(try_uncompress("rzip","test",alternateextension="rz"))
+
+	@unittest.skipIf(not has_app("tar"),
+		"archive programm tar not installed")
+	def test_taruncompress(self):
+		self.assertTrue(try_uncompress("tar","source.txt",alternateextension="tar.bz2"))
 
 if __name__ == '__main__':
 	unittest.main()
