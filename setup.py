@@ -158,8 +158,19 @@ setup(
 	#zip_safe=False,
 	keywords='Email encryption daemon gateway  gpg pgp smime pdf spam spamassassin bogofilter virus clamav drwatson avast f-prot fprot sophos bitdefender mysql sqlite postgres',
 	scripts =["scripts/gme_admin.py","scripts/encryptmaildir.py","scripts/gme.py"],
-	packages=["gmeutils","mailtemplates","documentation","misc","gmeutils/thirdparty","gmeutils/thirdparty/dkim"],
+	packages=["gmeutils","mailtemplates",
+			  "tests","tests/archives","tests/gpg","tests/smime",
+			  "documentation","misc",
+			  "gmeutils/thirdparty","gmeutils/thirdparty/dkim"],
 	py_modules=["gpgmailencrypt"],
-	package_data={'mailtemplates': ['*/*'],"documentation":["*"],"misc":["*"],'gmeutils/thirdparty':["*.license"]},
+	package_data={	'mailtemplates': ['*/*'],
+					"documentation":["*"],
+					"misc":["*"],
+					'gmeutils/thirdparty':["*.license"],
+					'tests':['*'],
+					'tests/archives':['*'],
+					'tests/gpg':['*'],
+					'tests/smime':['*']
+					},
 )
 
