@@ -610,7 +610,6 @@ class _LRZIP(_baseunpacker):
 				"-O \"%s\""%directory,
 				"\"%s\""%sourcefile,
 				">/dev/null"]
-		print(cmd)
 		return cmd
 
 ######
