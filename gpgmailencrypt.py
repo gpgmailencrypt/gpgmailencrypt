@@ -3073,6 +3073,7 @@ class gme:
 			else:
 				self.log("Error during encryption: payload will be "
 						"unencrypted!","m")
+				return None
 
 		self._del_tempfile(fp.name)
 		return payload
@@ -3384,6 +3385,7 @@ class gme:
 		else:
 			self.log("Error during encryption pgpmime: payload will be "
 					"unencrypted!","m")
+			return None
 
 		newmsg.set_payload(attachment)
 		newmsg.set_boundary(boundary)
