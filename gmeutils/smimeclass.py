@@ -165,6 +165,11 @@ class _SMIME(_gmechild):
 			self.log("SMIME encrypt file: No recipient set!","e")
 			return result,None
 
+		try:
+			_recipient=self.parent._backend.smimeuser(self._recipient)
+		except:
+			return result, None
+
 		f=self.parent._new_tempfile()
 		self.debug("_SMIME.encrypt_file _new_tempfile %s"%f.name)
 		f.close()
@@ -197,7 +202,12 @@ class _SMIME(_gmechild):
 	def _command_encrypt_fromfile(  self,
 									sourcefile,
 									binary):
-		_recipient=self.parent._backend.smimeuser(self._recipient)
+		try:
+			_recipient=self.parent._backend.smimeuser(self._recipient)
+		except:
+			_recipient=["norecipient"]
+			self.log_traceback()
+
 		encrypt="des3" # RFC 3583
 
 		if _recipient[1]=="AES256":
