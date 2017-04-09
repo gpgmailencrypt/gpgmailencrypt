@@ -881,6 +881,19 @@ class gpgtests(unittest.TestCase):
 			self.assertIsNotNone(result)
 			gme.close()
 
+	def test_encryptgpginlinemail2(self):
+		"test encryptgpginlinemail wrong address"
+
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			result=gme.encrypt_gpg_mail(  email_unencrypted,
+												False,
+												"xtestaddress@gpgmailencry.pt",
+												"xtestaddress@gpgmailencry.pt",
+												"xtestaddress@gpgmailencry.pt")
+			self.assertIsNone(result)
+			gme.close()
+
 	def test_encryptgpgmimemail(self):
 		"test encryptgpgmimemail"
 
@@ -892,6 +905,19 @@ class gpgtests(unittest.TestCase):
 												"testaddress@gpgmailencry.pt",
 												"testaddress@gpgmailencry.pt")
 			self.assertIsNotNone(result)
+			gme.close()
+
+	def test_encryptgpgmimemail2(self):
+		"test encryptgpgmimemail wrong address"
+
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			result=gme.encrypt_gpg_mail(  email_unencrypted,
+												True,
+												"xtestaddress@gpgmailencry.pt",
+												"xtestaddress@gpgmailencry.pt",
+												"xtestaddress@gpgmailencry.pt")
+			self.assertIsNone(result)
 			gme.close()
 
 
@@ -1036,6 +1062,30 @@ class smimetests(unittest.TestCase):
 			gme.close()
 
 		self.assertTrue(success)
+
+	def test_encryptgsmimemail(self):
+		"test encryptsmimemail"
+
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			result=gme.encrypt_smime_mail(  email_unencrypted,
+												"testaddress@gpgmailencry.pt",
+												"testaddress@gpgmailencry.pt",
+												"testaddress@gpgmailencry.pt")
+			self.assertIsNotNone(result)
+			gme.close()
+
+	def test_encryptgsmimemail2(self):
+		"test encryptsmimemail wrong address"
+
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			result=gme.encrypt_smime_mail(  email_unencrypted,
+												"xtestaddress@gpgmailencry.pt",
+												"xtestaddress@gpgmailencry.pt",
+												"xtestaddress@gpgmailencry.pt")
+			self.assertIsNone(result)
+			gme.close()
 
 #########
 #PDFTESTS
