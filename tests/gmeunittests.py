@@ -868,6 +868,32 @@ class gpgtests(unittest.TestCase):
 			self.assertFalse(gme.is_encrypted(email_unencrypted))
 			gme.close()
 
+	def test_encryptgpginlinemail(self):
+		"test encryptgpginlinemail"
+
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			result=gme.encrypt_gpg_mail(  email_unencrypted,
+												False,
+												"testaddress@gpgmailencry.pt",
+												"testaddress@gpgmailencry.pt",
+												"testaddress@gpgmailencry.pt")
+			self.assertIsNotNone(result)
+			gme.close()
+
+	def test_encryptgpgmimemail(self):
+		"test encryptgpgmimemail"
+
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			result=gme.encrypt_gpg_mail(  email_unencrypted,
+												True,
+												"testaddress@gpgmailencry.pt",
+												"testaddress@gpgmailencry.pt",
+												"testaddress@gpgmailencry.pt")
+			self.assertIsNotNone(result)
+			gme.close()
+
 
 	@unittest.skipIf(is_networkfilesystem("./gpg"),
 									"gpg directory on network file system")
@@ -1014,6 +1040,13 @@ class smimetests(unittest.TestCase):
 #########
 #PDFTESTS
 #########
+def has_pdf():
+	with gpgmailencrypt.gme() as gme:
+		gme.set_configfile("./gmetest.conf")
+		pdf=gme.pdf_factory()
+		return pdf.is_available()
+###################################
+
 class pdftests(unittest.TestCase):
 	def test_setpdfpassword(self):
 		"test set_pdfpassword"
@@ -1032,6 +1065,20 @@ class pdftests(unittest.TestCase):
 		with gpgmailencrypt.gme() as gme:
 			gme.set_configfile("./gmetest.conf")
 			self.assertTrue(gme.is_pdfencrypted(email_pdfencrypted))
+			gme.close()
+
+	@unittest.skipIf(not has_pdf(),
+		"pdf support not available")
+	def test_encryptpdfmail(self):
+		"test encryptpdfmail"
+
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			result=gme.encrypt_pdf_mail(  email_unencrypted,
+												"testaddress@gpgmailencry.pt",
+												"testaddress@gpgmailencry.pt",
+												"testaddress@gpgmailencry.pt")
+			self.assertIsNotNone(result)
 			gme.close()
 
 #############
@@ -1055,7 +1102,6 @@ def try_uncompress(armanager,expectedfilename,alternateextension=None):
 						os.path.abspath("./archives/test.%s"%
 							(alternateextension if alternateextension else
 								armanager.lower())))
-			print(result,rfile)
 			contentresult=False
 			data=None
 
