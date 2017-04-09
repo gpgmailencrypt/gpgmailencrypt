@@ -78,6 +78,16 @@ class _SMIME(_gmechild):
 		else:
 			self._keyhome=''
 
+	############
+	#get_keyhome
+	############
+
+	@_dbg
+	def get_keyhome(self):
+		"gets the directory where the smime keys are stored"
+
+		return self._keyhome
+
  	##############
 	#set_recipient
 	##############
