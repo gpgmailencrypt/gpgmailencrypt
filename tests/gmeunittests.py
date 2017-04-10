@@ -4,8 +4,10 @@ sys.path.insert(1,"..")
 import gpgmailencrypt
 import gmeutils.helpers
 import gmeutils.archivemanagers
+import gmeutils.virusscanners
 import os.path
 import shutil
+from   gmeutils.dkim	import mydkim
 
 ############################################
 #utilites
@@ -30,8 +32,7 @@ htmlbodycontent="test"
 htmlbody="<body>%s</body>"%htmlbodycontent
 htmlheader="<header>meta charset=\"utf-8\""
 
-email_unencrypted="""
-Message-ID: <55D748F3.4020400@from.com>
+email_unencrypted="""Message-ID: <55D748F3.4020400@from.com>
 Date: Fri, 21 Aug 2015 17:51:15 +0200
 From: test@from.com
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:31.0) Gecko/20100101 Thunderbird/31.8.0
@@ -44,8 +45,7 @@ Content-Transfer-Encoding: 7bit
 test
 
 """
-email_unencryptedencryptsubject="""
-Message-ID: <55D748F3.4020400@from.com>
+email_unencryptedencryptsubject="""Message-ID: <55D748F3.4020400@from.com>
 Date: Fri, 21 Aug 2015 17:51:15 +0200
 From: test@from.com
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:31.0) Gecko/20100101 Thunderbird/31.8.0
@@ -58,8 +58,7 @@ Content-Transfer-Encoding: 7bit
 test
 
 """
-email_gpgmimeencrypted="""
-Message-ID: <55D7543F.5070908@knorrnet.de>
+email_gpgmimeencrypted="""Message-ID: <55D7543F.5070908@knorrnet.de>
 Date: Fri, 21 Aug 2015 18:39:27 +0200
 From: test@knorrnet.de
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:31.0) Gecko/20100101 Thunderbird/31.8.0
@@ -98,8 +97,7 @@ eBJxKkkjpiCCRrPSbubBX8yd3tsEh+i7oSkz
 
 --===============6271318822587357114==--"""
 
-email_gpginlineencrypted="""
-Message-ID: <55D74DA5.4040503@from.com>
+email_gpginlineencrypted="""Message-ID: <55D74DA5.4040503@from.com>
 Date: Fri, 21 Aug 2015 18:11:17 +0200
 From: test@from.com
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:31.0) Gecko/20100101 Thunderbird/31.8.0
@@ -124,8 +122,7 @@ OO3rAIhyOg==
 =qggM
 -----END PGP MESSAGE-----
 """
-email_smimeencrypted="""
-Message-ID: <55D76AE0.2010301@from.com>
+email_smimeencrypted="""Message-ID: <55D76AE0.2010301@from.com>
 Date: Fri, 21 Aug 2015 20:16:00 +0200
 From: test@from.com
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:31.0) Gecko/20100101 Thunderbird/31.8.0
@@ -162,8 +159,7 @@ Content-Type: application/x-pkcs7-mime; smime-type=enveloped-data; name="smime.p
 Content-Transfer-Encoding: base64
 
 """
-email_pdfencrypted="""
-Content-Type: multipart/mixed; boundary="===============3660322619382959396=="
+email_pdfencrypted="""Content-Type: multipart/mixed; boundary="===============3660322619382959396=="
 MIME-Version: 1.0
 Message-ID: <55D748F3.4020400@from.com>
 Date: Fri, 21 Aug 2015 17:51:15 +0200
@@ -1293,6 +1289,106 @@ class archivetests(unittest.TestCase):
 		"archive programm tar not installed")
 	def test_taruncompress(self):
 		self.assertTrue(try_uncompress("tar","source.txt",alternateextension="tar.bz2"))
+
+###########
+#VIRUSTESTS
+###########
+def has_scanner(scanner):
+	with gpgmailencrypt.gme() as gme:
+		gme.set_configfile("./gmetest.conf")
+		return gmeutils.virusscanners.get_virusscanner(scanner,gme)!=None
+
+def check_virus(scanner,virusdir):
+	with gpgmailencrypt.gme() as gme:
+		gme.set_configfile("./gmetest.conf")
+		scanner=gmeutils.virusscanners.get_virusscanner(scanner,gme)
+		result=False
+
+		if scanner:
+			result=scanner.has_virus(os.path.abspath(virusdir))
+			#print("\n!!!!!SCANNERRESULT",result,scanner)
+
+		return (result[0] and scanner!=None)
+
+############################################
+class virustests(unittest.TestCase):
+
+	@unittest.skipIf((not has_scanner("clamav")) or  is_networkfilesystem("./virus"),
+		"virusscanner clamav not installed or test is on network filesystem")
+	def test_clamav(self):
+		virusdir="./virus"
+		self.assertTrue(check_virus("clamav",virusdir))
+
+	@unittest.skipIf(not (has_scanner("clamav")) or  is_networkfilesystem("./smime"),
+		"virusscanner clamav not installed or test is on network filesystem")
+	def test_clamavnovirus(self):
+		virusdir="./smime"
+		self.assertFalse(check_virus("clamav",virusdir))
+
+	@unittest.skipIf(not has_scanner("avg"),
+		"virusscanner avg not installed")
+	def test_avgvirus(self):
+		virusdir="./virus"
+		self.assertTrue(check_virus("avg",virusdir))
+
+	@unittest.skipIf(not has_scanner("avg"),
+		"virusscanner avg not installed")
+	def test_avgnovirus(self):
+		virusdir="./smime"
+		self.assertFalse(check_virus("avg",virusdir))
+
+	@unittest.skipIf(not has_scanner("bitdefender"),
+		"virusscanner bitdefender not installed")
+	def test_bitdefendervirus(self):
+		virusdir="./virus"
+		self.assertTrue(check_virus("bitdefender",virusdir))
+
+	@unittest.skipIf(not has_scanner("bitdefender"),
+		"virusscanner bitdefender not installed")
+	def test_bitdefendernovirus(self):
+		virusdir="./smime"
+		self.assertFalse(check_virus("bitdefender",virusdir))
+
+	@unittest.skipIf(not has_scanner("drweb"),
+		"virusscanner drweb not installed")
+	def test_drwebvirus(self):
+		virusdir="./virus"
+		self.assertTrue(check_virus("drweb",virusdir))
+
+	@unittest.skipIf(not has_scanner("drweb"),
+		"virusscanner drweb not installed")
+	def test_drwebnovirus(self):
+		virusdir="./smime"
+		self.assertFalse(check_virus("drweb",virusdir))
+
+	@unittest.skipIf(not has_scanner("sophos"),
+		"virusscanner sophos not installed")
+	def test_sophosvirus(self):
+		virusdir="./virus"
+		self.assertTrue(check_virus("sophos",virusdir))
+
+	@unittest.skipIf(not has_scanner("sophos"),
+		"virusscanner sophos not installed")
+	def test_sophosnovirus(self):
+		virusdir="./smime"
+		self.assertFalse(check_virus("sophos",virusdir))
+
+#########
+#DKIMTEST
+#########
+class dkimtests(unittest.TestCase):
+
+	def test_dkimsign(self):
+
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			dk=mydkim(	parent=gme,
+					selector="test",
+					domain="gpgmailencry.pt",
+					privkey="./dkim/test.private")
+
+			msg=dk.sign_mail(email_unencrypted.replace("\n","\r\n"))
+			self.assertTrue("DKIM-Signature" in msg)
 
 if __name__ == '__main__':
 	unittest.main()

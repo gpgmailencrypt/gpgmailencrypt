@@ -1,0 +1,2 @@
+test._domainkey	IN	TXT	( "v=DKIM1; k=rsa; "
+	  "p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCrwCeOrzJXb4NJhHLti37T4ADntFXJ9Rl1cfKxwvvCHBNfGfNLXreTrvLrgwZb8huFjlrCle/ncbC6+iN1ldtkVXwYOYhynHE6R046Z3m3OesZrPwk7wc2IEV6cZru7N0H3lF79nfIiNEGLa6ffsI8xdPsTtNf6AS1tT9QajqlUQIDAQAB" )  ; ----- DKIM key test for from.com
