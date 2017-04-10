@@ -17,7 +17,7 @@ def is_networkfilesystem(dir):
 
 	while tail!="":
 
-		if os.path.ismount(root):
+		if root!="/" and os.path.ismount(root):
 			return True
 		else:
 			root,tail=os.path.split(root)

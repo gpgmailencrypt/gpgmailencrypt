@@ -165,8 +165,10 @@ setup(
 					"mailtemplates",
 					"tests",
 					"tests/archives",
+					"tests/dkim",
 					"tests/gpg",
 					"tests/smime",
+					"tests/virus",
 					"documentation",
 					"misc",
 					"gmeutils/thirdparty",
@@ -180,9 +182,10 @@ setup(
 					'gmeutils/thirdparty':["*.license"],
 					'tests':['*'],
 					'tests/archives':['*'],
-					'tests/gpg':['*'],
 					'tests/dkim':['test.*'],
-					'tests/smime':['*']
+					'tests/gpg':['*'],
+					'tests/smime':['*'],
+					'tests/virus':['*']
 					},
 )
 
