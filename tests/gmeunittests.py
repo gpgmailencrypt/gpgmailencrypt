@@ -647,6 +647,16 @@ class gmetests(unittest.TestCase):
 			self.assertTrue(gme._smtpd_passwords["test"] == "1a5d0013be0c4a28c9c5a29973febad6275e9b144aa92d23aa1b2a413af2bcb307d239ec1d265978f6b36e4c64e45218e22e4096d438fa969e090913b099f7ae")
 			gme.close()
 
+	def test_zipattachment(self):
+
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			f=open("./attachment.eml","r")
+			mail=f.read()
+			f.close()
+			res=gme.zip_attachments(mail)
+			self.assertTrue("test.pdf.zip" in res)
+
 	def test_admdelpassword(self):
 
 		with gpgmailencrypt.gme() as gme:
