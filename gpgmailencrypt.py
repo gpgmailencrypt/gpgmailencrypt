@@ -2294,6 +2294,14 @@ class gme:
 		else:
 			self._DEBUG=False
 
+	##########
+	#get_debug
+	##########
+
+	@_dbg
+	def get_debug(self):
+		return self._DEBUG
+
 	###########
 	#set_locale
 	###########
