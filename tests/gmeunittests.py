@@ -1287,7 +1287,10 @@ class archivetests(unittest.TestCase):
 	@unittest.skipIf(not (has_app("unrar") or has_app("rar") ),
 		"archive programm rar/unrar not installed")
 	def test_raruncompress(self):
-		self.assertTrue(try_uncompress("rar","source.txt"))
+		rarmsg="unrar-free can't uncompress modern rar file formats. This "+\
+		"might be the reason for a failure of this test. Install "+\
+		"unrar-nonfree to solve this problem."
+		self.assertTrue(try_uncompress("rar","source.txt"),msg=rarmsg)
 
 	@unittest.skipIf(not has_app("rzip"),
 		"archive programm rzip not installed")
@@ -1323,17 +1326,21 @@ def check_virus(scanner,virusdir):
 ############################################
 class virustests(unittest.TestCase):
 
-	@unittest.skipIf((not has_scanner("clamav")) or  is_networkfilesystem("./virus"),
-		"virusscanner clamav not installed or test is on network filesystem")
+	@unittest.skipIf((not has_scanner("clamav")),
+		"virusscanner clamav not installed")
 	def test_clamav(self):
 		virusdir="./virus"
-		self.assertTrue(check_virus("clamav",virusdir))
+		msg="Test uses clamdscan. Usually this scan fails, because clamdscan"+\
+		" has no read access to the '%s' directory"%virusdir
+		self.assertTrue(check_virus("clamav",virusdir),msg)
 
-	@unittest.skipIf(not (has_scanner("clamav")) or  is_networkfilesystem("./smime"),
-		"virusscanner clamav not installed or test is on network filesystem")
+	@unittest.skipIf(not (has_scanner("clamav")),
+		"virusscanner clamav not installed")
 	def test_clamavnovirus(self):
 		virusdir="./smime"
-		self.assertFalse(check_virus("clamav",virusdir))
+		msg="Test uses clamdscan. Usually this scan fails, because clamdscan"+\
+		" has no read access to the '%s' directory"%virusdir
+		self.assertFalse(check_virus("clamav",virusdir),msg)
 
 	@unittest.skipIf(not has_scanner("avg"),
 		"virusscanner avg not installed")
