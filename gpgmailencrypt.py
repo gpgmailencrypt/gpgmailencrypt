@@ -1218,6 +1218,35 @@ class gme:
 
 			self.log(msg,"d",ln,filename=filename)
 
+	############
+	#set_logging
+	############
+
+	def set_logging( self, logmode):
+		if isinstance(logmode,str):
+			logmode=logmode.strip().lower()
+
+			if self._LOGGING!=self.l_syslog and logmode=="syslog":
+				self._LOGGING=self.l_syslog
+				self._prepare_syslog()
+			elif logmode=="stderr":
+				self._LOGGING=self.l_stderr
+			else:
+				self._LOGGING=self.l_none
+
+	############
+	#get_logging
+	############
+
+	def get_logging( self):
+		if self._LOGGING==self.l_syslog:
+			return "syslog"
+		elif self._LOGGING==self.l_stderr:
+			return "stderr"
+		else:
+			return "none"
+
+
 	################
 	#_debug_keepmail
 	################
