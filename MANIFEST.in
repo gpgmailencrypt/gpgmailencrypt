@@ -1,2 +1,6 @@
 include README.md
-
+recursive-include tests *
+exclude tests/gpg/random_seed tests/gpg/*~ tests/archives/test.lzip.out
+prune tests/gpg/*
+prune tests/emails
+prune tests/emails.orig
