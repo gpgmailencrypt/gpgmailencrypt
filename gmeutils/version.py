@@ -1,6 +1,6 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
-VERSION="3.1.2"
+VERSION="3.2.0dev"
 DATE="12.04.2017"
 COPYRIGHTYEAR="2017"
 unicodeerror="replace"
