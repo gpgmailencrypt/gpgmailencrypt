@@ -570,22 +570,56 @@ def decode_filename(name):
 #get_certfingerprint
 ####################
 
-def get_certfingerprint(cert):
+def get_certfingerprint(cert,parent=None):
+	#"openssl x509 -inform PEM -pubkey|openssl rsa -inform PEM -pubin -modulus 2>1|grep Modulus"
+	cmd1=["openssl","x509","-inform","PEM",	"-pubkey"]
+	cmd2=["openssl","rsa","-inform","PEM","-pubin","-modulus"]
+	cmd3=["grep","Modulus"]
 
-	if isinstance(cert,str):
-		cert=cert.encode("UTF-8",unicodeerror)
+	p1 = subprocess.Popen(   cmd1,
+							stdin=subprocess.PIPE,
+							stdout=subprocess.PIPE,
+							stderr=subprocess.PIPE )
+	output1,error1=p1.communicate(input=cert.encode("UTF-8",unicodeerror))
 
-	cmd=("openssl x509 -inform PEM -pubkey|openssl rsa -inform PEM -pubin "
-		"-modulus 2>1|grep Modulus")
+	if len(error1)>0:
 
-	try:
-		_result = subprocess.check_output(	cmd,
-											shell=True,
-											input=cert)
-	except:
+		if parent:
+			parent.log("get_certfingerprint process1 failed","w")
+			parent.log(error1.decode("UTF-8",unicodeerror),"w")
+
 		return None
 
-	pubkey=bytearray.fromhex(_result[8:-1].decode("UTF-8",unicodeerror))
+	p2 = subprocess.Popen(   cmd2,
+							stdin=subprocess.PIPE,
+							stdout=subprocess.PIPE,
+							stderr=subprocess.PIPE )
+	output2,error2=p2.communicate(input=output1)
+
+	if (error2.decode("UTF-8",unicodeerror)!="writing RSA key\n"):
+
+		if parent:
+			parent.log("get_certfingerprint process1 failed","w")
+			parent.log(error2.decode("UTF-8",unicodeerror),"w")
+
+		return None
+
+	p3 = subprocess.Popen(   cmd3,
+							stdin=subprocess.PIPE,
+							stdout=subprocess.PIPE,
+							stderr=subprocess.PIPE )
+
+	output3,error3=p3.communicate(input=output2)
+
+	if len(error3)>0:
+
+		if parent:
+			parent.log("get_certfingerprint process1 failed","w")
+			parent.log(error3.decode("UTF-8",unicodeerror),"w")
+
+		return None
+
+	pubkey=bytearray.fromhex(output3[8:-1].decode("UTF-8",unicodeerror))
 	return hashlib.sha512(pubkey).hexdigest()
 
 ###########
