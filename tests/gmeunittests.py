@@ -748,6 +748,34 @@ class gmetests(unittest.TestCase):
 			self.assertTrue(mapped=="testaddress@gpgmailencry.pt")
 			gme.close()
 
+	def test_encryptionmap(self):
+
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			mapped=[]
+
+			try:
+				mapped=gme._backend.encryptionmap("mapped@gpgmailencry.pt")
+			except:
+				pass
+
+			self.assertTrue(mapped==["pgpmime"])
+			gme.close()
+
+	def test_encryptionmap2(self):
+
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			mapped=[]
+
+			try:
+				mapped=gme._backend.encryptionmap("xyz@gpgmailencry.pt")
+			except:
+				pass
+
+			self.assertTrue(mapped==[])
+			gme.close()
+
 	def test_check_encryptsubject(self):
 
 		with gpgmailencrypt.gme() as gme:
