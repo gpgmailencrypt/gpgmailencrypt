@@ -149,7 +149,6 @@ class _base_storage(_gmechild):
 
 	@_dbg
 	def adm_init_passwords( self):
-		print("NotImplementedError base storage")
 		raise NotImplementedError
 
 
@@ -435,15 +434,12 @@ class _TEXT_BACKEND(_base_storage):
 		if self._admpw_loaded:
 			return
 
-		print ("txt adm_init_passw",self._SMTPD_PASSWORDFILE)
-
 		try:
 			f=open(os.path.expanduser(	self._SMTPD_PASSWORDFILE),
 										encoding="UTF-8",
 										errors=unicodeerror)
 		except:
 			self.log("_gpgmailencryptserver: Config file could not be read","e")
-			print("could not read file",self._SMTPD_PASSWORDFILE)
 			self.log_traceback()
 			exit(5)
 
