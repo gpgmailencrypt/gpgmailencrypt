@@ -581,11 +581,13 @@ def get_certfingerprint(cert,parent=None):
 							stdout=subprocess.PIPE,
 							stderr=subprocess.PIPE )
 	output1,error1=p1.communicate(input=cert.encode("UTF-8",unicodeerror))
+	error=p1.poll()
 
-	if len(error1)>0:
+	if error!=0:
 
 		if parent:
-			parent.log("get_certfingerprint process1 failed","w")
+			parent.log("get_certfingerprint process1 "
+						"failed with error code '%i'"%error,"w")
 			parent.log(error1.decode("UTF-8",unicodeerror),"w")
 
 		return None
@@ -595,14 +597,16 @@ def get_certfingerprint(cert,parent=None):
 							stdout=subprocess.PIPE,
 							stderr=subprocess.PIPE )
 	output2,error2=p2.communicate(input=output1)
+	error=p2.poll()
 
-	if (error2.decode("UTF-8",unicodeerror)!="writing RSA key\n"):
+	if error!=0:
 
 		if parent:
-			parent.log("get_certfingerprint process1 failed","w")
+			parent.log("get_certfingerprint process1 failed ","w")
 			parent.log(error2.decode("UTF-8",unicodeerror),"w")
 
 		return None
+
 
 	p3 = subprocess.Popen(   cmd3,
 							stdin=subprocess.PIPE,
@@ -610,8 +614,9 @@ def get_certfingerprint(cert,parent=None):
 							stderr=subprocess.PIPE )
 
 	output3,error3=p3.communicate(input=output2)
+	error=p3.poll()
 
-	if len(error3)>0:
+	if error!=0:
 
 		if parent:
 			parent.log("get_certfingerprint process1 failed","w")

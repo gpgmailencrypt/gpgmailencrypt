@@ -597,6 +597,8 @@ MQolJUVPRgo=
 
 --===============3660322619382959396==--
 """
+smimecertfingerprint="acb39e30d68b60fb5e2ddd96dd2577e3146d2f5b3ba9b05ecb703f606f39a4defa486b92bff705a35ebbac7e59cf705b9723824d0eacb5e816579a700dd95e39"
+
 class gmetests(unittest.TestCase):
 
 	#General tests
@@ -1092,6 +1094,15 @@ class smimetests(unittest.TestCase):
 												"xtestaddress@gpgmailencry.pt")
 			self.assertIsNone(result)
 			gme.close()
+
+	def test_smime_getcertfingerprint(self):
+
+		cert=""
+		with open("./smime/cert.crt","r") as rf:
+			cert=rf.read()
+
+		fingerprint=gmeutils.helpers.get_certfingerprint(cert)
+		self.assertTrue(fingerprint==smimecertfingerprint)
 
 #########
 #PDFTESTS
