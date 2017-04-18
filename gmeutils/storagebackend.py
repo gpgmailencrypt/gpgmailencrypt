@@ -2,6 +2,7 @@
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 from gmeutils.child 			import _gmechild
 from gmeutils.helpers			import *
+from gmeutils.password			import *
 from gmeutils.version			import *
 from gmeutils._dbg 				import _dbg
 import os.path
@@ -27,6 +28,14 @@ class _base_storage(_gmechild):
 
 	@_dbg
 	def init(self):
+		pass
+
+	######
+	#close
+	######
+
+	@_dbg
+	def close(self):
 		pass
 
 	################
@@ -109,6 +118,41 @@ class _base_storage(_gmechild):
 	def del_old_pdfpasswords(self,age):
 		raise NotImplementedError
 
+	#############
+	#adm_set_user
+	#############
+
+	@_dbg
+	def adm_set_user(self,user,password):
+		raise NotImplementedError
+
+	#############
+	#adm_del_user
+	#############
+
+	@_dbg
+	def adm_del_user(self,user):
+		"deletes a user"
+		raise NotImplementedError
+
+	###############
+	#adm_get_pwhash
+	###############
+
+	@_dbg
+	def adm_get_pwhash(self,user):
+		raise NotImplementedError
+
+	###################
+	#adm_init_passwords
+	###################
+
+	@_dbg
+	def adm_init_passwords( self):
+		print("NotImplementedError base storage")
+		raise NotImplementedError
+
+
 ##############
 #_TEXT_BACKEND
 ##############
@@ -126,6 +170,9 @@ class _TEXT_BACKEND(_base_storage):
 		self._smimeuser = dict()
 		self._pdfpasswords=dict()
 		self._PDF_PASSWORDFILE="/etc/gpgpdfpasswords.pw"
+		self._SMTPD_PASSWORDFILE="/etc/gpgmailencrypt.pw"
+		self._smtpd_passwords=dict()
+		self._admpw_loaded=False
 
 	################
 	#read_configfile
@@ -189,6 +236,22 @@ class _TEXT_BACKEND(_base_storage):
 				self.log("File '%s' could not be opened."
 						%self._PDF_PASSWORDFILE)
 				self.log_traceback()
+
+		if cfg.has_section('daemon'):
+
+			try:
+				self._SMTPD_PASSWORDFILE=cfg.get('daemon','smtppasswords')
+			except:
+				pass
+
+	######
+	#close
+	######
+
+	@_dbg
+	def close(self):
+		if self._admpw_loaded:
+			self._write_smtpdpasswordfile()
 
 	########
 	#usermap
@@ -361,6 +424,150 @@ class _TEXT_BACKEND(_base_storage):
 				self._pdfpasswords[name.strip()]=(passwd.strip(),0)
 			except:
 				pass
+
+	###################
+	#adm_init_passwords
+	###################
+
+	@_dbg
+	def adm_init_passwords(self):
+
+		if self._admpw_loaded:
+			return
+
+		print ("txt adm_init_passw",self._SMTPD_PASSWORDFILE)
+
+		try:
+			f=open(os.path.expanduser(	self._SMTPD_PASSWORDFILE),
+										encoding="UTF-8",
+										errors=unicodeerror)
+		except:
+			self.log("_gpgmailencryptserver: Config file could not be read","e")
+			print("could not read file",self._SMTPD_PASSWORDFILE)
+			self.log_traceback()
+			exit(5)
+
+		txt=f.read()
+		f.close()
+		self._smtpd_passwords=dict()
+
+		for l in txt.splitlines():
+
+			try:
+				name,passwd=l.split("=",1)
+				self._smtpd_passwords[name.strip()]=passwd.strip()
+			except:
+				pass
+
+		self._admpw_loaded=True
+
+	#########################
+	#_write_smtpdpasswordfile
+	#########################
+
+	@_dbg
+	def _write_smtpdpasswordfile(self):
+		"writes the users to the password file"
+
+		try:
+			pwfile=os.path.expanduser(self._SMTPD_PASSWORDFILE)
+			fileexists=os.path.exists(pwfile)
+			f=open(pwfile,mode="w",encoding="UTF-8",errors=unicodeerror)
+
+			if not fileexists:
+				self.debug("new pwfile chmod")
+				os.chmod(pwfile,0o600)
+
+		except:
+			self.log("_gpgmailencryptserver: Config file could not be written",
+					"e")
+			self.log_traceback()
+			return False
+
+		for user in self._smtpd_passwords:
+
+			try:
+				password=self._smtpd_passwords[user]
+				f.write(("%s=%s\n"%(user,password)))
+			except:
+				#self.log_traceback()
+				pass
+
+		f.close()
+
+
+	#############
+	#adm_set_user
+	#############
+
+	@_dbg
+	def adm_set_user(self,user,password):
+		"adds a user, if the user already exists it changes the password"
+
+		self.adm_init_passwords()
+
+		try:
+			self._smtpd_passwords[user]=pw_hash(password)
+			return True
+		except:
+			self.log("User could not be added","e")
+			self.log_traceback()
+			return False
+
+		return True
+
+	#############
+	#adm_del_user
+	#############
+
+	@_dbg
+	def adm_del_user(self,user):
+		"deletes a user"
+
+		self.adm_init_passwords()
+
+		try:
+			del self._smtpd_passwords[user]
+			return True
+		except:
+			self.log("User could not be deleted","w")
+			return False
+
+		return True
+
+	###############
+	#adm_get_pwhash
+	###############
+
+	@_dbg
+	def adm_get_pwhash(self,user):
+
+		self.adm_init_passwords()
+
+		pwhash=None
+		try:
+			pwhash=self._smtpd_passwords[user]
+		except:
+			pass
+
+		return pwhash
+
+	##############
+	#adm_get_users
+	##############
+
+	@_dbg
+	def adm_get_users(self):
+		"returns a list of all users and whether or not the user is a admin"
+		self.adm_init_passwords()
+
+		users=[]
+
+		for user in self._smtpd_passwords:
+			users.append({  "user":user,
+							"admin":self.parent.is_admin(user)})
+
+		return users
 
 #############
 #_sql_backend
@@ -1010,6 +1217,30 @@ class _sql_backend(_base_storage):
 					})
 		self.debug(sql)
 		self.execute_action(sql)
+
+	#############
+	#adm_set_user
+	#############
+
+	@_dbg
+	def adm_set_user(self,user,password):
+		return self._textbackend.adm_set_user(user,password)
+
+	#############
+	#adm_get_user
+	#############
+
+	@_dbg
+	def adm_set_user(self,user):
+		return self._textbackend.adm_get_user(user)
+
+	###############
+	#adm_get_pwhash
+	###############
+
+	@_dbg
+	def adm_get_pwhash(self,user):
+		return self._textbackend.adm_get_pwhash(user)
 
 #################
 #_SQLITE3_BACKEND

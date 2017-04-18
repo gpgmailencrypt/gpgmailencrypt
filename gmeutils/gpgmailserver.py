@@ -4,7 +4,6 @@ import asynchat
 import asyncore
 import binascii
 import datetime
-import hashlib
 import os
 import select
 import smtpd
@@ -14,6 +13,7 @@ import sys
 from	.child 			import _gmechild
 from	.version		import *
 from .storagebackend import _sql_backend
+from .password        import pw_hash,pw_verify,_deprecated_get_hash
 
 ######################
 #_gpgmailencryptserver
@@ -46,16 +46,14 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 			use_tls=False,
 			use_auth=False,
 			force_tls=False,
-			authenticate_function=None,
-			write_smtpdpasswordfile=None,
-			read_smtpdpasswordfile=None,
 			data_size_limit=smtpd.DATA_SIZE_DEFAULT):
 
 		try:
 			smtpd.SMTPServer.__init__(  self,
 										localaddr,
 										None,
-										data_size_limit=data_size_limit)
+										data_size_limit=data_size_limit,
+										decode_data=True)
 		except socket.error as e:
 
 			if parent:
@@ -64,8 +62,16 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 
 		smtpd.__version__="gpgmailencrypt smtp server %s"%VERSION
 		self.parent=parent
-		self.sslcertfile=os.path.expanduser(sslcertfile)
-		self.sslkeyfile=os.path.expanduser(sslkeyfile)
+		self.sslcertfile=None
+
+		if sslcertfile!=None:
+			self.sslcertfile=os.path.expanduser(sslcertfile)
+
+		self.sslkeyfile=None
+
+		if sslkeyfile!=None:
+			self.sslkeyfile=os.path.expanduser(sslkeyfile)
+
 		self.sslversion=sslversion
 		self.use_smtps=use_smtps
 		self.force_tls=False
@@ -77,9 +83,6 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 				self.force_tls=force_tls
 
 		self.use_authentication=use_auth
-		self.write_smtpdpasswordfile=write_smtpdpasswordfile
-		self.read_smtpdpasswordfile=read_smtpdpasswordfile
-		self.authenticate_function=authenticate_function
 		_sslpossible=True
 
 		try:
@@ -171,9 +174,6 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 						use_auth=self.use_authentication,
 						use_tls=self.use_tls,
 						force_tls=self.force_tls,
-						authenticate_function=self.authenticate_function,
-						write_smtpdpasswordfile=self.write_smtpdpasswordfile,
-						read_smtpdpasswordfile=self.read_smtpdpasswordfile,
 						sslcertfile=self.sslcertfile,
 						sslkeyfile=self.sslkeyfile,
 						sslversion=self.sslversion)
@@ -198,6 +198,30 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 
 		return
 
+
+	#############
+	#authenticate
+	#############
+
+	def authenticate(  self,
+					user,
+					password):
+		"checks user authentication against a password file"
+		self.parent.debug("authenticate")
+		print("aut1")
+		pw=self.parent.adm_get_pwhash(user)
+
+		if pw==_deprecated_get_hash(password):
+			self.parent.debug("_gpgmailencryptserver: User '%s' authenticated"%user)
+			self.parent.adm_set_user(user,password)
+			pw=self.parent.adm_get_pwhash(user)
+
+		if pw_verify(password,pw):
+			return True
+
+		return False
+
+
 ###############
 #_hksmtpchannel
 ###############
@@ -212,9 +236,6 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				fromaddr,
 				use_auth,
 				parent,
-				authenticate_function=None,
-				write_smtpdpasswordfile=None,
-				read_smtpdpasswordfile=None,
 				use_tls=False,
 				force_tls=False,
 				sslcertfile=None,
@@ -230,9 +251,6 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		self.starttls_available=False
 		self.force_tls=force_tls
 		self.tls_active=False
-		self.authenticate_function=authenticate_function
-		self.write_smtpdpasswordfile=write_smtpdpasswordfile
-		self.read_smtpdpasswordfile=read_smtpdpasswordfile
 		self.is_authenticated=False
 		self.is_admin=False
 		self.adminmode=False
@@ -334,10 +352,10 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 					self.password=binascii.a2b_base64(
 										line).decode("UTF-8",unicodeerror)
 
-					if (self.authenticate_function
-					and self.authenticate_function( self.parent,
-													self.user,
-													self.password)):
+					print("self.smtp_server.authenticate",self.smtp_server.authenticate)
+					if self.smtp_server.authenticate(
+										self.user,
+										self.password):
 						self.push("235 Authentication successful.")
 						self.is_authenticated=True
 						self.is_admin=self.parent.is_admin(self.user)
@@ -529,23 +547,22 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 							"_gpgmailencryptserver: error decode base64 '%s'"%
 							sys.exc_info()[1])
 				d=[]
-
+			print(1)
 			if len(d)<2:
 				self.push("454 Temporary authentication failure.")
 				return
+			print(2)
 
 			while len(d)>2:
 				del d[0]
 
+			print(3)
 			user=d[0]
 			password=d[1]
-
-			if not self.authenticate_function:
-			  self.parent.debug("_gpgmailencryptserver: "
-							"self.authenticate_function=None")
-
-			if (self.authenticate_function
-			and self.authenticate_function(self.parent,user,password)):
+			print(self.smtp_server)
+			print(self.smtp_server.authenticate)
+			print(4)
+			if (self.smtp_server.authenticate(user,password)):
 				self.push("235 Authentication successful.")
 				self.is_authenticated=True
 				self.is_admin=self.parent.is_admin(user)
@@ -559,7 +576,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			else:
 				self.push("454 Temporary authentication failure.")
 				self.parent.log("User '%s' failed to login"%user,"w")
-
+			print(5)
 		else:
 			self.push("454 Temporary authentication failure.")
 
@@ -919,42 +936,5 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 
 		self.push("250 OK")
 
-##########
-#file_auth
-##########
 
-def file_auth(  parent,
-				user,
-				password):
-	"checks user authentication against a password file"
-	parent.debug("_gpgmailencryptserver: file_auth")
-
-	try:
-		pw=parent._smtpd_passwords[user]
-
-		if pw==get_hash(password):
-			parent.debug("_gpgmailencryptserver: User '%s' authenticated"%user)
-			return True
-		else:
-			parent.debug("_gpgmailencryptserver: User '%s' "
-						"incorrect password"%user)
-
-	except:
-		parent.debug("_gpgmailencryptserver: No such user '%s'"%user)
-
-	return False
-
-#########
-#get_hash
-#########
-
-def get_hash(txt):
-	i=0
-	r=txt
-
-	while i<=1000:
-		r=hashlib.sha512(r.encode("UTF-8",unicodeerror)).hexdigest()
-		i+=1
-
-	return r
 

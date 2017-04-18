@@ -5,6 +5,7 @@ import gpgmailencrypt
 import gmeutils.helpers
 import gmeutils.archivemanagers
 import gmeutils.virusscanners
+import gmeutils.gpgmailserver
 import os.path
 import shutil
 from   gmeutils.dkim	import mydkim
@@ -641,14 +642,6 @@ class gmetests(unittest.TestCase):
 					"testaddress@gpgmailencry.pt")=="PGPMIME")
 			gme.close()
 
-	def test_admsetpassword(self):
-
-		with gpgmailencrypt.gme() as gme:
-			gme.set_configfile("./gmetest.conf")
-			gme.adm_set_user("test","test")
-			self.assertTrue(gme._smtpd_passwords["test"] == "1a5d0013be0c4a28c9c5a29973febad6275e9b144aa92d23aa1b2a413af2bcb307d239ec1d265978f6b36e4c64e45218e22e4096d438fa969e090913b099f7ae")
-			gme.close()
-
 	def test_zipattachment(self):
 
 		with gpgmailencrypt.gme() as gme:
@@ -659,47 +652,77 @@ class gmetests(unittest.TestCase):
 			res=gme.zip_attachments(mail)
 			self.assertTrue("test.pdf.zip" in res)
 
-	def test_admdelpassword(self):
+
+	def test_adm_verify_password(self):
+		shutil.copyfile("./gpgmailencrypt.pw.orig","./gpgmailencrypt.pw")
+
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			user="test"
+			password="test"
+			s=gmeutils.gpgmailserver._gpgmailencryptserver(gme,("localhost",0))
+			self.assertTrue(s.authenticate(user,password))
+			del s
+
+	def test_adm_verify_wrong_password(self):
+		shutil.copyfile("./gpgmailencrypt.pw.orig","./gpgmailencrypt.pw")
+
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			user="test"
+			password="wrong"
+			s=gmeutils.gpgmailserver._gpgmailencryptserver(gme,("localhost",0))
+			self.assertFalse(s.authenticate(user,password))
+			del s
+
+
+	def test_admsetpassword(self):
+		shutil.copyfile("./gpgmailencrypt.pw.orig","./gpgmailencrypt.pw")
+
+		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
+			user="test"
+			password="test"
+			gme.adm_set_user(password,password)
+			self.assertTrue(gmeutils.password.pw_verify(password,gme.adm_get_pwhash(user)))
+			gme.close()
+
+	def test_admdeluser(self):
+		shutil.copyfile("./gpgmailencrypt.pw.orig","./gpgmailencrypt.pw")
 
 		with gpgmailencrypt.gme() as gme:
 			gme.set_configfile("./gmetest.conf")
 			gme.adm_set_user("test","test")
-			result=True
-
-			try:
-				gme._smtpd_passwords["test"]
-			except:
-				result=False
+			result=False
+			result=(gme.adm_get_pwhash("test")!=None)
 
 			if result==True:
 				gme.adm_del_user("test")
-
-				try:
-					gme._smtpd_passwords["test"]
-					result=False
-				except:
-					pass
+				result=(gme.adm_get_pwhash("test")==None)
 
 			self.assertTrue(result)
 			gme.close()
 
 	def test_admgetusers(self):
+		shutil.copyfile("./gpgmailencrypt.pw.orig","./gpgmailencrypt.pw")
 
 		with gpgmailencrypt.gme() as gme:
+			gme.set_configfile("./gmetest.conf")
 			gme.adm_set_user("normal1","test")
 			gme.adm_set_user("testadmin","test")
 			gme.adm_set_user("testadmin2","test")
 			gme.adm_set_user("normal2","test")
-			gme.set_configfile("./gmetest.conf")
 			users=gme.adm_get_users()
-			self.assertTrue(len(users)==4)
+			print (users)
 
 			for u in users:
-
+				print("user",u)
 				if u["user"]in ["normal1","normal2"]:
+					print("in Normal")
 					self.assertTrue(u["admin"]==False)
 
 				if u["user"]in ["testadmin","testadmin2"]:
+					print("in admin")
 					self.assertTrue(u["admin"]==True)
 
 			gme.close()
@@ -1338,7 +1361,7 @@ def check_virus(scanner,virusdir):
 class virustests(unittest.TestCase):
 
 	@unittest.skipIf((not has_scanner("clamav")),
-		"virusscanner clamav not installed")
+		"virusscanner clamav not found")
 	def test_clamav(self):
 		virusdir="./virus"
 		msg="Test uses clamdscan. Usually this scan fails, because clamdscan"+\
@@ -1346,7 +1369,7 @@ class virustests(unittest.TestCase):
 		self.assertTrue(check_virus("clamav",virusdir),msg)
 
 	@unittest.skipIf(not (has_scanner("clamav")),
-		"virusscanner clamav not installed")
+		"virusscanner clamav not found")
 	def test_clamavnovirus(self):
 		virusdir="./smime"
 		msg="Test uses clamdscan. Usually this scan fails, because clamdscan"+\
@@ -1354,49 +1377,49 @@ class virustests(unittest.TestCase):
 		self.assertFalse(check_virus("clamav",virusdir),msg)
 
 	@unittest.skipIf(not has_scanner("avg"),
-		"virusscanner avg not installed")
+		"virusscanner avg not found")
 	def test_avgvirus(self):
 		virusdir="./virus"
 		self.assertTrue(check_virus("avg",virusdir))
 
 	@unittest.skipIf(not has_scanner("avg"),
-		"virusscanner avg not installed")
+		"virusscanner avg not found")
 	def test_avgnovirus(self):
 		virusdir="./smime"
 		self.assertFalse(check_virus("avg",virusdir))
 
 	@unittest.skipIf(not has_scanner("bitdefender"),
-		"virusscanner bitdefender not installed")
+		"virusscanner bitdefender not found")
 	def test_bitdefendervirus(self):
 		virusdir="./virus"
 		self.assertTrue(check_virus("bitdefender",virusdir))
 
 	@unittest.skipIf(not has_scanner("bitdefender"),
-		"virusscanner bitdefender not installed")
+		"virusscanner bitdefender not found")
 	def test_bitdefendernovirus(self):
 		virusdir="./smime"
 		self.assertFalse(check_virus("bitdefender",virusdir))
 
 	@unittest.skipIf(not has_scanner("drweb"),
-		"virusscanner drweb not installed")
+		"virusscanner drweb not found")
 	def test_drwebvirus(self):
 		virusdir="./virus"
 		self.assertTrue(check_virus("drweb",virusdir))
 
 	@unittest.skipIf(not has_scanner("drweb"),
-		"virusscanner drweb not installed")
+		"virusscanner drweb not found")
 	def test_drwebnovirus(self):
 		virusdir="./smime"
 		self.assertFalse(check_virus("drweb",virusdir))
 
 	@unittest.skipIf(not has_scanner("sophos"),
-		"virusscanner sophos not installed")
+		"virusscanner sophos not found")
 	def test_sophosvirus(self):
 		virusdir="./virus"
 		self.assertTrue(check_virus("sophos",virusdir))
 
 	@unittest.skipIf(not has_scanner("sophos"),
-		"virusscanner sophos not installed")
+		"virusscanner sophos not found")
 	def test_sophosnovirus(self):
 		virusdir="./smime"
 		self.assertFalse(check_virus("sophos",virusdir))

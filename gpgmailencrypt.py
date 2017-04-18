@@ -40,11 +40,11 @@ import gmeutils.storagebackend 	as backend
 from   gmeutils.child         	import _gmechild
 from   gmeutils._dbg 		  	import _dbg
 from   gmeutils.gpgclass 		import _GPG,_GPGEncryptedAttachment
-from   gmeutils.gpgmailserver 	import _gpgmailencryptserver,file_auth,get_hash
+from   gmeutils.gpgmailserver 	import _gpgmailencryptserver
 from   gmeutils.helpers			import *
-from   gmeutils.pdfclass 		import _PDF
 from   gmeutils.mytimer       	import _mytimer
 from   gmeutils.smimeclass 		import _SMIME
+from   gmeutils.pdfclass 		import _PDF
 from   gmeutils.usage       	import show_usage,print_exampleconfig
 from   gmeutils.viruscheck    	import _virus_check
 from   gmeutils.version			import *
@@ -220,6 +220,8 @@ class gme:
 		if self._LOGGING and self._logfile!=None:
 			self._logfile.close()
 
+		self._backend.close()
+
 	#####
 	#init
 	#####
@@ -310,7 +312,6 @@ class gme:
 		self._SMTPD_USE_STARTTLS=False
 		self._SMTPD_USE_AUTH=False
 		self._SMTPD_FORCETLS=False
-		self._SMTPD_PASSWORDFILE="/etc/gpgmailencrypt.pw"
 		self._SMTPD_SSL_KEYFILE="/etc/gpgsmtpd.key"
 		self._SMTPD_SSL_CERTFILE="/etc/gpgsmtpd.cert"
 		self._USEPDF=False
@@ -656,11 +657,6 @@ class gme:
 
 			try:
 				self._SMTPD_USE_AUTH=_cfg.getboolean('daemon','authenticate')
-			except:
-				pass
-
-			try:
-				self._SMTPD_PASSWORDFILE=_cfg.get('daemon','smtppasswords')
 			except:
 				pass
 
@@ -1858,7 +1854,7 @@ class gme:
 
 				if usessl:
 					cert=ssl.DER_cert_to_PEM_cert(smtp.sock.getpeercert(True))
-					fingerprint=get_certfingerprint(cert)
+					fingerprint=get_certfingerprint(cert,self)
 					self.debug("CERT fingerprint='%s'"%fingerprint)
 
 					if len(self._SMTP_CERTFINGERPRINTS)>0:
@@ -2630,8 +2626,7 @@ class gme:
 					smtps=False,
 					auth=False,
 					sslkeyfile=None,
-					sslcertfile=None,
-					passwordfile=None):
+					sslcertfile=None):
 		"sets the smtpd daemon settings"
 		self._SMTPD_HOST=host
 		self._SMTPD_PORT=port
@@ -2643,9 +2638,6 @@ class gme:
 
 		if sslcertfile:
 			self._SMTPD_SSL_CERTFILE=sslcertfile
-
-		if passwordfile:
-			self._SMTPD_PASSWORDFILE=passwordfile
 
 	################################
 	#get_default_preferredencryption
@@ -4511,17 +4503,11 @@ class gme:
 					self._SMTPD_HOST,
 					self._SMTPD_PORT) )
 
-		if self._SMTPD_USE_AUTH:
-			self._read_smtpdpasswordfile(self._SMTPD_PASSWORDFILE)
-
 		try:
 			server = _gpgmailencryptserver(
 						  self,
 						  (self._SMTPD_HOST, self._SMTPD_PORT),
 						  use_auth=self._SMTPD_USE_AUTH,
-						  authenticate_function=file_auth,
-						  write_smtpdpasswordfile=self.write_smtpdpasswordfile,
-						  read_smtpdpasswordfile=self._read_smtpdpasswordfile,
 						  use_smtps=self._SMTPD_USE_SMTPS,
 						  use_tls=self._SMTPD_USE_STARTTLS,
 						  force_tls=self._SMTPD_FORCETLS,
@@ -4553,13 +4539,7 @@ class gme:
 	@_dbg
 	def adm_get_users(self):
 		"returns a list of all users and whether or not the user is a admin"
-		users=[]
-
-		for user in self._smtpd_passwords:
-			users.append({  "user":user,
-							"admin":self.is_admin(user)})
-
-		return users
+		return self._backend.adm_get_users()
 
 	#############
 	#adm_set_user
@@ -4570,16 +4550,7 @@ class gme:
 						user,
 						password):
 		"adds a user, if the user already exists it changes the password"
-
-		try:
-			self._smtpd_passwords[user]=get_hash(password)
-			return True
-		except:
-			self.log("User could not be added","e")
-			self.log_traceback()
-			return False
-
-		return True
+		return self._backend.adm_set_user(user,password)
 
 	#############
 	#adm_del_user
@@ -4588,76 +4559,16 @@ class gme:
 	@_dbg
 	def adm_del_user(self,user):
 		"deletes a user"
+		return self._backend.adm_del_user(user)
 
-		try:
-			del self._smtpd_passwords[user]
-			return True
-		except:
-			self.log("User could not be deleted","w")
-			return False
-
-		return True
-
-	########################
-	#_read_smtpdpasswordfile
-	########################
+	#############
+	#adm_get_pwhash
+	#############
 
 	@_dbg
-	def _read_smtpdpasswordfile( self,pwfile):
-
-		try:
-			f=open(os.path.expanduser(pwfile),encoding="UTF-8",errors=unicodeerror)
-		except:
-			self.log("_gpgmailencryptserver: Config file could not be read","e")
-			self.log_traceback()
-			exit(5)
-
-		txt=f.read()
-		f.close()
-		self._smtpd_passwords=dict()
-
-		for l in txt.splitlines():
-
-			try:
-				name,passwd=l.split("=",1)
-				self._smtpd_passwords[name.strip()]=passwd.strip()
-			except:
-				pass
-
-	########################
-	#write_smtpdpasswordfile
-	########################
-
-	@_dbg
-	def write_smtpdpasswordfile(self):
-		"writes the users to the password file"
-
-		try:
-			pwfile=os.path.expanduser(self._SMTPD_PASSWORDFILE)
-			fileexists=os.path.exists(self._SMTPD_PASSWORDFILE)
-			f=open(pwfile,mode="w",encoding="UTF-8",errors=unicodeerror)
-
-			if not fileexists:
-				self.debug("new pwfile chmod")
-				f=open(self._SMTPD_PASSWORDFILE,mode="w",encoding="UTF-8",errors=unicodeerror)
-				os.chmod(self._SMTPD_PASSWORDFILE,0o600)
-
-		except:
-			self.log("_gpgmailencryptserver: Config file could not be written",
-					"e")
-			self.log_traceback()
-			return False
-
-		for user in self._smtpd_passwords:
-
-			try:
-				password=self._smtpd_passwords[user]
-				f.write(("%s=%s\n"%(user,password)))
-			except:
-				#self.log_traceback()
-				pass
-
-		f.close()
+	def adm_get_pwhash(self,user):
+		"returns the password hash from the user"
+		return self._backend.adm_get_pwhash(user)
 
 ################
 #_sigtermhandler
@@ -4676,6 +4587,7 @@ def main():
 
 	with gme() as g:
 		recipient=g._parse_commandline()
+		print("nach parse")
 		g._set_logmode()
 
 		if g._RUNMODE==g.m_daemon:
@@ -4688,5 +4600,6 @@ def main():
 ############################
 
 if __name__ == "__main__":
+	print("vor main")
 	main()
 
