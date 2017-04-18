@@ -208,11 +208,10 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 					password):
 		"checks user authentication against a password file"
 		self.parent.debug("authenticate")
-		print("aut1")
 		pw=self.parent.adm_get_pwhash(user)
 
 		if pw==_deprecated_get_hash(password):
-			self.parent.debug("_gpgmailencryptserver: User '%s' authenticated"%user)
+			self.parent.debug("_gpgmailencryptserver: deprecated User '%s' authenticated"%user)
 			self.parent.adm_set_user(user,password)
 			pw=self.parent.adm_get_pwhash(user)
 
@@ -352,7 +351,6 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 					self.password=binascii.a2b_base64(
 										line).decode("UTF-8",unicodeerror)
 
-					print("self.smtp_server.authenticate",self.smtp_server.authenticate)
 					if self.smtp_server.authenticate(
 										self.user,
 										self.password):
@@ -547,21 +545,17 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 							"_gpgmailencryptserver: error decode base64 '%s'"%
 							sys.exc_info()[1])
 				d=[]
-			print(1)
+
 			if len(d)<2:
 				self.push("454 Temporary authentication failure.")
 				return
-			print(2)
 
 			while len(d)>2:
 				del d[0]
 
-			print(3)
 			user=d[0]
 			password=d[1]
-			print(self.smtp_server)
-			print(self.smtp_server.authenticate)
-			print(4)
+
 			if (self.smtp_server.authenticate(user,password)):
 				self.push("235 Authentication successful.")
 				self.is_authenticated=True
@@ -576,7 +570,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			else:
 				self.push("454 Temporary authentication failure.")
 				self.parent.log("User '%s' failed to login"%user,"w")
-			print(5)
+
 		else:
 			self.push("454 Temporary authentication failure.")
 
