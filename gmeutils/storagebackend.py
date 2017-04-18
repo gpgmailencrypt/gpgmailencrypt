@@ -1226,13 +1226,6 @@ class _sql_backend(_base_storage):
 	def adm_set_user(self,user,password):
 		return self._textbackend.adm_set_user(user,password)
 
-	#############
-	#adm_get_user
-	#############
-
-	@_dbg
-	def adm_set_user(self,user):
-		return self._textbackend.adm_get_user(user)
 
 	###############
 	#adm_get_pwhash
