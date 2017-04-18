@@ -114,9 +114,16 @@ class _GPG(_gmechild):
 	@_dbg
 	def set_fromuser(self, user):
 		user=email.utils.parseaddr(user)[1].lower()
+		domain=None
+		addr=user.split('@')
 
-		if self._local_from_user!= user:
-			self._get_public_keys_from(from_user=user)
+		if len(addr)==2:
+			domain = addr[1]
+
+		if domain and (domain in self.parent._HOMEDOMAINS):
+
+			if self._local_from_user!= user:
+				self._get_public_keys_from(from_user=user)
 
 	#########
 	#fromuser
