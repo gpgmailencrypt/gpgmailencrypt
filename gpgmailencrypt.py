@@ -1787,12 +1787,8 @@ class gme:
 						store_deferred=True,
 						use_server2=False):
 		self.debug("_send_textmsg output %i"%self._OUTPUT)
-		gaddr=email.utils.parseaddr(from_addr)[1]
-		addr=gaddr.split('@')
-		domain=''
+		domain=maildomain(from_addr)
 		usessl=False
-		if len(addr)==2:
-			domain = addr[1]
 
 		if self._USEDKIM and (domain in self._HOMEDOMAINS):
 				message=self._dkim.sign_mail(message)
@@ -2656,13 +2652,7 @@ class gme:
 		"""returns True and the effective key-emailaddress if emails
 		to address 'gaddr' can be GPG encrcrypted"""
 		self.debug("check_gpgrecipient: start '%s'"%gaddr)
-		gaddr=email.utils.parseaddr(gaddr)[1]
-		addr=gaddr.split('@')
-		domain=''
-
-		if len(addr)==2:
-			domain = addr[1]
-
+		domain=maildomain(gaddr)
 		found =False
 		gpg = self.gpg_factory()
 
@@ -2699,13 +2689,7 @@ class gme:
 		"""returns True and the effective key-emailaddress if emails
 		to address 'saddr' can be SMIME encrcrypted"""
 		self.debug("check_smimerecipient: start '%s'"%saddr)
-		saddr=email.utils.parseaddr(saddr)[1]
-		addr=saddr.split('@')
-		domain=''
-
-		if len(addr)==2:
-			domain = addr[1]
-
+		domain=maildomain(saddr)
 		found =False
 		smime = self.smime_factory()
 
@@ -3696,15 +3680,16 @@ class gme:
 		except:
 			pass
 
-		if len(_m)==0:
-			addr=user.split('@')
+		domain=maildomain(user)
 
-			if len(addr)==2:
+		if len(_m)==0:
+
+			if len(domain)>0:
 
 				try:
-					_m=self._backend.encryptionmap("*@%s"%addr[1])[0].upper()
+					_m=self._backend.encryptionmap("*@%s"%domain)[0].upper()
 					self.debug("preferencedencryptionmethod for "
-								"*@%s=%s"%(addr[1],_m))
+								"*@%s=%s"%(domain,_m))
 				except:
 					self.debug("get_preferredencryptionmethod User"
 							" '%s/%s' not found"%(user,_u))
@@ -3796,11 +3781,7 @@ class gme:
 		result,pdffile=pdf.create_pdffile(pw)
 
 		if result==True:
-			domain=''
-			addr= email.utils.parseaddr(from_addr)[1].split('@')
-
-			if len(addr)==2:
-				domain = addr[1]
+			domain=maildomain(from_addr)
 
 			if domain in self._HOMEDOMAINS:
 				msgtxt=self._load_mailmaster("01-pdfpassword",
@@ -3875,10 +3856,9 @@ class gme:
 		except:
 
 			try:
-				_addr=email.utils.parseaddr(pdfuser)[1].split('@')
+				domain=maildomain(pdfuser)
 
-				if len(_addr)==2:
-					domain = _addr[1]
+				if len(domain)>0:
 					Zip.set_zipcipher(self._backend.encryptionmap("*@%s"
 																%domain)[1])
 			except:
@@ -3993,16 +3973,15 @@ class gme:
 
 		self._remove_mail_from_queue(queue_id)
 		#now send infomail
-		faddr= email.utils.parseaddr(from_addr)[1].split('@')
-		taddr= email.utils.parseaddr(from_addr)[1].split('@')
+		fdomain= maildomain(from_addr)
+		tdomain= maildomain(from_addr)
 		new_toaddr=None
 
-		if len(faddr)==2:
-			domain = faddr[1]
+		if len(fdomain)>0:
 			new_toaddr=from_addr
 
-		if not domain in self._HOMEDOMAINS and len(taddr)==2:
-			domain = taddr[1]
+		if not domain in self._HOMEDOMAINS and len(tdomain)>0:
+			domain = tdomain
 			new_toaddr=to_addr
 
 		infotxt=""
@@ -4125,11 +4104,7 @@ class gme:
 		self.debug("GPG encrypt possible %i / %s"%(g_r,to_gpg))
 		self.debug("SMIME encrypt possible %i / %s"%(s_r,to_smime))
 		self.debug("Prefer PDF %i / %s"%(_prefer_pdf,to_pdf))
-		domain=''
-		_addr=email.utils.parseaddr(from_addr)[1].split('@')
-
-		if len(_addr)==2:
-			domain = _addr[1]
+		domain=maildomain(from_addr)
 
 		if method=="PGPMIME":
 			_prefer_gpg=True
@@ -4561,9 +4536,9 @@ class gme:
 		"deletes a user"
 		return self._backend.adm_del_user(user)
 
-	#############
+	###############
 	#adm_get_pwhash
-	#############
+	###############
 
 	@_dbg
 	def adm_get_pwhash(self,user):
