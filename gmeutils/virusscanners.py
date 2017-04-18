@@ -377,50 +377,55 @@ def get_virusscannerlist():
 def get_virusscanner(scanner,parent):
 	scanner=scanner.upper().strip()
 
-	if scanner=="AVAST":
-		s= _AVAST(parent=parent)
+	try:
+		if scanner=="AVAST":
+			s= _AVAST(parent=parent)
 
-		if  s.cmd and len(s.cmd)>0:
-			return s
+			if  s.cmd and len(s.cmd)>0:
+				return s
 
-	if scanner=="AVG":
-		s= _AVG(parent=parent)
+		if scanner=="AVG":
+			s= _AVG(parent=parent)
 
-		if  s.cmd and len(s.cmd)>0:
-			return s
+			if  s.cmd and len(s.cmd)>0:
+				return s
 
-	if scanner=="CLAMAV" and _clamavscan_available:
-		return _CLAMAV(parent=parent)
+		if scanner=="CLAMAV" and _clamavscan_available:
+			return _CLAMAV(parent=parent)
 
-	if scanner=="COMODO":
-		s= _COMODO(parent=parent)
+		if scanner=="COMODO":
+			s= _COMODO(parent=parent)
 
-		if  s.cmd and len(s.cmd)>0:
-			return s
+			if  s.cmd and len(s.cmd)>0:
+				return s
 
-	if scanner=="BITDEFENDER":
-		s= _BITDEFENDER(parent=parent)
+		if scanner=="BITDEFENDER":
+			s= _BITDEFENDER(parent=parent)
 
-		if  s.cmd and len(s.cmd)>0:
-			return s
+			if  s.cmd and len(s.cmd)>0:
+				return s
 
-	if scanner=="DRWEB":
-		s= _DRWEB(parent=parent)
+		if scanner=="DRWEB":
+			s= _DRWEB(parent=parent)
 
-		if  s.cmd and len(s.cmd)>0:
-			return s
+			if  s.cmd and len(s.cmd)>0:
+				return s
 
-	if scanner=="FPROT":
-		s= _FPROT(parent=parent)
+		if scanner=="FPROT":
+			s= _FPROT(parent=parent)
 
-		if  s.cmd and len(s.cmd)>0:
-			return s
+			if  s.cmd and len(s.cmd)>0:
+				return s
 
-	if scanner=="SOPHOS":
-		s= _SOPHOS(parent=parent)
+		if scanner=="SOPHOS":
+			s= _SOPHOS(parent=parent)
 
-		if  s.cmd and len(s.cmd)>0:
-			return s
+			if  s.cmd and len(s.cmd)>0:
+				return s
+	except:
+		parent.log("Archive manager %s crashed while trying to init"%scanner,
+					"w")
+		parent.log_traceback()
 
 	return None
 
