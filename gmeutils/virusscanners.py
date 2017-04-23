@@ -423,9 +423,8 @@ def get_virusscanner(scanner,parent):
 			if  s.cmd and len(s.cmd)>0:
 				return s
 	except:
-		parent.log("Archive manager %s crashed while trying to init"%scanner,
+		parent.log("Virusscanner %s crashed while trying to init"%scanner,
 					"w")
-		parent.log_traceback()
 
 	return None
 
