@@ -95,19 +95,86 @@ class gme:
 	s_bounce=3
 	_LOCALEDB={
 	#"CN":("审读","文件","内容","文件附件"),
-	"DA":("aftale","fil","indhold","bilag","Password til"),
-	"DE":("Termin","Datei","Inhalt","Anhang","Passwort für"),
-	"EN":("appointment","file","content","attachment","Password for","Email could not be sent"),
-	"ES":("cita","fichero","contenido","apéndice","Contraseña por"),
-	"FI":("tapaaminen","tiedosto","sisältö","liite","Salasana"),
-	"FR":("rendez-vous","fichier","contenu","attachement","Mot de passe pour"),
-	"IT":("appuntamento","file","capacità","allegato","Password per"),
-	"NL":("Termijn","Bestand","inhoud","e-mailbijlage","Wachtwoord voor de"),
-	"NO":("avtale","fil","innhold","vedlegg","Passord for"),
-	"PL":("termin","plik","zawartość","załącznik","Hasło dla"),
-	"PT":("hora","ficheiro","conteúdo","anexo","Palavra-passe por"),
-	"RU":("срок","файл","содержа́ние","прикрепление","код для"),
-	"SE":("möte","fil","innehåll","bilaga","Lösenord för"),
+	"DA":{	"appointment":"aftale",
+			"file":"fil",
+			"content":"indhold",
+			"attachment":"bilag",
+			"passwordfor":"Password til",
+			},
+	"DE":{	"appointment":"Termin",
+			"file":"Datei",
+			"content":"Inhalt",
+			"attachment":"Anhang",
+			"passwordfor":"Passwort für",
+			"bouncemail":"Email konnte nicht versandt werden",
+			},
+	"EN":{	"appointment":"appointment",
+			"file":"file",
+			"content":"content",
+			"attachment":"attachment",
+			"passwordfor":"Password for",
+			"bouncemail":"E-mail could not be sent",
+			},
+	"ES":{	"appointment":"cita",
+			"file":"fichero",
+			"content":"contenido",
+			"attachment":"apéndice",
+			"passwordfor":"Contraseña por",
+			},
+	"FI":{	"appointment":"tapaaminen",
+			"file":"tiedosto",
+			"content":"sisältö",
+			"attachment":"liite",
+			"passwordfor":"Salasana",
+			},
+	"FR":{	"appointment":"rendez-vous",
+			"file":"fichier",
+			"content":"contenu",
+			"attachment":"attachement",
+			"passwordfor":"Mot de passe pour",
+			"bouncemail":"E-mail n'a pas pu être envoyé",
+			},
+	"IT":{	"appointment":"appuntamento",
+			"file":"file",
+			"content":"capacità",
+			"attachment":"allegato",
+			"passwordfor":"Password per"},
+	"NL":{	"appointment":"Termijn",
+			"file":"Bestand",
+			"content":"inhoud",
+			"attachment":"e-mailbijlage",
+			"passwordfor":"Wachtwoord voor de"
+			},
+	"NO":{	"appointment":"avtale",
+			"file":"fil",
+			"content":"innhold",
+			"attachment":"vedlegg",
+			"passwordfor":"Passord for"
+			},
+	"PL":{	"appointment":"termin",
+			"file":"plik",
+			"content":"zawartość",
+			"attachment":"załącznik",
+			"passwordfor":"Hasło dla"
+			},
+	"PT":{	"appointment":"hora",
+			"file":"ficheiro",
+			"content":"conteúdo",
+			"attachment":"anexo",
+			"passwordfor":"Palavra-passe por"
+			},
+	"RU":{	"appointment":"срок",
+			"file":"файл",
+			"content":"содержа́ние",
+			"attachment":"прикрепление",
+			"passwordfor":"код для"
+			},
+	"SE":{	"appointment":"möte",
+			"file":"fil",
+			"content":"innehåll",
+			"attachment":"bilaga",
+			"passwordfor":"Lösenord för"
+			},
 	}
 	_encryptheader="X-GPGMailencrypt"
 	_pdfencryptheader="X-PDFEncrypted"
@@ -3041,10 +3108,10 @@ class gme:
 					count="%i"%counter
 
 				try:
-					f=self._LOCALEDB[self._LOCALE][1]
+					f=self._LOCALEDB[self._LOCALE]["file"]
 				except:
 					self.log("wrong locale '%s'"%self._LOCALE,"w")
-					f=self._LOCALEDB["EN"][1]
+					f=self._LOCALEDB["EN"]["file"]
 
 				filename=('%s%s.'%(f,count))+guess_fileextension(contenttype)
 
@@ -3137,7 +3204,7 @@ class gme:
 		appointment="appointment"
 
 		try:
-			appointment=self._LOCALEDB[self._LOCALE][0]
+			appointment=self._LOCALEDB[self._LOCALE]["appointment"]
 		except:
 			pass
 
@@ -3718,6 +3785,7 @@ class gme:
 				except:
 					self.debug("get_preferredencryptionmethod User"
 							" '%s/%s' not found"%(user,_u))
+					self.debug("get_preferredencryptionmethod: returning default encryption method %s" % (method))
 					return method
 
 		if _m in ("PGPMIME","PGPINLINE","SMIME","PDF","NONE"):
@@ -3727,6 +3795,7 @@ class gme:
 		else:
 			self.debug("get_preferredencryptionmethod: Method "
 						"'%s' for user '%s' unknown" % (_m,_u))
+			self.debug("get_preferredencryptionmethod: returning default encryption method %s" % (method))
 			return method
 
 	###############
@@ -3831,10 +3900,10 @@ class gme:
 				msg.attach(htmlmsg)
 
 				try:
-					pwheader=self._LOCALEDB[self._LOCALE][4]
+					pwheader=self._LOCALEDB[self._LOCALE]["passwordfor"]
 				except:
 					self.log("wrong locale '%s'"%self._LOCALE,"w")
-					pwheader=self._LOCALEDB["EN"][4]
+					pwheader=self._LOCALEDB["EN"]["passwordfor"]
 
 				msg['Subject'] = ('%s: %s' %(pwheader,
 									self._decode_header(newmsg["To"])))
@@ -3856,10 +3925,10 @@ class gme:
 			msg.set_payload(pdffile)
 
 			try:
-				f=self._LOCALEDB[self._LOCALE][2]
+				f=self._LOCALEDB[self._LOCALE]["content"]
 			except:
 				self.log("wrong locale '%s'"%self._LOCALE,"w")
-				f=self._LOCALEDB["EN"][2]
+				f=self._LOCALEDB["EN"]["content"]
 
 			msg.add_header( 'Content-Disposition',
 							'attachment',
@@ -3927,10 +3996,10 @@ class gme:
 			if self._PDFSECUREZIPCONTAINER==True:
 
 				try:
-					content=self._LOCALEDB[self._LOCALE][2]
+					content=self._LOCALEDB[self._LOCALE]["content"]
 				except:
 					self.log("wrong locale '%s'"%self._LOCALE,"w")
-					content=self._LOCALEDB["EN"][2]
+					content=self._LOCALEDB["EN"]["content"]
 
 				content="%s.zip"%content
 			else:
@@ -3943,10 +4012,10 @@ class gme:
 				msg.set_payload(zipfile)
 
 				try:
-					f=self._LOCALEDB[self._LOCALE][3]
+					f=self._LOCALEDB[self._LOCALE]["attachment"]
 				except:
 					self.log("wrong locale '%s'"%self._LOCALE,"w")
-					f=self._LOCALEDB["EN"][3]
+					f=self._LOCALEDB["EN"]["attachment"]
 
 				filenamecD,filenamecT=encode_filename("%s.zip"%f)
 				msg.add_header( 'Content-Disposition',
@@ -4101,10 +4170,10 @@ class gme:
 				msg.attach(htmlmsg)
 
 				try:
-					pwheader=self._LOCALEDB[self._LOCALE][5]
+					pwheader=self._LOCALEDB[self._LOCALE]["bouncemail"]
 				except:
 					self.log("wrong locale '%s'"%self._LOCALE,"w")
-					pwheader=self._LOCALEDB["EN"][5]
+					pwheader=self._LOCALEDB["EN"]["bouncemail"]
 
 				msg['Subject'] = pwheader
 				msg['To'] = from_addr
