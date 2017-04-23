@@ -624,8 +624,8 @@ class gmetests(unittest.TestCase):
 					'-e', 'smime',
 					'testaddress@gpgmailencry.pt']
 		self.gme._parse_commandline()
-		self.assertTrue(self.gme.get_output()==self.gme.o_file)
-		self.assertTrue(self.gme.get_default_preferredencryption()=="SMIME")
+		self.assertEqual(self.gme.get_output(),self.gme.o_file)
+		self.assertEqual(self.gme.get_default_preferredencryption(),"SMIME")
 
 	def test_load_mailmaster(self):
 
@@ -647,71 +647,9 @@ class gmetests(unittest.TestCase):
 		self.assertTrue("test.pdf.zip" in res)
 
 
-	def test_adm_verify_password(self):
-		shutil.copyfile("./gpgmailencrypt.pw.orig","./gpgmailencrypt.pw")
-
-		user="test"
-		password="test"
-		s=gmeutils.gpgmailserver._gpgmailencryptserver(self.gme,("localhost",0))
-		self.assertTrue(s.authenticate(user,password))
-		del s
-
-	def test_adm_verify_wrong_password(self):
-		shutil.copyfile("./gpgmailencrypt.pw.orig","./gpgmailencrypt.pw")
-
-		user="test"
-		password="wrong"
-		s=gmeutils.gpgmailserver._gpgmailencryptserver(self.gme,("localhost",0))
-		self.assertFalse(s.authenticate(user,password))
-		del s
-
-
-	def test_admsetpassword(self):
-		shutil.copyfile("./gpgmailencrypt.pw.orig","./gpgmailencrypt.pw")
-
-		user="test"
-		password="test"
-		self.gme.adm_set_user(password,password)
-		self.assertTrue(gmeutils.password.pw_verify(password,
-											self.gme.adm_get_pwhash(user)))
-
-	def test_admdeluser(self):
-		shutil.copyfile("./gpgmailencrypt.pw.orig","./gpgmailencrypt.pw")
-
-		self.gme.adm_set_user("test","test")
-		result=False
-		result=(self.gme.adm_get_pwhash("test")!=None)
-
-		if result==True:
-			self.gme.adm_del_user("test")
-			result=(self.gme.adm_get_pwhash("test")==None)
-
-		self.assertTrue(result)
-
-	def test_admgetusers(self):
-		shutil.copyfile("./gpgmailencrypt.pw.orig","./gpgmailencrypt.pw")
-
-		self.gme.adm_set_user("normal1","test")
-		self.gme.adm_set_user("testadmin","test")
-		self.gme.adm_set_user("testadmin2","test")
-		self.gme.adm_set_user("normal2","test")
-		users=self.gme.adm_get_users()
-		print (users)
-
-		for u in users:
-			print("user",u)
-			if u["user"]in ["normal1","normal2"]:
-				print("in Normal")
-				self.assertTrue(u["admin"]==False)
-
-			if u["user"]in ["testadmin","testadmin2"]:
-				print("in admin")
-				self.assertTrue(u["admin"]==True)
-
-
 	def test_getcharset(self):
 
-		self.assertTrue(self.gme._find_charset(email_unencrypted)=="utf-8")
+		self.assertEqual(self.gme._find_charset(email_unencrypted),"utf-8")
 
 	def test_usermap(self):
 
@@ -744,7 +682,7 @@ class gmetests(unittest.TestCase):
 		except:
 			pass
 
-		self.assertTrue(mapped==["pgpmime"])
+		self.assertEqual(mapped,["pgpmime"])
 
 	def test_encryptionmap2(self):
 
@@ -755,7 +693,7 @@ class gmetests(unittest.TestCase):
 		except:
 			pass
 
-		self.assertTrue(mapped==[])
+		self.assertEqual(mapped,[])
 
 	def test_check_encryptsubject(self):
 
@@ -849,6 +787,69 @@ class gmetests(unittest.TestCase):
 		self.assertFalse(self.gme._check_bounce_mail(x,x))
 		self.assertFalse(self.gme._check_bounce_mail(x,h))
 		self.assertFalse(self.gme._check_bounce_mail(x,u))
+
+#########
+#ADM_VERIFICATIONTESTS
+#########
+class adm_verificationtests(unittest.TestCase):
+	def setUp(self):
+		self.gme=gpgmailencrypt.gme()
+		self.gme.set_configfile("./gmetest.conf")
+		shutil.copyfile("./gpgmailencrypt.pw.orig","./gpgmailencrypt.pw")
+		self.gmeserver=gmeutils.gpgmailserver._gpgmailencryptserver(
+															self.gme,
+															("localhost",0))
+
+	def tearDown(self):
+		del self.gmeserver
+		self.gme.close()
+
+	def test_adm_verify_password(self):
+		user="test"
+		password="test"
+		self.assertTrue(self.gmeserver.authenticate(user,password))
+
+	def test_adm_verify_wrong_password(self):
+		user="test"
+		password="wrong"
+		self.assertFalse(self.gmeserver.authenticate(user,password))
+
+	def test_admsetpassword(self):
+		user="test"
+		password="test"
+		self.gme.adm_set_user(password,password)
+		self.assertTrue(gmeutils.password.pw_verify(password,
+											self.gme.adm_get_pwhash(user)))
+
+	def test_admdeluser(self):
+		self.gme.adm_set_user("test","test")
+		result=False
+		result=(self.gme.adm_get_pwhash("test")!=None)
+
+		if result==True:
+			self.gme.adm_del_user("test")
+			result=(self.gme.adm_get_pwhash("test")==None)
+
+		self.assertTrue(result)
+
+	def test_admgetusers(self):
+		self.gme.adm_set_user("normal1","test")
+		self.gme.adm_set_user("testadmin","test")
+		self.gme.adm_set_user("testadmin2","test")
+		self.gme.adm_set_user("normal2","test")
+		users=self.gme.adm_get_users()
+		print (users)
+
+		for u in users:
+			print("user",u)
+			if u["user"]in ["normal1","normal2"]:
+				print("in Normal")
+				self.assertEqual(u["admin"],False)
+
+			if u["user"]in ["testadmin","testadmin2"]:
+				print("in admin")
+				self.assertEqual(u["admin"],True)
+
 
 #########
 #GPGTESTS
@@ -1013,7 +1014,7 @@ class smimetests(unittest.TestCase):
 		pk=self.smime.private_keys()
 		controllist=list()
 		controllist.append("testaddress2@gpgmailencry.pt")
-		self.assertTrue(pk==controllist)
+		self.assertEqual(pk,controllist)
 
 	def test_issmimeencrypted(self):
 		"test is_smimeencrypted"
@@ -1089,7 +1090,7 @@ class smimetests(unittest.TestCase):
 			cert=rf.read()
 
 		fingerprint=gmeutils.helpers.get_certfingerprint(cert)
-		self.assertTrue(fingerprint==smimecertfingerprint)
+		self.assertEqual(fingerprint,smimecertfingerprint)
 
 #########
 #PDFTESTS
@@ -1116,7 +1117,7 @@ class pdftests(unittest.TestCase):
 		pw="test"
 		user="test@gpgmailencry.pt"
 		self.gme.set_pdfpassword(user,pw)
-		self.assertTrue(self.gme.get_pdfpassword(user)==pw)
+		self.assertEqual(self.gme.get_pdfpassword(user),pw)
 
 	def test_ispdfeencrypted(self):
 		"test is_pdfencrypted"
@@ -1176,16 +1177,16 @@ class archivetests(unittest.TestCase):
 
 	def test_zipcipher(self):
 		self.gme.set_zipcipher("aes128")
-		self.assertTrue(self.gme.get_zipcipher()=="AES128")
+		self.assertEqual(self.gme.get_zipcipher(),"AES128")
 
 	def test_zipcipher2(self):
 		self.gme.set_zipcipher("ZipCrypto")
-		self.assertFalse(self.gme.get_zipcipher()=="AES128")
+		self.assertNotEqual(self.gme.get_zipcipher(),"AES128")
 
 	def test_zipcipher3(self):
 		wrongcipher="aes1281"
 		self.gme.set_zipcipher(wrongcipher)
-		self.assertFalse(self.gme.get_zipcipher()==wrongcipher)
+		self.assertNotEqual(self.gme.get_zipcipher(),wrongcipher)
 
 	def test_zipunzip(self):
 
