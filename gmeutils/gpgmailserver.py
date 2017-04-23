@@ -211,7 +211,8 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 		pw=self.parent.adm_get_pwhash(user)
 
 		if pw==_deprecated_get_hash(password):
-			self.parent.debug("_gpgmailencryptserver: deprecated User '%s' authenticated"%user)
+			self.parent.debug("_gpgmailencryptserver: User '%s' "
+			"with deprecated password hash algorithm authenticated"%user)
 			self.parent.adm_set_user(user,password)
 			pw=self.parent.adm_get_pwhash(user)
 
