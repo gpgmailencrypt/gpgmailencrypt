@@ -259,6 +259,7 @@ class _TEXT_BACKEND(_base_storage):
 	@_dbg
 	def usermap(self, user):
 		exception=False
+		user=email.utils.parseaddr(user)[1]
 
 		try:
 			to_addr=self._addressmap[user.lower()]
@@ -753,6 +754,8 @@ class _sql_backend(_base_storage):
 
 	@_dbg
 	def usermap(self, user):
+
+		user=email.utils.parseaddr(user)[1]
 
 		if not self._USE_SQLUSERMAP:
 			return self._textbackend.usermap(user)
