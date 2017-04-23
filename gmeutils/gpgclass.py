@@ -1,6 +1,7 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 import email
+import email.utils
 from   email.generator	import Generator
 from   io 				import StringIO
 import os
@@ -95,7 +96,7 @@ class _GPG(_gmechild):
 		"set the recipient e-mail address, for which the data will be encrypted"
 
 		if isinstance(recipient, str):
-			self._recipient=recipient
+			self._recipient=email.utils.parseaddr(recipient)[1]
 			self.parent._GPGkeys = list()
 
 	##########
@@ -175,7 +176,7 @@ class _GPG(_gmechild):
 		if not isinstance(key,str):
 			self.debug("has_public_key, key not of type str")
 			return False
-
+		key=email.utils.parseaddr(key)[1]
 		key=key.lower()
 
 		if key in self._localGPGkeys:

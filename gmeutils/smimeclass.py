@@ -1,6 +1,7 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 import email
+import email.utils
 import os
 import re
 import subprocess
@@ -97,7 +98,7 @@ class _SMIME(_gmechild):
 		"set the recipient e-mail address, for which the data will be encrypted"
 
 		if isinstance(recipient, str):
-			self._recipient=recipient
+			self._recipient=email.utils.parseaddr(recipient)[1]
 
 	##########
 	#recipient
@@ -123,6 +124,7 @@ class _SMIME(_gmechild):
 			return False
 
 		key=key.lower()
+		key=email.utils.parseaddr(key)[1]
 
 		try:
 			_u=self.parent._backend.smimeuser(key)
