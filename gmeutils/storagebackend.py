@@ -5,6 +5,7 @@ from gmeutils.helpers			import *
 from gmeutils.password			import *
 from gmeutils.version			import *
 from gmeutils._dbg 				import _dbg
+import email.utils
 import os.path
 import re
 import time
