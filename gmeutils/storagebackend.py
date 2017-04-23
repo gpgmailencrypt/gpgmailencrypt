@@ -280,6 +280,8 @@ class _TEXT_BACKEND(_base_storage):
 	@_dbg
 	def encryptionmap(self, user):
 
+		user=email.utils.parseaddr(user)[1]
+
 		try:
 			self.debug("get_preferred encryptionmap %s"%user)
 			encryption=self._encryptionmap[user.lower()]
@@ -855,6 +857,8 @@ class _sql_backend(_base_storage):
 
 	@_dbg
 	def encryptionmap(self, user):
+
+		user=email.utils.parseaddr(user)[1]
 
 		if not self._USE_SQLENCRYPTIONMAP:
 			return self._textbackend.encryptionmap(user)
