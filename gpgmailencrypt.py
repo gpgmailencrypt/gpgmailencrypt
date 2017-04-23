@@ -90,11 +90,14 @@ class gme:
 	l_stderr=4
 	m_daemon=1
 	m_script=2
+	s_may=1
+	s_redirect=2
+	s_bounce=3
 	_LOCALEDB={
 	#"CN":("审读","文件","内容","文件附件"),
 	"DA":("aftale","fil","indhold","bilag","Password til"),
 	"DE":("Termin","Datei","Inhalt","Anhang","Passwort für"),
-	"EN":("appointment","file","content","attachment","Password for"),
+	"EN":("appointment","file","content","attachment","Password for","Email could not be sent"),
 	"ES":("cita","fichero","contenido","apéndice","Contraseña por"),
 	"FI":("tapaaminen","tiedosto","sisältö","liite","Salasana"),
 	"FR":("rendez-vous","fichier","contenu","attachement","Mot de passe pour"),
@@ -275,14 +278,12 @@ class gme:
 		self._SMTP_USESMTPS=False
 		self._SMTP_CERTFINGERPRINTS=[]
 		self._SMTP_CACERTS=None
-		self._SMTP_USESERVER2=False
 		self._SMTP_HOST2='localhost'
 		self._SMTP_PORT2=25
 		self._SMTP_AUTHENTICATE2=False
 		self._SMTP_USER2=""
 		self._SMTP_PASSWORD2=""
 		self._SMTP_CREDENTIAL2=""
-		self._SMTP_USESMTPS2=False
 		self._SMTP_CACERTS2=None
 		self._DOMAINS=""
 		self._HOMEDOMAINS=["localhost"]
@@ -290,6 +291,8 @@ class gme:
 		self._MAILTEMPLATEDIR="/usr/share/gpgmailencrypt/mailtemplates"
 		self._INFILE=""
 		self._OUTFILE=""
+		self._SECURITYLEVEL=self.s_may
+		self._BOUNCEHOMEDOMAIN=True
 		self._PREFERRED_ENCRYPTION="PGPINLINE"
 		self._GPGKEYHOME="~/.gnupg"
 		self._ALLOWGPGCOMMENT=False
@@ -362,6 +365,7 @@ class gme:
 			self.log_traceback()
 			return
 
+		#logging
 		if _cfg.has_section('logging'):
 
 			try:
@@ -408,6 +412,7 @@ class gme:
 			except:
 				pass
 
+		#default
 		if _cfg.has_section('default'):
 
 			try:
@@ -437,6 +442,35 @@ class gme:
 				else:
 					self._OUTPUT=self.o_stdout
 
+			except:
+				pass
+
+			try:
+				o=_cfg.get('default','securitylevel').lower().strip()
+
+				if o=="bounce":
+					self._SECURITYLEVEL=self.s_bounce
+				elif o=="redirect":
+					self._SECURITYLEVEL=self.s_redirect
+				else:
+					self._SECURITYLEVEL=self.s_may
+					if not o=="may":
+						self.log("Config file security option '%s' unknown."
+							" Setting securitylevel to 'may'","e")
+			except:
+
+				try:
+					s2=_cfg.getboolean('mailserver',"useserver2")
+					self.log("config entry [mailserver].useserver2 is depre"
+					"cated. Use '[default].securitylevel redirect' instead")
+					if s2:
+						self._SECURITYLEVEL=self.s_redirect
+				except:
+					pass
+
+			try:
+				self._BOUNCEHOMEDOMAIN=_cfg.getboolean('default',
+												'bouncehomedomain')
 			except:
 				pass
 
@@ -501,6 +535,7 @@ class gme:
 			except:
 				pass
 
+		#gpg
 		if _cfg.has_section('gpg'):
 
 			try:
@@ -537,6 +572,7 @@ class gme:
 			except:
 				pass
 
+		#mailserver
 		if _cfg.has_section('mailserver'):
 
 			try:
@@ -573,22 +609,12 @@ class gme:
 				pass
 
 			try:
-				self._SMTP_USESERVER2=_cfg.getboolean('mailserver','useserver2')
-			except:
-				pass
-
-			try:
 				self._SMTP_HOST2=_cfg.get('mailserver','host2')
 			except:
 				pass
 
 			try:
 				self._SMTP_PORT2=_cfg.getint('mailserver','port2')
-			except:
-				pass
-
-			try:
-				self._SMTP_USESMTPS2=_cfg.getint('mailserver','usetsmtps2')
 			except:
 				pass
 
@@ -618,6 +644,7 @@ class gme:
 			except:
 				pass
 
+		#daemon
 		if _cfg.has_section('daemon'):
 
 			try:
@@ -678,6 +705,7 @@ class gme:
 			except:
 				pass
 
+		#pdf
 		if _cfg.has_section('pdf'):
 
 			try:
@@ -698,7 +726,7 @@ class gme:
 			except:
 				pass
 
-
+		#zip
 		if _cfg.has_section('zip'):
 
 			try:
@@ -730,6 +758,7 @@ class gme:
 			except:
 				pass
 
+		#smime
 		if _cfg.has_section('smime'):
 
 			try:
@@ -767,6 +796,7 @@ class gme:
 			except:
 				pass
 
+		#spam
 		if _cfg.has_section('spam'):
 
 			try:
@@ -838,6 +868,7 @@ class gme:
 												self._SA_SPAMPORT,
 												self._SPAMMAXSIZE]
 
+		#virus
 		if _cfg.has_section('virus'):
 
 			try:
@@ -851,6 +882,7 @@ class gme:
 			except:
 				pass
 
+		#dkim
 		if _cfg.has_section('dkim'):
 
 			try:
@@ -1281,7 +1313,8 @@ class gme:
 			f=open(templatefile,encoding="UTF-8",errors=unicodeerror)
 			self.debug("template found in %s"%templatefile)
 		except:
-			pass
+			self.debug("(%s)template %s not found in %s"%(self._LOCALE,identifier,templatefile))
+
 
 		if f==None:
 
@@ -1292,7 +1325,7 @@ class gme:
 				f=open(templatefile,encoding="UTF-8",errors=unicodeerror)
 				self.debug("template found in %s"%templatefile)
 			except:
-				pass
+				self.debug("(%s)template %s not found in %s"%("EN",identifier,templatefile))
 
 		if f==None:
 			self.debug("template not found, returning defaulttext")
@@ -1722,8 +1755,7 @@ class gme:
 						mailtext,
 						msg,
 						from_addr,
-						to_addr,
-						use_server2=False):
+						to_addr):
 		try:
 			message = email.message_from_string( mailtext )
 
@@ -1733,16 +1765,14 @@ class gme:
 			self._send_msg(	m_id,
 							message,
 							from_addr,
-							to_addr,
-							use_server2=use_server2)
+							to_addr)
 		except:
 			self.log("_send_rawmsg: exception _send_textmsg")
 			self.log_traceback()
 			self._send_textmsg(	m_id,
 								mailtext,
 								from_addr,
-								to_addr,
-								use_server2=use_server2)
+								to_addr)
 
 	##########
 	#_send_msg
@@ -1753,16 +1783,14 @@ class gme:
 					m_id,
 					message,
 					from_addr,
-					to_addr ,
-						use_server2=False):
+					to_addr):
 		self.debug("_send_msg output %i"%self._OUTPUT)
 
 		if isinstance(message,str):
 			self._send_textmsg(	m_id,
 								message,
 								from_addr,
-								to_addr,
-								use_server2=use_server2)
+								to_addr)
 		else:
 
 			if self._ADDHEADER and not self._encryptheader in message:
@@ -1771,8 +1799,7 @@ class gme:
 			self._send_textmsg(	m_id,
 								message.as_string(),
 								from_addr,
-								to_addr,
-								use_server2=use_server2)
+								to_addr)
 
 	##############
 	#_send_textmsg
@@ -1784,8 +1811,7 @@ class gme:
 						message,
 						from_addr,
 						to_addr,
-						store_deferred=True,
-						use_server2=False):
+						store_deferred=True):
 		self.debug("_send_textmsg output %i"%self._OUTPUT)
 		domain=maildomain(from_addr)
 		usessl=False
@@ -1801,10 +1827,9 @@ class gme:
 
 			self.debug("Sending email to: <%s>" % to_addr)
 
-			if use_server2:
+			if self._SECURITYLEVEL==self.s_redirect:
 				_HOST=self._SMTP_HOST2
 				_PORT=self._SMTP_PORT2
-				_USESMTPS=self._SMTP_USESMTPS2
 				_AUTHENTICATE=self._SMTP_AUTHENTICATE2
 				_USER=self._SMTP_USER2
 				_PASSWORD=self._SMTP_PASSWORD2
@@ -4013,6 +4038,30 @@ class gme:
 			msg['From'] = self._SYSTEMMAILFROM
 			self.send_mails(msg.as_string(),from_addr)
 
+	###################
+	#_check_bounce_mail
+	###################
+
+	@_dbg
+	def _check_bounce_mail(	self,
+							from_addr,
+							to_addr):
+
+		if not self._SECURITYLEVEL==self.s_bounce:
+			return False
+
+		from_domain=maildomain(from_addr)
+
+		if not from_domain in self._HOMEDOMAINS:
+			return False
+		#=>from_domain in homedomain
+		to_domain=maildomain(to_addr)
+
+		if to_domain in self._HOMEDOMAINS:
+			return self._BOUNCEHOMEDOMAIN
+
+		return True
+
 	#######################
 	#_send_unencrypted_mail
 	#######################
@@ -4023,15 +4072,56 @@ class gme:
 								mailtext,
 								message,
 								from_addr,
-								to_addr):
-
-			self.debug("send_unencrypted: %s"%message)
-			self._send_rawmsg(  queue_id,
-								mailtext,
-								message,
-								from_addr,
 								to_addr,
-								use_server2=self._SMTP_USESERVER2)
+								in_bounce_process=False
+								):
+
+		if (self._check_bounce_mail(from_addr,to_addr)
+			and not in_bounce_process):
+				newmsg=email.message_from_string( mailtext)
+				msgtxt=self._load_mailmaster("04-bouncemail",
+					"Mail was not encrypted and thus not delivered<br>"
+					"<table><tr><td>Subject:</td><td>%SUBJECT%</td></tr>"
+					"<tr><td>From:</td><td>%FROM%</td></tr><tr><td>To:</td>"
+					"<td>%TO%</td></tr><tr><td>Date:</td><td>%DATE%</td></tr>"
+					"</table>")
+				msgtxt=replace_variables(msgtxt,
+						{"FROM":html.escape(from_addr),
+						 "TO":html.escape(self._decode_header(newmsg["To"])),
+						 "DATE":newmsg["Date"],
+						 "SUBJECT":html.escape(self._decode_header(
+															newmsg["Subject"]
+						 ))})
+				msg=MIMEMultipart()
+				msg.set_type("multipart/alternative")
+				res,htmlheader,htmlbody,htmlfooter=self._split_html(msgtxt)
+				htmlmsg=MIMEText(msgtxt,"html")
+				plainmsg=MIMEText(htmlbody)
+				msg.attach(plainmsg)
+				msg.attach(htmlmsg)
+
+				try:
+					pwheader=self._LOCALEDB[self._LOCALE][5]
+				except:
+					self.log("wrong locale '%s'"%self._LOCALE,"w")
+					pwheader=self._LOCALEDB["EN"][5]
+
+				msg['Subject'] = pwheader
+				msg['To'] = from_addr
+				msg['From'] = self._SYSTEMMAILFROM
+				self.log("bounce mail from %s to %s"%(from_addr,to_addr))
+				self.send_mails(	msg.as_string(),
+									from_addr,
+									in_bounce_process=True)
+				self._remove_mail_from_queue(queue_id)
+				return
+
+		self.debug("send_unencrypted: %s"%message)
+		self._send_rawmsg(  queue_id,
+							mailtext,
+							message,
+							from_addr,
+							to_addr)
 
 	#####################
 	#_encrypt_single_mail
@@ -4045,7 +4135,8 @@ class gme:
 								to_addr,
 								is_spam=spamscanners.S_NOSPAM,
 								has_virus=False,
-								virusinfo=None):
+								virusinfo=None,
+								in_bounce_process=False):
 		_pgpmime=False
 		_prefer_gpg=True
 		_prefer_pdf=False
@@ -4137,7 +4228,12 @@ class gme:
 			if self._ZIPATTACHMENTS:
 				mailtext=self.zip_attachments(mailtext)
 
-			self._send_unencrypted_mail(queue_id,mailtext,m,from_addr,to_addr)
+			self._send_unencrypted_mail(queue_id,
+										mailtext,
+										m,
+										from_addr,
+										to_addr,
+										in_bounce_process=in_bounce_process)
 			return
 
 		if ((   not _prefer_pdf
@@ -4198,7 +4294,8 @@ class gme:
 								mailtext,
 								m,
 								from_addr,
-								to_addr)
+								to_addr,
+								in_bounce_process=in_bounce_process)
 
 	############
 	# send_mails
@@ -4207,7 +4304,8 @@ class gme:
 	@_dbg
 	def send_mails(  self,
 						mailtext,
-						recipients):
+						recipients,
+						in_bounce_process=False):
 		"""
 		Main function of this library:
 			mailtext is the mail as a string
@@ -4364,7 +4462,8 @@ class gme:
 											to_addr,
 											spamlevel,
 											has_virus,
-											virusinfo)
+											virusinfo,
+											in_bounce_process=in_bounce_process)
 
 			newfrom="%s <%s>"%(	self._SENTADDRESS,
 					 			email.utils.parseaddr(from_addr)[1])

@@ -65,6 +65,11 @@ def print_exampleconfig():
 	"#a comma separated list of domains, for which this server is working ")
 	print ("".ljust(space)+"#and users might receive system mail "
 	"and can use pdf encrypt")
+	print ("securitylevel=may".ljust(space)+
+	"#valid values are 'may','redirect' or 'bounce'")
+	print ("bouncehomedomain=true".ljust(space)+
+	"#when true and security level is 'bounce' unencrypted emails ")
+	print ("".ljust(space)+"#to an address in 'homedomains' will bounce. ")
 	print ("output=mail".ljust(space)+
 	"#valid values are 'mail'or 'stdout'")
 	print ("locale=en".ljust(space)+
