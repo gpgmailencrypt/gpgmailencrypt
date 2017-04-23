@@ -53,7 +53,7 @@ def print_exampleconfig():
 	space=56
 
 	print ("[default]")
-	print ("prefered_encryption = pgpinline".ljust(space)+
+	print ("preferred_encryption = pgpinline".ljust(space)+
 	"#valid values are 'pgpinline','pgpmime' or 'smime'")
 	print ("add_header = no".ljust(space)+
 	"#adds a gpgmailencrypt version header to the mail")
