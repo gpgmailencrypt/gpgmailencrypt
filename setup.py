@@ -130,7 +130,7 @@ setup(
 	author='Horst Knorr',
 	author_email='gpgmailencrypt@gmx.de',
 	license='GPL v3',
-	install_requires=["pypdf2","beautifulsoup4","python-magic"],
+	install_requires=["pypdf2","beautifulsoup4","python-magic","requests"],
 	cmdclass={'install': install},
 	# See https://pypi.python.org/pypi?%3Aaction=list_classifiers
 
