@@ -154,6 +154,8 @@ def get_spamscannerlist(void):
 
 def get_spamscanner(scanner,parent,leveldict):
 
+	scanner=scanner.upper().strip()
+
 	if scanner=="BOGOFILTER":
 		_s=_BOGOFILTER(parent,leveldict)
 
