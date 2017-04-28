@@ -5,6 +5,7 @@ import gpgmailencrypt
 import gmeutils.helpers
 import gmeutils.archivemanagers
 import gmeutils.virusscanners
+import gmeutils.spamscanners
 import gmeutils.gpgmailserver
 import os.path
 import shutil
@@ -599,6 +600,33 @@ MQolJUVPRgo=
 --===============3660322619382959396==--
 """
 smimecertfingerprint="acb39e30d68b60fb5e2ddd96dd2577e3146d2f5b3ba9b05ecb703f606f39a4defa486b92bff705a35ebbac7e59cf705b9723824d0eacb5e816579a700dd95e39"
+spamgtube="""Subject: Test spam mail (GTUBE)
+Message-ID: <GTUBE1.1010101@example.net>
+Date: Wed, 23 Jul 2003 23:30:00 +0200
+From: Sender <sender@example.net>
+To: Recipient <recipient@example.net>
+Precedence: junk
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Transfer-Encoding: 7bit
+
+This is the GTUBE, the
+	Generic
+	Test for
+	Unsolicited
+	Bulk
+	Email
+
+If your spam filter supports it, the GTUBE provides a test by which you
+can verify that the filter is installed correctly and is detecting incoming
+spam. You can send yourself a test mail containing the following string of
+characters (in upper case and with no white spaces and line breaks):
+
+XJS*C4JDBQADN1.NSBN3*2IDNEN*GTUBE-STANDARD-ANTI-UBE-TEST-EMAIL*C.34X
+
+You should send this test mail from an account outside of your network.
+
+"""
 
 class gmetests(unittest.TestCase):
 
@@ -1401,6 +1429,82 @@ class dkimtests(unittest.TestCase):
 
 		msg=dk.sign_mail(email_unencrypted.replace("\n","\r\n"))
 		self.assertTrue("DKIM-Signature" in msg)
+
+################
+#SPAMSCANNERTEST
+################
+class spamscannertests(unittest.TestCase):
+
+	def setUp(self):
+		self.gme=gpgmailencrypt.gme()
+		self.gme.set_configfile("./gmetest.conf")
+		self.spam_leveldict={}
+
+	def tearDown(self):
+		self.gme.close()
+
+	#@unittest.skipIf(not has_app("spamc"),
+	#	"spamassassin not installed")
+	@unittest.skip
+	def test_spamassassin_spam(self):
+
+
+		self.spam_leveldict["SPAMASSASSIN"]=[6.2,
+											3.0,
+											"localhost",
+											783,
+											500000]
+		sc=gmeutils.spamscanners.get_spamscanner("SPAMASSASSIN",
+												parent=self.gme,
+												leveldict=self.spam_leveldict)
+		spamlevel,score=sc.is_spam(spamgtube)
+		print("spamlevel",spamlevel,"score",score,self.spam_leveldict["SPAMASSASSIN"])
+		self.assertTrue(spamlevel==gmeutils.spamscanners.S_SPAM)
+
+
+	#@unittest.skipIf(not has_app("spamc"),
+	#	"spamassassin not installed")
+	@unittest.skip
+	def test_spamassassin_nospam(self):
+		self.spam_leveldict["SPAMASSASSIN"]=[6.2,
+											3.0,
+											"localhost",
+											783,
+											500000]
+		sc=gmeutils.spamscanners.get_spamscanner("SPAMASSASSIN",
+												parent=self.gme,
+												leveldict=self.spam_leveldict)
+		spamlevel,score=sc.is_spam(spamgtube)
+		print("spamlevel",spamlevel,"score",score,self.spam_leveldict["SPAMASSASSIN"])
+		self.assertTrue(spamlevel==gmeutils.spamscanners.S_NOSPAM)
+
+	#@unittest.skipIf(not has_app("bogofilter"),
+	#	"bogofilter not installed")
+	@unittest.skip
+	def test_bogofilter_spam(self):
+
+		sc=gmeutils.spamscanners.get_spamscanner("BOGOFILTER",
+												parent=self.gme,
+												leveldict=self.spam_leveldict)
+		spamlevel,score=sc.is_spam(spamgtube)
+		print("spamlevel",spamlevel,"score",score)
+		self.assertTrue(spamlevel==gmeutils.spamscanners.S_SPAM)
+
+
+	#@unittest.skipIf(not has_app("bogofilter"),
+	#	"bogofilter not installed")
+	@unittest.skip
+	def test_bogofilter_nospam(self):
+
+		sc=gmeutils.spamscanners.get_spamscanner("BOGOFILTER",
+												parent=self.gme,
+												leveldict=self.spam_leveldict)
+		spamlevel,score=sc.is_spam(spamgtube)
+		print("spamlevel",spamlevel,"score",score)
+		self.assertTrue(spamlevel==gmeutils.spamscanners.S_NOSPAM)
+
+
+
 
 if __name__ == '__main__':
 	unittest.main()
