@@ -435,6 +435,29 @@ class _sql_backend(_base_storage):
 	def connect(self):
 		raise NotImplementedError
 
+
+	######
+	#close
+	######
+
+	@_dbg
+	def close(self):
+
+		if self._cursor:
+			try:
+				self._cursor.close()
+			except:
+				self.log_traceback()
+
+		if self._db:
+			try:
+				self._db.close()
+			except:
+				self.log_traceback()
+
+		self._db=None
+		self._cursor=None
+
 	################
 	#read_configfile
 	################
@@ -570,6 +593,7 @@ class _sql_backend(_base_storage):
 			raise KeyError(user)
 
 		self.debug("sqlbackend %s usermap %s=>%s"%(self._backend,user,r[0]))
+		self.close()
 		return r[0]
 
 	########
@@ -596,8 +620,7 @@ class _sql_backend(_base_storage):
 
 		except:
 			self.log_traceback()
-			self._cursor=None
-			self._db=None
+			self.close()
 			return False
 
 		return True
@@ -638,8 +661,7 @@ class _sql_backend(_base_storage):
 			result=False
 			self.debug("execute_action failed")
 
-		self._cursor=None
-		self._db=None
+		self.close()
 		return result
 
 	##############
@@ -668,6 +690,7 @@ class _sql_backend(_base_storage):
 		self.debug("sqlbackend %s encryptionmap %s=>%s"%(self._backend,
 														user,
 														r[0]))
+		self.close()
 		return r[0].split(":")
 
 	########################
@@ -794,6 +817,7 @@ class _sql_backend(_base_storage):
 			pass
 
 		if r==None:
+			self.close()
 			raise KeyError(user)
 
 		cipher=self.parent._SMIMECIPHER
@@ -810,6 +834,7 @@ class _sql_backend(_base_storage):
 		self.debug("sqlbackend %s smimuser %s=>%s"%(self._backend,
 														user,
 														result))
+		self.close()
 		return result
 
 	#################
@@ -842,6 +867,7 @@ class _sql_backend(_base_storage):
 			if publickey!=None:
 				rows.append(result)
 
+		self.close()
 		return rows
 
 	##################
@@ -874,6 +900,7 @@ class _sql_backend(_base_storage):
 			if privatekey!=None:
 				rows.append(result)
 
+		self.close()
 		return rows
 
 	################
@@ -960,9 +987,11 @@ class _sql_backend(_base_storage):
 
 		if r==None:
 			pw= create_password(self.parent._PDFPASSWORDLENGTH)
+			self.close()
 			self.set_pdfpassword(user,pw)
 			return pw
 
+		self.close()
 		return r[0]
 
 	###################
