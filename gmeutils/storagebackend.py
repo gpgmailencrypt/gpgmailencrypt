@@ -2,10 +2,8 @@
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 from gmeutils.child 			import _gmechild
 from gmeutils.helpers			import *
-from gmeutils.password			import *
 from gmeutils.version			import *
 from gmeutils._dbg 				import _dbg
-import email.utils
 import os.path
 import re
 import time
@@ -29,14 +27,6 @@ class _base_storage(_gmechild):
 
 	@_dbg
 	def init(self):
-		pass
-
-	######
-	#close
-	######
-
-	@_dbg
-	def close(self):
 		pass
 
 	################
@@ -119,40 +109,6 @@ class _base_storage(_gmechild):
 	def del_old_pdfpasswords(self,age):
 		raise NotImplementedError
 
-	#############
-	#adm_set_user
-	#############
-
-	@_dbg
-	def adm_set_user(self,user,password):
-		raise NotImplementedError
-
-	#############
-	#adm_del_user
-	#############
-
-	@_dbg
-	def adm_del_user(self,user):
-		"deletes a user"
-		raise NotImplementedError
-
-	###############
-	#adm_get_pwhash
-	###############
-
-	@_dbg
-	def adm_get_pwhash(self,user):
-		raise NotImplementedError
-
-	###################
-	#adm_init_passwords
-	###################
-
-	@_dbg
-	def adm_init_passwords( self):
-		raise NotImplementedError
-
-
 ##############
 #_TEXT_BACKEND
 ##############
@@ -170,9 +126,6 @@ class _TEXT_BACKEND(_base_storage):
 		self._smimeuser = dict()
 		self._pdfpasswords=dict()
 		self._PDF_PASSWORDFILE="/etc/gpgpdfpasswords.pw"
-		self._SMTPD_PASSWORDFILE="/etc/gpgmailencrypt.pw"
-		self._smtpd_passwords=dict()
-		self._admpw_loaded=False
 
 	################
 	#read_configfile
@@ -237,22 +190,6 @@ class _TEXT_BACKEND(_base_storage):
 						%self._PDF_PASSWORDFILE)
 				self.log_traceback()
 
-		if cfg.has_section('daemon'):
-
-			try:
-				self._SMTPD_PASSWORDFILE=cfg.get('daemon','smtppasswords')
-			except:
-				pass
-
-	######
-	#close
-	######
-
-	@_dbg
-	def close(self):
-		if self._admpw_loaded:
-			self._write_smtpdpasswordfile()
-
 	########
 	#usermap
 	########
@@ -260,7 +197,6 @@ class _TEXT_BACKEND(_base_storage):
 	@_dbg
 	def usermap(self, user):
 		exception=False
-		user=email.utils.parseaddr(user)[1]
 
 		try:
 			to_addr=self._addressmap[user.lower()]
@@ -279,8 +215,6 @@ class _TEXT_BACKEND(_base_storage):
 
 	@_dbg
 	def encryptionmap(self, user):
-
-		user=email.utils.parseaddr(user)[1]
 
 		try:
 			self.debug("get_preferred encryptionmap %s"%user)
@@ -428,147 +362,6 @@ class _TEXT_BACKEND(_base_storage):
 			except:
 				pass
 
-	###################
-	#adm_init_passwords
-	###################
-
-	@_dbg
-	def adm_init_passwords(self):
-
-		if self._admpw_loaded:
-			return
-
-		try:
-			f=open(os.path.expanduser(	self._SMTPD_PASSWORDFILE),
-										encoding="UTF-8",
-										errors=unicodeerror)
-		except:
-			self.log("_gpgmailencryptserver: Config file could not be read","e")
-			self.log_traceback()
-			exit(5)
-
-		txt=f.read()
-		f.close()
-		self._smtpd_passwords=dict()
-
-		for l in txt.splitlines():
-
-			try:
-				name,passwd=l.split("=",1)
-				self._smtpd_passwords[name.strip()]=passwd.strip()
-			except:
-				pass
-
-		self._admpw_loaded=True
-
-	#########################
-	#_write_smtpdpasswordfile
-	#########################
-
-	@_dbg
-	def _write_smtpdpasswordfile(self):
-		"writes the users to the password file"
-
-		try:
-			pwfile=os.path.expanduser(self._SMTPD_PASSWORDFILE)
-			fileexists=os.path.exists(pwfile)
-			f=open(pwfile,mode="w",encoding="UTF-8",errors=unicodeerror)
-
-			if not fileexists:
-				self.debug("new pwfile chmod")
-				os.chmod(pwfile,0o600)
-
-		except:
-			self.log("_gpgmailencryptserver: Config file could not be written",
-					"e")
-			self.log_traceback()
-			return False
-
-		for user in self._smtpd_passwords:
-
-			try:
-				password=self._smtpd_passwords[user]
-				f.write(("%s=%s\n"%(user,password)))
-			except:
-				#self.log_traceback()
-				pass
-
-		f.close()
-
-
-	#############
-	#adm_set_user
-	#############
-
-	@_dbg
-	def adm_set_user(self,user,password):
-		"adds a user, if the user already exists it changes the password"
-
-		self.adm_init_passwords()
-
-		try:
-			self._smtpd_passwords[user]=pw_hash(password)
-			return True
-		except:
-			self.log("User could not be added","e")
-			self.log_traceback()
-			return False
-
-		return True
-
-	#############
-	#adm_del_user
-	#############
-
-	@_dbg
-	def adm_del_user(self,user):
-		"deletes a user"
-
-		self.adm_init_passwords()
-
-		try:
-			del self._smtpd_passwords[user]
-			return True
-		except:
-			self.log("User could not be deleted","w")
-			return False
-
-		return True
-
-	###############
-	#adm_get_pwhash
-	###############
-
-	@_dbg
-	def adm_get_pwhash(self,user):
-
-		self.adm_init_passwords()
-
-		pwhash=None
-		try:
-			pwhash=self._smtpd_passwords[user]
-		except:
-			pass
-
-		return pwhash
-
-	##############
-	#adm_get_users
-	##############
-
-	@_dbg
-	def adm_get_users(self):
-		"returns a list of all users and whether or not the user is a admin"
-		self.adm_init_passwords()
-
-		users=[]
-
-		for user in self._smtpd_passwords:
-			users.append({  "user":user,
-							"admin":self.parent.is_admin(user)})
-
-		return users
-
 #############
 #_sql_backend
 #############
@@ -641,6 +434,29 @@ class _sql_backend(_base_storage):
 	@_dbg
 	def connect(self):
 		raise NotImplementedError
+
+
+	######
+	#close
+	######
+
+	@_dbg
+	def close(self):
+
+		if self._cursor:
+			try:
+				self._cursor.close()
+			except:
+				self.log_traceback()
+
+		if self._db:
+			try:
+				self._db.close()
+			except:
+				self.log_traceback()
+
+		self._db=None
+		self._cursor=None
 
 	################
 	#read_configfile
@@ -758,8 +574,6 @@ class _sql_backend(_base_storage):
 	@_dbg
 	def usermap(self, user):
 
-		user=email.utils.parseaddr(user)[1]
-
 		if not self._USE_SQLUSERMAP:
 			return self._textbackend.usermap(user)
 
@@ -776,9 +590,11 @@ class _sql_backend(_base_storage):
 			pass
 
 		if r==None:
+			self.close()
 			raise KeyError(user)
 
 		self.debug("sqlbackend %s usermap %s=>%s"%(self._backend,user,r[0]))
+		self.close()
 		return r[0]
 
 	########
@@ -792,6 +608,7 @@ class _sql_backend(_base_storage):
 		self.connect()
 
 		if self._cursor== None:
+			self.close()
 			raise KeyError("Database backend not available")
 
 		try:
@@ -805,8 +622,7 @@ class _sql_backend(_base_storage):
 
 		except:
 			self.log_traceback()
-			self._cursor=None
-			self._db=None
+			self.close()
 			return False
 
 		return True
@@ -821,6 +637,7 @@ class _sql_backend(_base_storage):
 		self.connect()
 
 		if self._cursor== None:
+			self.close()
 			raise KeyError("Database backend not available")
 
 		result=True
@@ -847,8 +664,7 @@ class _sql_backend(_base_storage):
 			result=False
 			self.debug("execute_action failed")
 
-		self._cursor=None
-		self._db=None
+		self.close()
 		return result
 
 	##############
@@ -857,8 +673,6 @@ class _sql_backend(_base_storage):
 
 	@_dbg
 	def encryptionmap(self, user):
-
-		user=email.utils.parseaddr(user)[1]
 
 		if not self._USE_SQLENCRYPTIONMAP:
 			return self._textbackend.encryptionmap(user)
@@ -874,11 +688,13 @@ class _sql_backend(_base_storage):
 			pass
 
 		if r==None:
+			self.close()
 			raise KeyError(user)
 
 		self.debug("sqlbackend %s encryptionmap %s=>%s"%(self._backend,
 														user,
 														r[0]))
+		self.close()
 		return r[0].split(":")
 
 	########################
@@ -1005,6 +821,7 @@ class _sql_backend(_base_storage):
 			pass
 
 		if r==None:
+			self.close()
 			raise KeyError(user)
 
 		cipher=self.parent._SMIMECIPHER
@@ -1021,6 +838,7 @@ class _sql_backend(_base_storage):
 		self.debug("sqlbackend %s smimuser %s=>%s"%(self._backend,
 														user,
 														result))
+		self.close()
 		return result
 
 	#################
@@ -1053,6 +871,7 @@ class _sql_backend(_base_storage):
 			if publickey!=None:
 				rows.append(result)
 
+		self.close()
 		return rows
 
 	##################
@@ -1085,6 +904,7 @@ class _sql_backend(_base_storage):
 			if privatekey!=None:
 				rows.append(result)
 
+		self.close()
 		return rows
 
 	################
@@ -1171,9 +991,11 @@ class _sql_backend(_base_storage):
 
 		if r==None:
 			pw= create_password(self.parent._PDFPASSWORDLENGTH)
+			self.close()
 			self.set_pdfpassword(user,pw)
 			return pw
 
+		self.close()
 		return r[0]
 
 	###################
@@ -1221,23 +1043,6 @@ class _sql_backend(_base_storage):
 					})
 		self.debug(sql)
 		self.execute_action(sql)
-
-	#############
-	#adm_set_user
-	#############
-
-	@_dbg
-	def adm_set_user(self,user,password):
-		return self._textbackend.adm_set_user(user,password)
-
-
-	###############
-	#adm_get_pwhash
-	###############
-
-	@_dbg
-	def adm_get_pwhash(self,user):
-		return self._textbackend.adm_get_pwhash(user)
 
 #################
 #_SQLITE3_BACKEND
