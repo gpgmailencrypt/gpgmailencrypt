@@ -81,8 +81,25 @@ class _virus_check(_gmechild):
 	@_dbg
 	def _search_archivemanager(self):
 
+#				for exclude in self._DEBUGEXCLUDETEXT:
+#
+#					if exclude.lower() in searchtext:
+#						return False
+
+
+
+
 		for m in archivemanagers.get_managerlist():
-			mngr=archivemanagers.get_archivemanager(m,self.parent)
+
+
+			try:
+				mngr=archivemanagers.get_archivemanager(m,self.parent)
+			except:
+				self.log("Archive manager %s crashed while trying to init"%m,
+							"w")
+				self.log_traceback()
+				continue
+
 
 			if mngr != None and mngr.cmd!=None and len(mngr.cmd)>0:
 				self.unpacker[m]=mngr
