@@ -590,6 +590,7 @@ class _sql_backend(_base_storage):
 			pass
 
 		if r==None:
+			self.close()
 			raise KeyError(user)
 
 		self.debug("sqlbackend %s usermap %s=>%s"%(self._backend,user,r[0]))
@@ -607,6 +608,7 @@ class _sql_backend(_base_storage):
 		self.connect()
 
 		if self._cursor== None:
+			self.close()
 			raise KeyError("Database backend not available")
 
 		try:
@@ -635,6 +637,7 @@ class _sql_backend(_base_storage):
 		self.connect()
 
 		if self._cursor== None:
+			self.close()
 			raise KeyError("Database backend not available")
 
 		result=True
@@ -685,6 +688,7 @@ class _sql_backend(_base_storage):
 			pass
 
 		if r==None:
+			self.close()
 			raise KeyError(user)
 
 		self.debug("sqlbackend %s encryptionmap %s=>%s"%(self._backend,
