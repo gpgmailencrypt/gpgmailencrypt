@@ -211,14 +211,16 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 		pw=self.parent.adm_get_pwhash(user)
 
 		if pw==_deprecated_get_hash(password):
-			self.parent.debug("_gpgmailencryptserver: User '%s' "
-			"with deprecated password hash algorithm authenticated"%user)
+
+			self.parent.debug("mailencryptserver: User '%s' with deprecated password hash algorithm authenticated"%user)
 			self.parent.adm_set_user(user,password)
 			pw=self.parent.adm_get_pwhash(user)
 
 		if pw_verify(password,pw):
+			self.parent.debug("mailencryptserver: User '%s' password verifed"%user)
 			return True
 
+		self.parent.debug("mailencryptserver: User '%s' password wrong"%user)
 		return False
 
 
@@ -855,10 +857,6 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		r=self.parent.adm_set_user(res[0],res[1])
 
 		if r:
-
-			if self.write_smtpdpasswordfile:
-				self.write_smtpdpasswordfile()
-
 			self.push("250 OK")
 		else:
 			self.push("454 User could not be set")
@@ -901,10 +899,6 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 
 	def smtp_ADMIN(self,arg):
 		self.adminmode=True
-
-		if self.read_smtpdpasswordfile:
-			self.read_smtpdpasswordfile(self.parent._SMTPD_PASSWORDFILE)
-
 		self.push("250 OK")
 		return
 

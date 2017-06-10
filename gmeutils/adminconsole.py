@@ -106,7 +106,7 @@ def start_adminconsole(host,port):
 				try:
 
 					try:
-						i=input("> ").upper()
+						i=input("> ")
 					except (KeyboardInterrupt,EOFError):
 						i="QUIT"
 

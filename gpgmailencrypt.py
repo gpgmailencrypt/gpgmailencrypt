@@ -4730,7 +4730,6 @@ def main():
 
 	with gme() as g:
 		recipient=g._parse_commandline()
-		print("nach parse")
 		g._set_logmode()
 
 		if g._RUNMODE==g.m_daemon:
