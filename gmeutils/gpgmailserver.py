@@ -216,8 +216,9 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 			self.parent.adm_set_user(user,password)
 			pw=self.parent.adm_get_pwhash(user)
 
-		if pw_verify(password,pw):
-			self.parent.debug("mailencryptserver: User '%s' password verifed"%user)
+		if pw_verify(password,pw,parent=self.parent):
+			self.parent.debug("mailencryptserver: User '%s' password verifed"
+								%user)
 			return True
 
 		self.parent.debug("mailencryptserver: User '%s' password wrong"%user)
@@ -370,7 +371,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 					self._SMTPChannel__line=[]
 					return
 
-			if not command in SIMPLECOMMANDS+["AUTH"]:
+			if not command in (SIMPLECOMMANDS+["AUTH"]):
 				self.push("530 Authentication required.")
 				self._SMTPChannel__line=[]
 				return

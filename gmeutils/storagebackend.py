@@ -125,6 +125,7 @@ class _base_storage(_gmechild):
 
 	@_dbg
 	def adm_set_user(self,user,password):
+		self.log("_base_storage adm_set_user not implemented")
 		raise NotImplementedError
 
 	#############
@@ -134,6 +135,7 @@ class _base_storage(_gmechild):
 	@_dbg
 	def adm_del_user(self,user):
 		"deletes a user"
+		self.log("_base_storage adm_del_user not implemented")
 		raise NotImplementedError
 
 	###############
@@ -142,6 +144,7 @@ class _base_storage(_gmechild):
 
 	@_dbg
 	def adm_get_pwhash(self,user):
+		self.log("_base_storage adm_get_pwhash not implemented")
 		raise NotImplementedError
 
 	###################
@@ -150,6 +153,7 @@ class _base_storage(_gmechild):
 
 	@_dbg
 	def adm_init_passwords( self):
+		self.log("_base_storage adm_init_passwords not implemented")
 		raise NotImplementedError
 
 
@@ -436,6 +440,7 @@ class _TEXT_BACKEND(_base_storage):
 	@_dbg
 	def adm_init_passwords(self):
 
+		self.log("text_backend adm_init_passwords %s"%self._admpw_loaded)
 		if self._admpw_loaded:
 			return
 
@@ -447,6 +452,7 @@ class _TEXT_BACKEND(_base_storage):
 			self.log("_gpgmailencryptserver: Config file could not be read","e")
 			self.log_traceback()
 			exit(5)
+		self.log("text_backend adm_init_passwords read '%s'"%f.name)
 
 		txt=f.read()
 		f.close()
@@ -457,7 +463,9 @@ class _TEXT_BACKEND(_base_storage):
 			try:
 				name,passwd=l.split("=",1)
 				self._smtpd_passwords[name.strip()]=passwd.strip()
+				self.log("password loaded for '%s'"%name)
 			except:
+				self.log("Error loading passwords '%s'"%l,"e")
 				pass
 
 		self._admpw_loaded=True
@@ -469,6 +477,7 @@ class _TEXT_BACKEND(_base_storage):
 	@_dbg
 	def _write_smtpdpasswordfile(self):
 		"writes the users to the password file"
+		self.debug("text_backend _write_smtpdpasswordfile")
 
 		try:
 			pwfile=os.path.expanduser(self._SMTPD_PASSWORDFILE)
@@ -505,6 +514,7 @@ class _TEXT_BACKEND(_base_storage):
 	def adm_set_user(self,user,password):
 		"adds a user, if the user already exists it changes the password"
 
+		self.debug("text_backend adm_set_user")
 		self.adm_init_passwords()
 
 		try:
@@ -525,6 +535,7 @@ class _TEXT_BACKEND(_base_storage):
 	def adm_del_user(self,user):
 		"deletes a user"
 
+		self.debug("text_backend adm_del_user")
 		self.adm_init_passwords()
 
 		try:
@@ -543,6 +554,7 @@ class _TEXT_BACKEND(_base_storage):
 	@_dbg
 	def adm_get_pwhash(self,user):
 
+		self.debug("text_backend adm_get_pwhash")
 		self.adm_init_passwords()
 
 		pwhash=None
@@ -560,6 +572,7 @@ class _TEXT_BACKEND(_base_storage):
 	@_dbg
 	def adm_get_users(self):
 		"returns a list of all users and whether or not the user is a admin"
+		self.debug("text_backend adm_get_users")
 		self.adm_init_passwords()
 
 		users=[]
@@ -1263,12 +1276,22 @@ class _sql_backend(_base_storage):
 		self.debug(sql)
 		self.execute_action(sql)
 
+	###################
+	#adm_init_passwords
+	###################
+
+	@_dbg
+	def adm_init_passwords(self):
+		self.debug("sql_backend adm_init_passwords")
+		return self._textbackend.adm_init_passwords()
+
 	#############
 	#adm_set_user
 	#############
 
 	@_dbg
 	def adm_set_user(self,user,password):
+		self.debug("sql_backend adm_set_user")
 		return self._textbackend.adm_set_user(user,password)
 
 
@@ -1278,6 +1301,7 @@ class _sql_backend(_base_storage):
 
 	@_dbg
 	def adm_get_pwhash(self,user):
+		self.debug("sql_backend adm_get_pwhash")
 		return self._textbackend.adm_get_pwhash(user)
 
 
@@ -1287,6 +1311,7 @@ class _sql_backend(_base_storage):
 
 	@_dbg
 	def adm_get_users(self):
+		self.debug("sql_backend adm_get_users")
 		return self._textbackend.adm_get_users()
 
 #################
