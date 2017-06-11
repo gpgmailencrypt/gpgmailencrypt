@@ -4594,6 +4594,22 @@ class gme:
 		else:
 			self.debug("Program exits without errors")
 
+	################
+	#_sigthuphandler
+	################
+
+	def _sighuphandler(self,signum, frame):
+		self.init()
+		self._parse_commandline()
+
+	################
+	#_sigtermhandler
+	################
+
+	def _sigtermhandler(self,signum, frame):
+		self.log("Got SIGTERM signal,shutting down server.")
+		raise SystemExit
+
 	###########
 	#daemonmode
 	###########
@@ -4637,7 +4653,8 @@ class gme:
 		except:
 			self._count_alarms=0
 
-		signal.signal(signal.SIGTERM, _sigtermhandler)
+		signal.signal(signal.SIGTERM, self._sigtermhandler)
+		signal.signal(signal.SIGHUP, self._sighuphandler)
 		self.load_deferred_list()
 		self.load_virus_list()
 		_deferredlisthandler()
@@ -4665,6 +4682,7 @@ class gme:
 		try:
 			server.start()
 		except SystemExit as m:
+			alarm.stop()
 			exit(0)
 
 		except (KeyboardInterrupt,EOFError):
@@ -4713,12 +4731,6 @@ class gme:
 		"returns the password hash from the user"
 		return self._backend.adm_get_pwhash(user)
 
-################
-#_sigtermhandler
-################
-
-def _sigtermhandler(signum, frame):
-	exit(0)
 
 #####
 #main
