@@ -24,4 +24,4 @@ It can be used normally as a script doing everything on command line, in daemon 
 It takes e-mails and  returns the e-mail encrypted to another e-mail server if a encryption key exists for the receiver. Otherwise it returns the e-mail unencrypted.
 The encryption method can be selected per user.
 
-See gpgmailencrypt documentation.pdf for more info.
+See gpgmailencrypt documentation.pdf for more info.(https://github.com/gpgmailencrypt/gpgmailencrypt/blob/master/documentation/gpgmailencrypt%20documentation.pdf)
