@@ -255,6 +255,7 @@ class _TEXT_BACKEND(_base_storage):
 	@_dbg
 	def close(self):
 		self.log("close storagebackend")
+
 		if self._admpw_loaded:
 			self._write_smtpdpasswordfile()
 
@@ -440,7 +441,7 @@ class _TEXT_BACKEND(_base_storage):
 	@_dbg
 	def adm_init_passwords(self):
 
-		self.log("text_backend adm_init_passwords %s"%self._admpw_loaded)
+		self.debug("text_backend adm_init_passwords %s"%self._admpw_loaded)
 		if self._admpw_loaded:
 			return
 
@@ -452,8 +453,8 @@ class _TEXT_BACKEND(_base_storage):
 			self.log("_gpgmailencryptserver: Config file could not be read","e")
 			self.log_traceback()
 			exit(5)
-		self.log("text_backend adm_init_passwords read '%s'"%f.name)
 
+		self.log("text_backend adm_init_passwords read '%s'"%f.name)
 		txt=f.read()
 		f.close()
 		self._smtpd_passwords=dict()
@@ -556,8 +557,8 @@ class _TEXT_BACKEND(_base_storage):
 
 		self.debug("text_backend adm_get_pwhash")
 		self.adm_init_passwords()
-
 		pwhash=None
+
 		try:
 			pwhash=self._smtpd_passwords[user]
 		except:
@@ -794,6 +795,7 @@ class _sql_backend(_base_storage):
 	@_dbg
 	def close(self):
 		self.log("close sqlbackend")
+		self.con_end()
 		self._textbackend.close()
 
 
