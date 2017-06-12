@@ -798,7 +798,6 @@ class _sql_backend(_base_storage):
 		self.con_end()
 		self._textbackend.close()
 
-
 	########
 	#usermap
 	########
