@@ -254,7 +254,7 @@ class _TEXT_BACKEND(_base_storage):
 
 	@_dbg
 	def close(self):
-		self.log("close storagebackend")
+		self.debug("close storagebackend")
 
 		if self._admpw_loaded:
 			self._write_smtpdpasswordfile()
@@ -794,7 +794,7 @@ class _sql_backend(_base_storage):
 
 	@_dbg
 	def close(self):
-		self.log("close sqlbackend")
+		self.debug("close sqlbackend")
 		self.con_end()
 		self._textbackend.close()
 
