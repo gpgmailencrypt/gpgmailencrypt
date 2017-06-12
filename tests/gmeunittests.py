@@ -7,6 +7,7 @@ import gmeutils.archivemanagers
 import gmeutils.virusscanners
 import gmeutils.spamscanners
 import gmeutils.gpgmailserver
+import os
 import os.path
 import shutil
 from   gmeutils.dkim	import mydkim
@@ -831,6 +832,11 @@ class adm_verificationtests(unittest.TestCase):
 	def tearDown(self):
 		del self.gmeserver
 		self.gme.close()
+
+		try:
+			os.remove("./gpgmailencrypt.pw")
+		except:
+			pass
 
 	def test_adm_verify_password(self):
 		user="test"
