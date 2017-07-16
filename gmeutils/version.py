@@ -1,7 +1,7 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 VERSION="3.2.2dev"
-DATE="11.06.2017"
+DATE="16.07.2017"
 COPYRIGHTYEAR="2017"
 unicodeerror="replace"
 #passwords user better hashing algorithms via passlib

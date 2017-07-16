@@ -203,7 +203,9 @@ class _SMIME(_gmechild):
 	@_dbg
 	def _command_encrypt_fromfile(  self,
 									sourcefile,
-									binary):
+									binary,
+									additionalrecipients=None
+									):
 		try:
 			_recipient=self.parent._backend.smimeuser(self._recipient)
 		except:
@@ -226,6 +228,12 @@ class _SMIME(_gmechild):
 				"-in",self._filename,
 				"-out", sourcefile,
 				_recipient[0] ]
+		
+		if additionalrecipients!=None:
+
+			for r in additionalrecipients:
+				cmd.append(r)
+
 		return cmd
 
 	#############

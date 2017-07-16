@@ -4693,6 +4693,26 @@ class gme:
 
 		alarm.stop()
 
+	#############################
+	#gpg_additionalencryptionkeys
+	#############################
+
+	@_dbg
+	def gpg_additionalencryptionkeys(self,user):
+		"returns a list of all additional gpg encryption keys, "
+		"with which an email should be encrypted"
+		return self._backend.gpg_additionalencryptionkeys(user)
+
+	###############################
+	#smime_additionalencryptionkeys
+	###############################
+
+	@_dbg
+	def smime_additionalencryptionkeys(self,user):
+		"returns a list of all additional smime encryption keys, "
+		"with which an email should be encrypted"
+		return self._backend.smime_additionalencryptionkeys(user)
+
 	##############
 	#adm_get_users
 	##############

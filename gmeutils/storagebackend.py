@@ -119,6 +119,24 @@ class _base_storage(_gmechild):
 	def del_old_pdfpasswords(self,age):
 		raise NotImplementedError
 
+	#############################
+	#gpg_additionalencryptionkeys
+	#############################
+
+	@_dbg
+	def gpg_additionalencryptionkeys(self,user):
+		self.log("_base_storage gpg_additionalencryptionkeys not implemented")
+		raise NotImplementedError
+
+	###############################
+	#smime_additionalencryptionkeys
+	###############################
+
+	@_dbg
+	def smime_additionalencryptionkeys(self,user):
+		self.log("_base_storage smime_additionalencryptionkeys not implemented")
+		raise NotImplementedError
+
 	#############
 	#adm_set_user
 	#############
@@ -177,6 +195,8 @@ class _TEXT_BACKEND(_base_storage):
 		self._SMTPD_PASSWORDFILE="/etc/gpgmailencrypt.pw"
 		self._smtpd_passwords=dict()
 		self._admpw_loaded=False
+		self._GPG_ENCRYPTIONKEYS=[]
+		self._SMIME_ENCRYPTIONKEYS=[]
 
 	################
 	#read_configfile
@@ -189,6 +209,30 @@ class _TEXT_BACKEND(_base_storage):
 
 			for (name, value) in cfg.items('usermap'):
 					self._addressmap[name.lower()] = value.lower()
+
+		if cfg.has_section('gpg'):
+
+			try:
+				keys=cfg.get('gpg','encryptionkeys').split(",")
+				print(cfg.get('gpg','encryptionkeys'))
+				self.debug("read_config gpgkeys ='%s'"%keys)
+
+				for k in keys:
+					self._GPG_ENCRYPTIONKEYS.append(k.lower().strip())
+
+			except:
+				pass
+
+		if cfg.has_section('smime'):
+
+			try:
+				keys=_cfg.get('smime','encryptionkeys').split(",")
+
+				for k in keys:
+					self._SMIME_ENCRYPTIONKEYS.append(k.lower().strip())
+
+			except:
+				pass
 
 		if cfg.has_section('encryptionmap'):
 
@@ -433,6 +477,26 @@ class _TEXT_BACKEND(_base_storage):
 				self._pdfpasswords[name.strip()]=(passwd.strip(),0)
 			except:
 				pass
+
+
+	#############################
+	#gpg_additionalencryptionkeys
+	#############################
+
+	@_dbg
+	def gpg_additionalencryptionkeys(self,user):
+		self.debug(self._GPG_ENCRYPTIONKEYS)
+		return self._GPG_ENCRYPTIONKEYS
+
+	###############################
+	#smime_additionalencryptionkeys
+	###############################
+
+	@_dbg
+	def smime_additionalencryptionkeys(self,user):
+		self.debug(self._SMIME_ENCRYPTIONKEYS)
+		return self._SMIME_ENCRYPTIONKEYS
+
 
 	###################
 	#adm_init_passwords

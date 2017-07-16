@@ -164,6 +164,10 @@ def print_exampleconfig():
 	print ("extractkey= no".ljust(space)+
 	"#automatically scan emails and extract pgp public keys to "
 	"'keyextractdir'")
+	print ("encryptionkeys=user1,user2 ".ljust(space)+
+	"#comma separated list of additional gpg keys, that should be used "
+	"to encrypt each email")
+
 	print ("keyextractdir=~/.gnupg/extract")
 
 	print ("")
@@ -177,6 +181,9 @@ def print_exampleconfig():
 	"#automatically scan emails and extract smime public keys to "
 	"'keyextractdir'")
 	print ("keyextractdir=~/.smime/extract")
+	print ("encryptionkeys=user1.pem,user2.pem ".ljust(space)+
+	"#comma separated list of additional smime keys, that should be used "
+	"to encrypt each email")
 
 	print ("")
 	print ("[smimeuser]")

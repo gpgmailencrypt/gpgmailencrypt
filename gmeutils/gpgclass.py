@@ -361,7 +361,11 @@ class _GPG(_gmechild):
 		self.debug("_GPG.encrypt_file _new_tempfile %s"%f.name)
 		f.close()
 		_result = subprocess.call(
-					' '.join(self._encryptcommand_fromfile(f.name,binary)),
+					' '.join(self._encryptcommand_fromfile(	
+							f.name,
+							binary,
+							self.parent.gpg_additionalencryptionkeys(recipient)
+								)),
 					shell=True )
 		self.debug("Encryption command: '%s'" %
 					' '.join(self._encryptcommand_fromfile(f.name,binary)))
@@ -393,7 +397,9 @@ class _GPG(_gmechild):
 	@_dbg
 	def _encryptcommand_fromfile(   self,
 									sourcefile,
-									binary):
+									binary,
+									additionalrecipients=None
+									):
 
 		if self._recipient in self._localGPGkeys:
 			keyhome=self._local_gpg_dir
@@ -414,10 +420,16 @@ class _GPG(_gmechild):
 		if self.parent._ALLOWGPGCOMMENT==True:
 			cmd.insert(1,"'%s'"%self.parent._encryptgpgcomment)
 			cmd.insert(1,"--comment")
+		
+		if additionalrecipients!=None:
+
+			for r in additionalrecipients:
+				cmd.insert(1,"'%s'"%r)
+				cmd.insert(1,"-r")
 
 		if not binary:
 			cmd.insert(1,"-a")
-
+		print("encryption cmd",cmd,additionalrecipients)
 		return cmd
 
 	#############
