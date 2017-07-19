@@ -340,7 +340,14 @@ def print_exampleconfig():
 	print ("sqlpdf_starttimefield=starttime".ljust(space)+
 	"#fieldname that contains the password creation time (needed for automatic"
 	" password deletion)")
-
+	print ("use_sqlgpgencryptionkeys=False".ljust(space)+
+	"#if True each mail will be encrypted not only for the receiver, but also"
+	"for additional keys delivered by 'gpgencryptionkeysql'")
+	print ("gpgencryptionkeysql=SELECT encryptionkey"
+									" FROM gpgencryptionkeys WHERE user= ?")
+	print("".ljust(space)+
+	"#SQL command that returns a list of keys "
+	"with which emails will be additionally encrypted")
 	print ("")
 	print ("[logging]")
 	print ("log=none".ljust(space)+

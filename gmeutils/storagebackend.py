@@ -222,7 +222,7 @@ class _TEXT_BACKEND(_base_storage):
 
 			except:
 				pass
-
+			
 		if cfg.has_section('smime'):
 
 			try:
@@ -478,7 +478,6 @@ class _TEXT_BACKEND(_base_storage):
 			except:
 				pass
 
-
 	#############################
 	#gpg_additionalencryptionkeys
 	#############################
@@ -672,6 +671,10 @@ class _sql_backend(_base_storage):
 		self._PDFPASSWORDUSERFIELD="user"
 		self._PDFPASSWORDPASSWORDFIELD="password"
 		self._PDFPASSWORDSTARTTIMEFIELD="starttime"
+		self._GPGENCRYPTIONKEYSSQL=	("SELECT encryptionkey"
+									" FROM gpgencryptionkeys WHERE user= ?")
+		self._SMIMEENCRYPTIONKEYSSQL=	("SELECT encryptionkey"
+									" FROM smimeencryptionkeys WHERE user= ?")
 		self._USER="gpgmailencrypt"
 		self._PASSWORD=""
 		self._HOST="127.0.0.1"
@@ -680,6 +683,8 @@ class _sql_backend(_base_storage):
 		self._USE_SQLENCRYPTIONMAP=False
 		self._USE_SQLSMIME=False
 		self._USE_SQLPDFPASSWORDS=False
+		self._USE_SQLGPGADDITIONALENCRYPTIONKEYS=False
+		self._USE_SQLSMIMEADDITIONALENCRYPTIONKEYS=False
 		self._db=None
 		self._cursor=None
 		self.placeholder="?"
@@ -712,6 +717,18 @@ class _sql_backend(_base_storage):
 									"\"cipher\" varchar (255));")
 		self._tabledefinition["smimeusersindex"]=("create unique index sindex"
 					" on smimeuser (\"user\");")
+		self._tabledefinition["gpgencryptionkeys"]=("create table "
+									"\"gpgencryptionkeys\" ("
+									"\"user\" varchar (255) not null, "
+									"\"encryptionkey\" varchar (255) not null);")
+		self._tabledefinition["gpgencryptionkeysindex"]=(
+				"create unique index gindex on gpgencryptionkeys (\"user\");")
+		self._tabledefinition["smimeencryptionkeys"]=("create table "
+									"\"smimeencryptionkeys\" ("
+									"\"user\" varchar (255) not null, "
+									"\"encryptionkey\" varchar (255) not null);")
+		self._tabledefinition["smimeencryptionkeysindex"]=(
+				"create unique index smindex on smimeencryptionkeys (\"user\");")
 
 	########
 	#con_end
@@ -816,6 +833,28 @@ class _sql_backend(_base_storage):
 			try:
 				self._USE_SQLSMIME=cfg.getboolean('sql',
 														'use_sqlsmime')
+			except:
+				pass
+
+			try:
+				self._USE_SQLGPGADDITIONALENCRYPTIONKEYS=cfg.getboolean('sql','use_sqlgpgencryptionkeys')
+
+			except:
+				pass
+
+			try:
+				self._GPGENCRYPTIONKEYSSQL=cfg.get('sql','smimeencryptionkeysql')
+			except:
+				pass
+
+			try:
+				self._USE_SQLSMIMEADDITIONALENCRYPTIONKEYS=cfg.getboolean('sql','use_sqlsmimeencryptionkeys')
+
+			except:
+				pass
+
+			try:
+				self._SMIMEENCRYPTIONKEYSSQL=cfg.get('sql','gpgencryptionkeysql')
 			except:
 				pass
 
@@ -1045,6 +1084,9 @@ class _sql_backend(_base_storage):
 					raise Exception
 				if not self.create_table("pdf",logerror=logerror):
 					raise Exception
+				if not self.create_table("gpgencryptionkeys",logerror=logerror):
+					raise Exception
+
 			except:
 				return False
 
@@ -1084,6 +1126,19 @@ class _sql_backend(_base_storage):
 				return self.create_single_table("pdfpasswordsindex",
 												logerror=logerror)
 
+		if table=="gpgencryptionkeys":
+			r=self.create_single_table("gpgencryptionkeys",logerror=logerror)
+
+			if r==True:
+				return self.create_single_table("gpgencryptionkeysindex",
+												logerror=logerror)
+
+		if table=="smimeencryptionkeys":
+			r=self.create_single_table("smimeencryptionkeys",logerror=logerror)
+
+			if r==True:
+				return self.create_single_table("smimeencryptionkeysindex",
+												logerror=logerror)
 		return False
 
 	##################
@@ -1096,6 +1151,8 @@ class _sql_backend(_base_storage):
 		self.create_table("encryptionmap",logerror=logerror)
 		self.create_table("smime",logerror=logerror)
 		self.create_table("pdf",logerror=logerror)
+		self.create_table("gpgencryptionkeys",logerror=logerror)
+		self.create_table("smimeencryptionkeys",logerror=logerror)
 
 	##########
 	#smimeuser
@@ -1359,7 +1416,6 @@ class _sql_backend(_base_storage):
 		self.debug("sql_backend adm_set_user")
 		return self._textbackend.adm_set_user(user,password)
 
-
 	###############
 	#adm_get_pwhash
 	###############
@@ -1369,7 +1425,6 @@ class _sql_backend(_base_storage):
 		self.debug("sql_backend adm_get_pwhash")
 		return self._textbackend.adm_get_pwhash(user)
 
-
 	##############
 	#adm_get_users
 	##############
@@ -1378,6 +1433,53 @@ class _sql_backend(_base_storage):
 	def adm_get_users(self):
 		self.debug("sql_backend adm_get_users")
 		return self._textbackend.adm_get_users()
+
+	#############################
+	#gpg_additionalencryptionkeys
+	#############################
+
+	@_dbg
+	def gpg_additionalencryptionkeys(self,user):
+
+		if not self._USE_SQLGPGADDITIONALENCRYPTIONKEYS:
+			return self._textbackend.gpg_additionalencryptionkeys(user)
+
+		rows=list()
+
+		if not	self.execute(self._GPGENCRYPTIONKEYSSQL,user):
+			return rows
+
+		for r in self._cursor:
+			rows.append(r[0].lower().strip())
+
+		self.con_end()
+		rows=sorted(list(set(rows+
+					self._textbackend.gpg_additionalencryptionkeys(user))))
+		return rows
+
+	
+	###############################
+	#smime_additionalencryptionkeys
+	###############################
+
+	@_dbg
+	def smime_additionalencryptionkeys(self,user):
+
+		if not self._USE_SQLSMIMEADDITIONALENCRYPTIONKEYS:
+			return self._textbackend.smime_additionalencryptionkeys(user)
+
+		rows=list()
+
+		if not	self.execute(self._SMIMEENCRYPTIONKEYSSQL,user):
+			return rows
+
+		for r in self._cursor:
+			rows.append(r[0].lower().strip())
+
+		self.con_end()
+		rows=sorted(list(set(rows+
+					self._textbackend.smime_additionalencryptionkeys(user))))
+		return rows
 
 #################
 #_SQLITE3_BACKEND

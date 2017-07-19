@@ -368,7 +368,10 @@ class _GPG(_gmechild):
 								)),
 					shell=True )
 		self.debug("Encryption command: '%s'" %
-					' '.join(self._encryptcommand_fromfile(f.name,binary)))
+					' '.join(self._encryptcommand_fromfile(f.name,
+							binary,
+							self.parent.gpg_additionalencryptionkeys(recipient)
+							)))
 
 		if _result != 0:
 			self.log("Error executing command (Error code %d)"%_result,
@@ -429,7 +432,7 @@ class _GPG(_gmechild):
 
 		if not binary:
 			cmd.insert(1,"-a")
-		print("encryption cmd",cmd,additionalrecipients)
+
 		return cmd
 
 	#############
