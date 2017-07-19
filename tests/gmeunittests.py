@@ -1023,6 +1023,13 @@ class gpgtests(unittest.TestCase):
 
 		self.assertTrue(success)
 
+	def test_additionalencryptionkeys(self):
+		user="testaddress@gpgmailencry.pt"
+		self.gme.set_configfile("./gmetest2.conf")
+		self.assertEqual(self.gme.gpg_additionalencryptionkeys(""),[user])
+		
+		pass
+		
 ###########
 #SMIMETESTS
 ###########
