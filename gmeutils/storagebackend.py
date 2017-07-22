@@ -460,7 +460,9 @@ class _TEXT_BACKEND(_base_storage):
 	def _read_pdfpasswordfile( self,pwfile):
 
 		try:
-			f=open(os.path.expanduser(pwfile),encoding="UTF-8",errors=unicodeerror)
+			f=open(	os.path.expanduser(pwfile),
+					encoding="UTF-8",
+					errors=unicodeerror)
 		except:
 			self.log("read_pdfpasswordfile: passwords could not be read","e")
 			self.log_traceback()
@@ -711,24 +713,24 @@ class _sql_backend(_base_storage):
 		self._tabledefinition["pdfpasswordsindex"]=("create unique index pindex"
 					" on pdfpasswords (\"user\");")
 		self._tabledefinition["smimeusers"]=("create table \"smimeuser\"("
-									"\"user\" varchar (255) not null, "
-									"\"privatekey\" varchar (255), "
-									"\"publickey\" varchar(255) not null, "
-									"\"cipher\" varchar (255));")
+								"\"user\" varchar (255) not null, "
+								"\"privatekey\" varchar (255), "
+								"\"publickey\" varchar(255) not null, "
+								"\"cipher\" varchar (255));")
 		self._tabledefinition["smimeusersindex"]=("create unique index sindex"
 					" on smimeuser (\"user\");")
 		self._tabledefinition["gpgencryptionkeys"]=("create table "
-									"\"gpgencryptionkeys\" ("
-									"\"user\" varchar (255) not null, "
-									"\"encryptionkey\" varchar (255) not null);")
+								"\"gpgencryptionkeys\" ("
+								"\"user\" varchar (255) not null, "
+								"\"encryptionkey\" varchar (255) not null);")
 		self._tabledefinition["gpgencryptionkeysindex"]=(
 				"create unique index gindex on gpgencryptionkeys (\"user\");")
 		self._tabledefinition["smimeencryptionkeys"]=("create table "
-									"\"smimeencryptionkeys\" ("
-									"\"user\" varchar (255) not null, "
-									"\"encryptionkey\" varchar (255) not null);")
+								"\"smimeencryptionkeys\" ("
+								"\"user\" varchar (255) not null, "
+								"\"encryptionkey\" varchar (255) not null);")
 		self._tabledefinition["smimeencryptionkeysindex"]=(
-				"create unique index smindex on smimeencryptionkeys (\"user\");")
+			"create unique index smindex on smimeencryptionkeys (\"user\");")
 
 	########
 	#con_end
@@ -831,30 +833,33 @@ class _sql_backend(_base_storage):
 				pass
 
 			try:
-				self._USE_SQLSMIME=cfg.getboolean('sql',
-														'use_sqlsmime')
+				self._USE_SQLSMIME=cfg.getboolean('sql','use_sqlsmime')
 			except:
 				pass
 
 			try:
-				self._USE_SQLGPGADDITIONALENCRYPTIONKEYS=cfg.getboolean('sql','use_sqlgpgencryptionkeys')
-
-			except:
-				pass
-
-			try:
-				self._GPGENCRYPTIONKEYSSQL=cfg.get('sql','smimeencryptionkeysql')
-			except:
-				pass
-
-			try:
-				self._USE_SQLSMIMEADDITIONALENCRYPTIONKEYS=cfg.getboolean('sql','use_sqlsmimeencryptionkeys')
+				self._USE_SQLGPGADDITIONALENCRYPTIONKEYS=cfg.getboolean('sql',
+												'use_sqlgpgencryptionkeys')
 
 			except:
 				pass
 
 			try:
-				self._SMIMEENCRYPTIONKEYSSQL=cfg.get('sql','gpgencryptionkeysql')
+				self._GPGENCRYPTIONKEYSSQL=cfg.get('sql',
+												'gpgencryptionkeysql')
+			except:
+				pass
+
+			try:
+				self._USE_SQLSMIMEADDITIONALENCRYPTIONKEYS=cfg.getboolean('sql',
+												'use_sqlsmimeencryptionkeys')
+
+			except:
+				pass
+
+			try:
+				self._SMIMEENCRYPTIONKEYSSQL=cfg.get('sql',
+												'smimeencryptionkeysql')
 			except:
 				pass
 
@@ -1295,8 +1300,8 @@ class _sql_backend(_base_storage):
 			"password":password
 		})
 
-		updatesql=(	"UPDATE %(fbdlm)s%(table)s%(fedlm)s"
-		" SET %(fbdlm)s%(passwordfield)s%(fedlm)s = %(tdlm)s%(password)s%(tdlm)s"
+		updatesql=(	"UPDATE %(fbdlm)s%(table)s%(fedlm)s "
+		"SET %(fbdlm)s%(passwordfield)s%(fedlm)s = %(tdlm)s%(password)s%(tdlm)s"
 		" WHERE %(fbdlm)s%(userfield)s%(fedlm)s = %(tdlm)s%(user)s%(tdlm)s"
 		%{	"passwordfield":self._PDFPASSWORDPASSWORDFIELD,
 			"table":self._PDFPASSWORDTABLE,
@@ -1322,8 +1327,8 @@ class _sql_backend(_base_storage):
 			return self._textbackend.get_pdfpassword(user)
 
 		sql=("SELECT %(fbdlm)s%(password)s%(fedlm)s "
-				"FROM %(fbdlm)s%(table)s%(fedlm)s "
-				"WHERE %(fbdlm)s%(userfield)s%(fedlm)s =%(tdlm)s%(user)s%(tdlm)s"
+			"FROM %(fbdlm)s%(table)s%(fedlm)s "
+			"WHERE %(fbdlm)s%(userfield)s%(fedlm)s =%(tdlm)s%(user)s%(tdlm)s"
 		%{	"password":self._PDFPASSWORDPASSWORDFIELD,
 			"table":self._PDFPASSWORDTABLE,
 			"userfield":self._PDFPASSWORDUSERFIELD,
