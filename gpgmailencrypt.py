@@ -4192,6 +4192,17 @@ class gme:
 							from_addr,
 							to_addr)
 
+	#############################
+	#_send_already_encrypted_mail
+	#############################
+
+	@_dbg
+	def _send_already_encrypted_mail(self,queue_id,mailtext,from_addr,to_addr):
+			m="Email already encrypted"
+			self.debug(m)
+			self._count_alreadyencryptedmails+=1
+			self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
+
 	#####################
 	#_encrypt_single_mail
 	#####################
@@ -4216,10 +4227,10 @@ class gme:
 		to_addr=to_addr.lower()
 
 		if self.is_encrypted(mailtext):
-			m="Email already encrypted"
-			self.debug(m)
-			self._count_alreadyencryptedmails+=1
-			self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
+			self._send_already_encrypted_mail(	queue_id,
+												mailtext,
+												from_addr,
+												to_addr)
 			return
 
 		if has_virus:
