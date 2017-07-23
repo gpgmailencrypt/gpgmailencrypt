@@ -346,8 +346,19 @@ def print_exampleconfig():
 	print ("gpgencryptionkeysql=SELECT encryptionkey"
 									" FROM gpgencryptionkeys WHERE user= ?")
 	print("".ljust(space)+
-	"#SQL command that returns a list of keys "
+	"#SQL command that returns a list of gpg keys "
 	"with which emails will be additionally encrypted")
+
+	print ("use_sqlsmimeencryptionkeys=False".ljust(space)+
+	"#if True each mail will be encrypted not only for the receiver, but also"
+	"for additional keys delivered by 'smimeencryptionkeysql'")
+	print ("smimeencryptionkeysql=SELECT encryptionkey"
+									" FROM smimeencryptionkeys WHERE user= ?")
+	print("".ljust(space)+
+	"#SQL command that returns a list of smime keys "
+	"with which emails will be additionally encrypted")
+
+
 	print ("")
 	print ("[logging]")
 	print ("log=none".ljust(space)+
