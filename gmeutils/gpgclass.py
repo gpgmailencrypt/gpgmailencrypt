@@ -205,6 +205,10 @@ class _GPG(_gmechild):
 	def _get_public_keys_from( self, from_user=None ):
 		self.debug("_GPG._get_public_keys")
 
+		if from_user!=None and not (maildomain(from_user) in 
+									self.parent._HOMEDOMAINS):
+			return
+			
 		if from_user==None:
 			self.parent._GPGkeys = list()
 			keys=self.parent._GPGkeys

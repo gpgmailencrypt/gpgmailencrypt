@@ -632,6 +632,10 @@ def get_certfingerprint(cert,parent=None):
 ###########
 
 def maildomain(mailaddress):
+
+	if mailaddress == None:
+		return ""
+		
 	addr= email.utils.parseaddr(mailaddress)[1].split('@')
 	domain=""
 
