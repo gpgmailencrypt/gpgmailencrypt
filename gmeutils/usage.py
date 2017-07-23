@@ -292,7 +292,7 @@ def print_exampleconfig():
 	"#sql server")
 	print ("port=3306".ljust(space)+
 	"#sql server port")
-	print ("usermapsql=select gpguser from gpgusermap where "
+	print ("usermapsql=SELECT gpguser FROM gpgusermap WHERE "
 			"user=? ".ljust(space)+
 	"#SQL command that returns one row with the alternatve e-mail address")
 	print ("encryptionmapsql=SELECT encrypt FROM encryptionmap WHERE user= ?")
@@ -341,8 +341,9 @@ def print_exampleconfig():
 	"#fieldname that contains the password creation time (needed for automatic"
 	" password deletion)")
 	print ("use_sqlgpgencryptionkeys=False".ljust(space)+
-	"#if True each mail will be encrypted not only for the receiver, but also"
-	"for additional keys delivered by 'gpgencryptionkeysql'")
+	"#if True each mail will be encrypted not only for the receiver, but also")
+	print ("".ljust(space)+	
+			"#for additional keys delivered by 'gpgencryptionkeysql'")
 	print ("gpgencryptionkeysql=SELECT encryptionkey"
 									" FROM gpgencryptionkeys WHERE user= ?")
 	print("".ljust(space)+
@@ -350,8 +351,9 @@ def print_exampleconfig():
 	"with which emails will be additionally encrypted")
 
 	print ("use_sqlsmimeencryptionkeys=False".ljust(space)+
-	"#if True each mail will be encrypted not only for the receiver, but also"
-	"for additional keys delivered by 'smimeencryptionkeysql'")
+	"#if True each mail will be encrypted not only for the receiver, but also")
+	print ("".ljust(space)+
+	"#for additional keys delivered by 'smimeencryptionkeysql'")
 	print ("smimeencryptionkeysql=SELECT encryptionkey"
 									" FROM smimeencryptionkeys WHERE user= ?")
 	print("".ljust(space)+
