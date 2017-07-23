@@ -126,6 +126,8 @@ class _GPG(_gmechild):
 			if self._local_from_user!= user:
 				self._get_public_keys_from(from_user=user)
 
+		self._local_from_user=user
+
 	#########
 	#fromuser
 	#########
