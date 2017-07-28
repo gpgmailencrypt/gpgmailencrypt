@@ -2752,7 +2752,7 @@ class gme:
 	@_dbg
 	def check_gpgrecipient(self,gaddr, from_addr=None):
 		"""returns True and the effective key-emailaddress if emails
-		to address 'gaddr' can be GPG encrcrypted"""
+		to address 'gaddr' can be GPG encrypted"""
 		self.debug("check_gpgrecipient: start '%s'"%gaddr)
 		domain=maildomain(gaddr)
 		found =False
@@ -2789,7 +2789,7 @@ class gme:
 	@_dbg
 	def check_smimerecipient(self,saddr, from_addr=None):
 		"""returns True and the effective key-emailaddress if emails
-		to address 'saddr' can be SMIME encrcrypted"""
+		to address 'saddr' can be SMIME encrypted"""
 		self.debug("check_smimerecipient: start '%s'"%saddr)
 		domain=maildomain(saddr)
 		found =False
@@ -4255,6 +4255,12 @@ class gme:
 		if not self.is_pgpmimeencrypted(mailtext):
 				return None
 
+		g_r,to_gpg=self.check_gpgrecipient(to_addr)
+
+		if not g_r:
+			self.debug("no gpg user key found")
+			return None
+
 		gpg =self.gpg_factory()
 		gpg.set_recipient(to_addr)
 		gpg.set_fromuser(from_addr)
@@ -4297,8 +4303,14 @@ class gme:
 				return None
 
 		self.debug("decrypt smime")
+		s_r,to_smime=self.check_smimerecipient(to_addr)
+
+		if not s_r:
+			self.debug("no smime user key found")
+			return None
+
 		smime =self.smime_factory()
-		smime.set_recipient(to_addr)
+		smime.set_recipient(to_smime)
 		smime.set_fromuser(from_addr)
 		fp=self._new_tempfile()
 		fp.write(mailtext.encode("UTF-8",unicodeerror))
@@ -4315,7 +4327,6 @@ class gme:
 		if header:
 			return header +"\r\n"+encdata
 		else:
-			print("header==None")
 			return None
 
 
@@ -4348,8 +4359,24 @@ class gme:
 
 		if self._DECRYPT:
 			mresult=self.decrypt_mail(mailtext,from_addr,to_addr)
+			has_virus=False
 
 			if mresult:
+
+				if 	(self._VIRUSCHECK==True and self._virus_checker==None):
+					self._virus_checker=_virus_check(parent=self)
+
+				if (self._VIRUSCHECK==True and self._virus_checker!=None):
+					has_virus,virusinfo=self._virus_checker.has_virus(mailtext)
+
+				if has_virus:
+						self._handle_virusmail(	virusinfo,
+												queue_id,
+												mresult,
+												from_addr,
+												to_addr)
+						return
+
 				m="decrypted"
 				self._send_rawmsg( queue_id,
 								mresult,
