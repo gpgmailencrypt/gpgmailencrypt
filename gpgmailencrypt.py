@@ -359,6 +359,7 @@ class gme:
 		self._INFILE=""
 		self._OUTFILE=""
 		self._SECURITYLEVEL=self.s_may
+		self._DECRYPT=False
 		self._BOUNCEHOMEDOMAIN=True
 		self._PREFERRED_ENCRYPTION="PGPINLINE"
 		self._GPGKEYHOME="~/.gnupg"
@@ -538,6 +539,12 @@ class gme:
 			try:
 				self._BOUNCEHOMEDOMAIN=_cfg.getboolean('default',
 												'bouncehomedomain')
+			except:
+				pass
+
+			try:
+				self._DECRYPT=_cfg.getboolean('default',
+												'decrypt')
 			except:
 				pass
 
@@ -1012,6 +1019,7 @@ class gme:
 			  ['addheader',
 				'config=',
 				'daemon',
+				'decrypt',
 				'example',
 				'help',
 				'keyhome=',
@@ -1142,6 +1150,8 @@ class gme:
 					elif _arg.lower() in ["false","no"]:
 						self.set_check_viruses(False)
 
+			if _opt == '--decrypt':
+					self._DECRYPT=True
 			if _opt == '--spamcheck':
 
 					if _arg.lower() in ["true","yes",None]:
@@ -3220,7 +3230,7 @@ class gme:
 			self.debug("CONTENTTYPE %s"%contenttype)
 
 			if isinstance( message.get_payload(),str ):
-				self.debug("encrypt_pgpinlie: type( get_payload() ) == str")
+				self.debug("encrypt_pgpinline: type( get_payload() ) == str")
 				charset=message.get_param("charset",header="Content-Type")
 
 				if (charset==None
@@ -4192,16 +4202,166 @@ class gme:
 							from_addr,
 							to_addr)
 
+	############
+	#_get_header
+	############
+
+	@_dbg
+	def _get_header(self,mail):
+
+		splitmsg=re.split("\n\n",mail,1)
+
+		if len(splitmsg)!=2:
+			splitmsg=re.split("\r\n\r\n",mail,1)
+
+		if len(splitmsg)!=2:
+			self.debug("Mail could not be split in header and body part "
+						"(mailsize=%i)"%len(mail))
+			return None
+
+		header,body=splitmsg
+		lines=header.splitlines()
+		result=[]
+		in_ignoreheader=False
+		for l in lines:
+
+			if in_ignoreheader:
+
+				if l.startswith(" "):
+					continue
+				else:
+					in_ignoreheader=False
+
+			if not in_ignoreheader:
+				if (l.startswith("Content-Type")
+				or l.startswith("Content-Disposition")
+				or l.startswith("Content-Description")
+				or l.startswith("Content-Transfer-Encoding")
+				or l.startswith("X-GPGMailencrypt")
+				):
+					in_ignoreheader=True
+				else:
+					result.append(l)
+
+		return "\r\n".join(result)
+
+	################
+	#decrypt_pgpmime
+	################
+
+	@_dbg
+	def decrypt_pgpmime(self,mailtext,from_addr,to_addr):
+
+		if not self.is_pgpmimeencrypted(mailtext):
+				return None
+
+		gpg =self.gpg_factory()
+		gpg.set_recipient(to_addr)
+		gpg.set_fromuser(from_addr)
+		fp=self._new_tempfile()
+		fp.write(mailtext.encode("UTF-8",unicodeerror))
+		fp.close()
+		result,encdata=gpg.decrypt_file(filename=fp.name)
+		self._del_tempfile(fp.name)
+
+		if result==False:
+			self.log("Error during decrypting pgpmime: couldn't decrypt mail")
+			return None
+
+		header=self._get_header(mailtext)
+
+		if header:
+			return header +"\r\n"+encdata
+		else:
+			return None
+
+	##################
+	#decrypt_pgpinline
+	##################
+
+	@_dbg
+	def decrypt_pgpinline(self,mailtext,from_addr,to_addr):
+		return None
+
+
+	##############
+	#decrypt_smime
+	##############
+
+	@_dbg
+	def decrypt_smime(self,mailtext,from_addr,to_addr):
+		self.set_debug(True)
+		self.log("START decrypt smime")
+
+		if not self.is_smimeencrypted(mailtext):
+				return None
+
+		self.debug("decrypt smime")
+		smime =self.smime_factory()
+		smime.set_recipient(to_addr)
+		smime.set_fromuser(from_addr)
+		fp=self._new_tempfile()
+		fp.write(mailtext.encode("UTF-8",unicodeerror))
+		fp.close()
+		result,encdata=smime.decrypt_file(filename=fp.name)
+		self._del_tempfile(fp.name)
+
+		if result==False:
+			self.log("Error during decrypting smime: couldn't decrypt mail")
+			return None
+
+		header=self._get_header(mailtext)
+
+		if header:
+			return header +"\r\n"+encdata
+		else:
+			print("header==None")
+			return None
+
+
+	##############
+	#_decrypt_mail
+	##############
+
+	@_dbg
+	def decrypt_mail(self,mailtext,from_addr,to_addr):
+		mresult=None
+
+		if self.is_pgpmimeencrypted(mailtext):
+			mresult=self.decrypt_pgpmime(mailtext,from_addr,to_addr)
+
+		elif self.is_pgpinlineencrypted(mailtext):
+			mresult=self.decrypt_pgpinline(mailtext,from_addr,to_addr)
+
+		elif self.is_smimeencrypted(mailtext):
+			mresult=self.decrypt_smime(mailtext,from_addr,to_addr)
+
+		return mresult
+
 	#############################
 	#_send_already_encrypted_mail
 	#############################
 
 	@_dbg
 	def _send_already_encrypted_mail(self,queue_id,mailtext,from_addr,to_addr):
-			m="Email already encrypted"
-			self.debug(m)
-			self._count_alreadyencryptedmails+=1
-			self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
+		mresult=None
+
+		if self._DECRYPT:
+			mresult=self.decrypt_mail(mailtext,from_addr,to_addr)
+
+			if mresult:
+				m="decrypted"
+				self._send_rawmsg( queue_id,
+								mresult,
+								m,
+								from_addr,
+								to_addr )
+				return
+
+		m="Email already encrypted"
+		self.debug(m)
+		self._count_alreadyencryptedmails+=1
+		self._send_rawmsg(queue_id,mailtext,m,from_addr,to_addr)
 
 	#####################
 	#_encrypt_single_mail

@@ -31,7 +31,6 @@ class _GPG(_gmechild):
 		self.debug("_GPG.__init__")
 		self._localGPGkeys=list()
 		self._local_from_user=None
-		self.set_recipient(None)
 
 		if isinstance(keyhome,str):
 			self._keyhome = os.path.expanduser(keyhome)
@@ -473,10 +472,11 @@ class _GPG(_gmechild):
 		f=self.parent._new_tempfile()
 		self.debug("_GPG.decrypt_file _new_tempfile %s"%f.name)
 		f.close()
-		_result = subprocess.call(
-			' '.join(self._decryptcommand_fromfile(f.name,binary)),shell=True )
 		self.debug("Encryption command: '%s'" %
 			' '.join(self._decryptcommand_fromfile(f.name,binary)))
+
+		_result = subprocess.call(
+			' '.join(self._decryptcommand_fromfile(f.name,binary)),shell=True )
 
 		if _result != 0:
 			self.log("Error executing command (Error code %d)"%_result,
@@ -508,7 +508,6 @@ class _GPG(_gmechild):
 		cmd=[self.parent._GPGCMD,
 					"--trust-model", "always",
 					"-q",
-					"-r",self._recipient,
 					"--homedir", self._keyhome.replace("%user",self._recipient),
 					"--batch",
 					"--yes",

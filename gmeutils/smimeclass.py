@@ -31,8 +31,8 @@ class _SMIME(_gmechild):
 			self._keyhome=os.path.expanduser(self.parent._SMIMEKEYHOME)
 
 		self._recipient = ''
+		self._local_from_user=''
 		self._filename=''
-		self._recipient=None
 		self.debug("_SMIME.__init__ end")
 
 	############
@@ -99,6 +99,17 @@ class _SMIME(_gmechild):
 
 		if isinstance(recipient, str):
 			self._recipient=email.utils.parseaddr(recipient)[1]
+
+
+	#############
+	#set_fromuser
+	#############
+
+	@_dbg
+	def set_fromuser(self, user):
+		user=email.utils.parseaddr(user)[1].lower()
+
+		self._local_from_user=user
 
 	##########
 	#recipient
@@ -266,14 +277,15 @@ class _SMIME(_gmechild):
 			self.set_recipient(recipient)
 
 		f=self.parent._new_tempfile()
-		self.debug("_SMIME.decrypt_file _new_tempfile %s"%f.name)
+
 		f.close()
+		self.debug("Decryption command: '%s'" %
+				' '.join(self._command_decrypt_fromfile(f.name,binary)))
+
 		_result = subprocess.call(
 				' '.join(self._command_decrypt_fromfile(f.name,
 														binary))
 				,shell=True )
-		self.debug("Decryption command: '%s'" %
-				' '.join(self._command_decrypt_fromfile(f.name,binary)))
 
 		if _result != 0:
 			self.log("Error executing command (Error code %d)"%
@@ -287,8 +299,7 @@ class _SMIME(_gmechild):
 		encdata=res.read()
 		res.close()
 		self.parent._del_tempfile(f.name)
-		m=email.message_from_string(encdata)
-		return result,m.get_payload()
+		return result,encdata
 
 	###########################
 	#_command_decrypt_from_file
@@ -298,13 +309,26 @@ class _SMIME(_gmechild):
 	def _command_decrypt_fromfile(  self,
 									sourcefile,
 									binary):
-		_recipient=self.parent._backend.smimeuser(self._recipient)
+		try:
+			_recipient=self.parent._backend.smimeuser(self._recipient)
+		except:
+			self.log("decryption failed. No smime user '%s' found"%
+						self._recipient,"w")
+			return ["NO_PRIVATE_KEY"]
+		try:
+			privatekey=_recipient[2]
+		except:
+			self.log("decryption failed. No private key for '%s' found"%
+						self._recipient,"w")
+			return ["NO_PRIVATE_KEY"]
+		
 		cmd=[self.parent._SMIMECMD,
 				"smime",
 				"-decrypt",
 				"-in",self._filename,
 				"-out", sourcefile,
 				"-inkey" , _recipient[2] ]
+		print("cmd",cmd)
 		return cmd
 
 	############
