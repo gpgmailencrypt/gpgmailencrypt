@@ -187,9 +187,9 @@ def print_exampleconfig():
 
 	print ("")
 	print ("[smimeuser]")
-	print ("smime.user@domain.com = user.pem[,cipher]".ljust(space)+
-	"#public S/MIME key file [,used cipher, see defaultcipher "
-	"in the smime section]")
+	print ("smime.user@domain.com = user.pem[,cipher[,user.key]]".ljust(space)+
+	"#public S/MIME key file [,used cipher[, used private key],"
+	" see defaultcipher in the smime section]")
 
 	print ("")
 	print ("[pdf]")
