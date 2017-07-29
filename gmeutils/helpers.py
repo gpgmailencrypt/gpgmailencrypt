@@ -10,6 +10,7 @@ import html
 import html.parser
 from   io				import BytesIO
 from   io				import StringIO
+import mimetypes
 import random
 import re
 import quopri
@@ -325,6 +326,14 @@ def decode_html(parent,msg):
 	h=_htmldecode(parent)
 	h.feed(msg)
 	return h.mydata()
+
+###############
+#guess_mimetype
+###############
+
+def guess_mimetype(filename):
+	mimetype,enc=mimetypes.guess_type(filename)
+	return mimetype
 
 ####################
 #guess_fileextension
