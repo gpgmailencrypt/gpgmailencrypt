@@ -23,6 +23,8 @@ def show_usage():
 	print ("-c f --config f:    use configfile 'f'. Default is")
 	print ("                    /etc/gpgmailencrypt.conf")
 	print ("-d --daemon :       start gpgmailencrypt as smtpserver")
+	print ("--decrypt :         it will be tried to decrypt already encrypted ")
+	print ("                    e-mails sent to recipients in 'homedomains'")
 	print ("-e pgpinline :      preferred encryption method, either ")
 	print ("                    'pgpinline','pgpmime' or 'smime'")
 	print ("-f mail :           reads email file 'mail', otherwise from stdin")
@@ -95,6 +97,9 @@ def print_exampleconfig():
 	"#the used address looks like 'sent_address <original@fromaddress>'")
 	print ("storagebackend=TEXT".ljust(space)+
 	"#valid values are TEXT|MSSQL|MYSQL|SQLITE3|POSTGRESQL")
+	print ("decrypt=False".ljust(space)+
+	"#if True it will be tried to decrypt already encrypted e-mails sent to ")
+	print ("".ljust(space)+	"#recipients in 'homedomains'")
 
 	print ("")
 	print ("[mailserver]")
@@ -193,7 +198,7 @@ def print_exampleconfig():
 
 	print ("")
 	print ("[pdf]")
-	print ("useenryptpdf=False".ljust(space)+
+	print ("useencryptpdf=False".ljust(space)+
 	"#if True, emails can be encrypted as PDF")
 	print ("passwordlength=10".ljust(space)+
 	"#Length of the automatic created password")

@@ -50,6 +50,7 @@ class _PDF(_gmechild):
 	@_dbg
 	def create_pdffile( self,
 						password,
+						from_addr,
 						filename=None):
 		"""
 		creates a PDF file out of the content of a file and encrypts it.
@@ -94,7 +95,7 @@ class _PDF(_gmechild):
 		else:
 			result=True
 
-		_res,encryptedfile=self._encrypt_pdffile(f.name,password)
+		_res,encryptedfile=self._encrypt_pdffile(f.name,password,from_addr)
 
 		if _res==False:
 		  self.log("Error encrypting pdf file (Error code %d)"%_res,"e")
@@ -130,23 +131,27 @@ class _PDF(_gmechild):
 	@_dbg
 	def _encrypt_pdffile(   self,
 							inputfilename,
-							password):
+							password,
+							from_addr):
 		result=False
 		f=self.parent._new_tempfile()
 		self.debug("_PDF.encrypt_file _new_tempfile %s"%f.name)
 		self.debug("Encryption command: '%s'" %
 			' '.join(self._encryptcommand_fromfile( inputfilename,
-													f.name,password)))
+													f.name,password,
+													from_addr)))
 		_result = subprocess.call( 
 				' '.join(self._encryptcommand_fromfile(  inputfilename,
-														 f.name,password))
+														 f.name,password,
+													from_addr))
 				 ,shell=True ) 
 
 		if _result != 0:
 			self.log("Error executing command "
 							"(Error code %d)"%_result,"e")
 			self.log(' '.join(self._encryptcommand_fromfile(  inputfilename,
-														 f.name,password))
+														 f.name,password,
+														from_addr))
 					,"e")
 			return result,None
 		else:
@@ -163,11 +168,18 @@ class _PDF(_gmechild):
 							self,
 							fromfile,
 							tofile,
-							password):
+							password,
+							from_addr):
 		cmd=[   self._pdfencryptcmd,
 				fromfile, 
 				"output",tofile,
 				"user_pw","\"%s\""%password]
+		pw=self.parent.pdf_additionalencryptionkey(from_addr)
+
+		if pw!=None:
+			cmd.append("owner_pw")
+			cmd.append(pw)
+
 		return cmd
 
 	@_dbg

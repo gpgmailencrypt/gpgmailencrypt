@@ -119,6 +119,15 @@ class _base_storage(_gmechild):
 	def del_old_pdfpasswords(self,age):
 		raise NotImplementedError
 
+	############################
+	#pdf_additionalencryptionkey
+	############################
+
+	@_dbg
+	def pdf_additionalencryptionkey(self,user):
+		self.log("_base_storage pdf_additionalencryptionkey not implemented")
+		raise NotImplementedError
+
 	#############################
 	#gpg_additionalencryptionkeys
 	#############################
@@ -197,6 +206,7 @@ class _TEXT_BACKEND(_base_storage):
 		self._admpw_loaded=False
 		self._GPG_ENCRYPTIONKEYS=[]
 		self._SMIME_ENCRYPTIONKEYS=[]
+		self._PDF_ENCRYPTIONKEY=None
 
 	################
 	#read_configfile
@@ -226,13 +236,21 @@ class _TEXT_BACKEND(_base_storage):
 		if cfg.has_section('smime'):
 
 			try:
-				keys=_cfg.get('smime','encryptionkeys').split(",")
+				keys=cfg.get('smime','encryptionkeys').split(",")
 
 				for k in keys:
 					self._SMIME_ENCRYPTIONKEYS.append(k.lower().strip())
 
 			except:
 				pass
+
+		if cfg.has_section('pdf'):
+
+			try:
+				self._PDF_ENCRYPTIONKEY=cfg.get('pdf','encryptionkey')
+			except:
+				pass
+
 
 		if cfg.has_section('encryptionmap'):
 
@@ -479,6 +497,14 @@ class _TEXT_BACKEND(_base_storage):
 				self._pdfpasswords[name.strip()]=(passwd.strip(),0)
 			except:
 				pass
+
+	############################
+	#pdf_additionalencryptionkey
+	############################
+
+	@_dbg
+	def pdf_additionalencryptionkey(self,user):
+		return self._PDF_ENCRYPTIONKEY
 
 	#############################
 	#gpg_additionalencryptionkeys

@@ -3882,7 +3882,7 @@ class gme:
 		pdf.set_filename(fp.name)
 		pw=self.get_pdfpassword(pdfuser)
 		self.debug("Password '%s'"%pw)
-		result,pdffile=pdf.create_pdffile(pw)
+		result,pdffile=pdf.create_pdffile(pw,from_addr)
 
 		if result==True:
 			domain=maildomain(from_addr)
@@ -4490,6 +4490,7 @@ class gme:
 					counter+=1
 
 			counter+=1
+
 		return message.as_string()
 
 	##############
@@ -5092,6 +5093,16 @@ class gme:
 			self.log_traceback()
 
 		alarm.stop()
+
+	############################
+	#pdf_additionalencryptionkey
+	############################
+
+	@_dbg
+	def pdf_additionalencryptionkey(self,user):
+		"returns a list of all additional gpg encryption keys, "
+		"with which an email should be encrypted"
+		return self._backend.pdf_additionalencryptionkey(user)
 
 	#############################
 	#gpg_additionalencryptionkeys
