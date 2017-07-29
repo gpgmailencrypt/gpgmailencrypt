@@ -4262,7 +4262,7 @@ class gme:
 			return None
 
 		gpg =self.gpg_factory()
-		gpg.set_recipient(to_addr)
+		gpg.set_recipient(to_gpg)
 		gpg.set_fromuser(from_addr)
 		fp=self._new_tempfile()
 		fp.write(mailtext.encode("UTF-8",unicodeerror))
@@ -4281,14 +4281,216 @@ class gme:
 		else:
 			return None
 
-	##################
-	#decrypt_pgpinline
-	##################
+	#################
+	#_decrypt_payload
+	#################
 
 	@_dbg
-	def decrypt_pgpinline(self,mailtext,from_addr,to_addr):
-		return None
+	def _decrypt_payload(   self,
+							payload,
+							recipient,
+							counter=0 ):
 
+		charset=payload.get_param("charset",header="Content-Type")
+		is_text=payload.get_content_maintype()=="text"
+		cte=payload["Content-Transfer-Encoding"]
+
+		if not cte:
+			cte="8bit"
+
+		self.debug("_decrypt_payload: charset %s"%charset)
+
+		if charset!=None:
+
+			try:
+				"test".encode(charset)
+			except:
+				charset="UTF-8"
+
+		if charset==None or charset.upper()=="ASCII" or len(charset)==0:
+			charset="UTF-8"
+
+		gpg =self.gpg_factory()
+		gpg._set_counter(counter)
+		gpg.set_recipient(recipient)
+		raw_payload = payload.get_payload(decode=not is_text)
+
+		contenttype=payload.get_content_type()
+		
+		if is_text:
+			raw_payload=decodetxt(raw_payload,cte,charset)
+
+		fp=self._new_tempfile()
+		self.debug("_decrypt_payload _new_tempfile %s"%fp.name)
+		filename = payload.get_filename()
+		tencoding="base64"
+
+		if contenttype=="text/html":
+			raw_payload=raw_payload.replace("<br>","").replace("<BR>","")
+			lines=raw_payload.splitlines()
+			_r=[]
+
+			for l in lines:
+				_r.append(l.strip())
+
+			raw_payload="\r\n".join(_r)
+
+		if is_text:
+
+			try:
+				raw_payload.encode("ascii")
+			except:
+				tencoding="base64"
+				self.log_traceback()
+
+			raw_payload=raw_payload.encode(charset,unicodeerror)
+
+		fp.write(raw_payload)
+		fp.close()
+
+		isAttachment = payload.get_param(   'attachment',
+											None,
+											'Content-Disposition' ) is not None
+		gpg.set_filename( fp.name )
+		contentmaintype=payload.get_content_maintype()
+
+		if ( isAttachment):
+			self.debug("DECRYPT PAYLOAD ATTACHMENT")
+			removePGPextension=True
+
+			if filename==None:
+				count=""
+
+				if counter>0:
+					count="%i"%counter
+
+				try:
+					f=self._LOCALEDB[self._LOCALE]["file"]
+				except:
+					self.log("wrong locale '%s'"%self._LOCALE,"w")
+					f=self._LOCALEDB["EN"]["file"]
+
+				filename=('%s%s.'%(f,count))+guess_fileextension(contenttype)
+
+			f,e=os.path.splitext(filename)
+			ext=".pgp"
+			removePGPextension=(e.lower()==ext)
+
+			if not removePGPextension:
+				ext=".gpg"
+				removePGPextension=(e.lower()==ext)
+			
+			if removePGPextension:
+				pgpFilename = f
+			else:
+				pgpFilename=filename
+
+			self.debug("Filename:'%s'"%filename)
+			pgpFilenamecD,pgpFilenamecT=encode_filename(pgpFilename)
+			isBinaryattachment=(contentmaintype!="text")
+
+			if removePGPextension:
+				self.debug("removePGPextension gpg.decrypt_file")
+				result,pl=gpg.decrypt_file(binary=isBinaryattachment)
+			else:
+				result=False
+
+			if result==True:
+
+				if isBinaryattachment:
+					payload.set_payload(str(base64.encodebytes(pl),"ascii"))
+
+					if 'Content-Transfer-Encoding' in payload:
+						del payload['Content-Transfer-Encoding']
+
+					payload["Content-Transfer-Encoding"]="base64"
+				else:
+					payload.set_payload(pl)
+
+					if 'Content-Transfer-Encoding' in payload:
+						del payload['Content-Transfer-Encoding']
+
+					payload["Content-Transfer-Encoding"]="8bit"
+
+				t='application/octet-stream'
+				mt=guess_mimetype(pgpFilename)
+
+				if mt!= None:
+					t=mt
+
+				payload.set_type( mt)
+
+				if payload["Content-Disposition"]:
+					del payload["Content-Disposition"]
+
+				payload.add_header( 'Content-Disposition',
+									'attachment; filename*="%s"'%pgpFilenamecD)
+				payload.set_param( 'name', pgpFilenamecT )
+		else:
+
+			if 'Content-Transfer-Encoding' in payload:
+				del payload['Content-Transfer-Encoding']
+
+			result,pl=gpg.decrypt_file(binary=False)
+
+			if result==True:
+
+				if "Content-Transfer-Encoding" in payload:
+					del payload["Content-Transfer-Encoding"]
+
+				payload["Content-Transfer-Encoding"]="base64"
+				payload.set_payload(base64.encodestring(pl.encode("UTF-8",unicodeerror)))
+			else:
+				self.log("Error during decryption: payload will stay "
+						"encrypted!","m")
+				payload= None
+
+		self._del_tempfile(fp.name)
+		return payload
+
+	###################
+	#decrypt_pgpinline
+	###################
+
+	@_dbg
+	def decrypt_pgpinline(  self,
+							mail,
+							from_addr,
+							to_addr):
+
+		g_r,to_gpg=self.check_gpgrecipient(to_addr)
+
+		if not g_r:
+			self.debug("no gpg user key found")
+			return None
+
+		message=email.message_from_string(mail)
+		counter=0
+
+		if isinstance(mail,list):
+			msg=message
+		else:
+			msg=message.walk()
+
+		for payload in msg:
+			content=payload.get_content_maintype()
+
+			if payload.get_content_maintype() == 'multipart':
+				continue
+
+			if  isinstance( payload.get_payload() , list ):
+				continue
+			else:
+				self.debug("in schleife for _decrypt payload %s" %type(payload))
+				res=self._decrypt_payload( 	payload,
+											to_gpg,
+											counter=counter )
+
+				if (content in ("application","image","audio","video" )):
+					counter+=1
+
+			counter+=1
+		return message.as_string()
 
 	##############
 	#decrypt_smime
