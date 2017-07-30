@@ -206,6 +206,8 @@ def print_exampleconfig():
 	"#lifetime for autocreated passwords in seconds. Default is 48 hours")
 	print ("pdfpasswords=/etc/gpgpdfpasswords.pw".ljust(space)+
 	"#file that includes users and passwords for permanent pdf passwords")
+	print ("encryptionkey=".ljust(space)+
+	"#the second password, with which all pdf files will be encrypted")
 
 	print ("")
 	print ("[encryptionmap]")
