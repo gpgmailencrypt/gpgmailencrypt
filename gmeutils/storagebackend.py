@@ -470,9 +470,9 @@ class _TEXT_BACKEND(_base_storage):
 			del self._pdfpasswords[user]
 			self.debug("Password for user '%s' deleted"%user)
 
-	########################
+	######################
 	#_read_pdfpasswordfile
-	########################
+	######################
 
 	@_dbg
 	def _read_pdfpasswordfile( self,pwfile):
@@ -703,6 +703,8 @@ class _sql_backend(_base_storage):
 									" FROM gpgencryptionkeys WHERE user= ?")
 		self._SMIMEENCRYPTIONKEYSSQL=	("SELECT encryptionkey"
 									" FROM smimeencryptionkeys WHERE user= ?")
+		self._PDFENCRYPTIONKEYSSQL=	("SELECT encryptionkey"
+									" FROM pdfencryptionkeys WHERE user= ?")
 		self._USER="gpgmailencrypt"
 		self._PASSWORD=""
 		self._HOST="127.0.0.1"
@@ -713,6 +715,7 @@ class _sql_backend(_base_storage):
 		self._USE_SQLPDFPASSWORDS=False
 		self._USE_SQLGPGADDITIONALENCRYPTIONKEYS=False
 		self._USE_SQLSMIMEADDITIONALENCRYPTIONKEYS=False
+		self._USE_SQLPDFADDITIONALENCRYPTIONKEY=False
 		self._db=None
 		self._cursor=None
 		self.placeholder="?"
@@ -750,13 +753,26 @@ class _sql_backend(_base_storage):
 								"\"user\" varchar (255) not null, "
 								"\"encryptionkey\" varchar (255) not null);")
 		self._tabledefinition["gpgencryptionkeysindex"]=(
-				"create unique index gindex on gpgencryptionkeys (\"user\");")
+				"create unique index gencindex on gpgencryptionkeys (\"user\","
+														"\"encryptionkey\");")
 		self._tabledefinition["smimeencryptionkeys"]=("create table "
 								"\"smimeencryptionkeys\" ("
 								"\"user\" varchar (255) not null, "
 								"\"encryptionkey\" varchar (255) not null);")
 		self._tabledefinition["smimeencryptionkeysindex"]=(
-			"create unique index smindex on smimeencryptionkeys (\"user\");")
+			"create unique index smencindex on smimeencryptionkeys (\"user\","
+														"\"encryptionkey\");")
+
+
+
+		self._tabledefinition["pdfencryptionkeys"]=("create table "
+								"\"pdfencryptionkeys\" ("
+								"\"user\" varchar (255) not null, "
+								"\"encryptionkey\" varchar (255) not null);")
+		self._tabledefinition["pdfencryptionkeysindex"]=(
+				"create unique index pdfencindex on pdfencryptionkeys "
+													"(\"user\");")
+
 
 	########
 	#con_end
@@ -877,6 +893,12 @@ class _sql_backend(_base_storage):
 				pass
 
 			try:
+				self._PDFENCRYPTIONKEYSSQL=cfg.get('sql',
+												'pdfencryptionkeysql')
+			except:
+				pass
+
+			try:
 				self._USE_SQLSMIMEADDITIONALENCRYPTIONKEYS=cfg.getboolean('sql',
 												'use_sqlsmimeencryptionkeys')
 
@@ -888,6 +910,15 @@ class _sql_backend(_base_storage):
 												'smimeencryptionkeysql')
 			except:
 				pass
+
+
+			try:
+				self._USE_SQLPDFADDITIONALENCRYPTIONKEY=cfg.get('sql',
+												'use_sqlpdfencryptionkey')
+			except:
+				pass
+
+
 
 			try:
 				self._USE_SQLPDFPASSWORDS=cfg.getboolean('sql',
@@ -1170,6 +1201,13 @@ class _sql_backend(_base_storage):
 			if r==True:
 				return self.create_single_table("smimeencryptionkeysindex",
 												logerror=logerror)
+
+		if table=="pdfencryptionkeys":
+			r=self.create_single_table("pdfencryptionkeys",logerror=logerror)
+
+			if r==True:
+				return self.create_single_table("pdfencryptionkeysindex",
+												logerror=logerror)
 		return False
 
 	##################
@@ -1184,6 +1222,7 @@ class _sql_backend(_base_storage):
 		self.create_table("pdf",logerror=logerror)
 		self.create_table("gpgencryptionkeys",logerror=logerror)
 		self.create_table("smimeencryptionkeys",logerror=logerror)
+		self.create_table("pdfencryptionkeys",logerror=logerror)
 
 	##########
 	#smimeuser
@@ -1511,6 +1550,35 @@ class _sql_backend(_base_storage):
 		rows=sorted(list(set(rows+
 					self._textbackend.smime_additionalencryptionkeys(user))))
 		return rows
+
+
+	############################
+	#pdf_additionalencryptionkey
+	############################
+
+	@_dbg
+	def pdf_additionalencryptionkey(self,user):
+		pw=self._textbackend.pdf_additionalencryptionkey(user)
+
+		if not self._USE_SQLPDFADDITIONALENCRYPTIONKEY:
+			return pw
+
+		if not 	self.execute(self._PDFENCRYPTIONKEYSSQL,user):
+			return pw
+
+		r=self._cursor.fetchone()
+
+		try:
+			self._cursor.fetchall()
+		except:
+			pass
+
+		try:
+			pw=r[0]
+		except:
+			self.debug("now additional pdf password found")
+
+		return pw
 
 #################
 #_SQLITE3_BACKEND

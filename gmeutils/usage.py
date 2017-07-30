@@ -356,7 +356,6 @@ def print_exampleconfig():
 	print("".ljust(space)+
 	"#SQL command that returns a list of gpg keys "
 	"with which emails will be additionally encrypted")
-
 	print ("use_sqlsmimeencryptionkeys=False".ljust(space)+
 	"#if True each mail will be encrypted not only for the receiver, but also")
 	print ("".ljust(space)+
@@ -366,6 +365,23 @@ def print_exampleconfig():
 	print("".ljust(space)+
 	"#SQL command that returns a list of smime keys "
 	"with which emails will be additionally encrypted")
+	print ("use_sqlpdfencryptionkey=False".ljust(space)+
+	"#if True each mail will be encrypted not only for the receiver, but also")
+	print ("".ljust(space)+
+	"#with one additional password delivered by 'pdfencryptionkeysql'")
+	print ("pdfencryptionkeysql=SELECT encryptionkey"
+									" FROM pdfencryptionkeys WHERE user= ?")
+	print("".ljust(space)+
+	"#SQL command that returns one single pdf password "
+	"with which emails will be")
+	print("".ljust(space)+
+	"#additionally encrypted")
+	print ("".ljust(space)+
+	"#Important: PDF can only be encrypted with 2 passwords in total")
+	print ("".ljust(space)+
+	"#That's why this function is limited to one password")
+	print ("".ljust(space)+
+	"#(the other password is the user password)")
 
 
 	print ("")

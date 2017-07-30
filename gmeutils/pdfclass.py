@@ -176,7 +176,7 @@ class _PDF(_gmechild):
 				"user_pw","\"%s\""%password]
 		pw=self.parent.pdf_additionalencryptionkey(from_addr)
 
-		if pw!=None:
+		if pw!=None and len(pw)>0:
 			cmd.append("owner_pw")
 			cmd.append(pw)
 
