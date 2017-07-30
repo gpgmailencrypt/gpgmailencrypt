@@ -919,6 +919,10 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			self.push("501 Syntax error: CREATETABLE table")
 			return
 
+		if not hasattr(self.parent._backend,"create_table"):
+			self.push("454 Error: Backend is not a SQL Server")
+			return
+		
 		if not self.parent._backend.create_table(res[0].lower(),logerror=True):
 			self.push("454 Table definition '%s' could not be created"
 				% res[0].lower())
