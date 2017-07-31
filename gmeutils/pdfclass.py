@@ -183,6 +183,79 @@ class _PDF(_gmechild):
 		return cmd
 
 	@_dbg
+	def decrypt_pdffile(  self,
+							inputfilename,
+							outputfilename,
+							password):
+		cmd=' '.join(self._decryptcommand_fromfile( inputfilename,
+														outputfilename,
+														password))
+
+		_result = subprocess.call( cmd ,shell=True )
+
+		if _result != 0:
+			return False
+
+		return True
+
+	@_dbg
+	def _decryptcommand_fromfile(	self,
+									fromfile,
+									tofile,
+									password):
+		#pdftk secured.pdf input_pw foopass output unsecured.pdf
+		cmd=[   self._pdfencryptcmd,
+				fromfile,
+				"input_pw","\"%s\""%password,
+				"output",tofile]
+		return cmd
+
+	@_dbg
+	def decrypt_file(  self,
+							inputfilename,
+							from_addr=None,
+							to_addr=None):
+		result=False
+		pw=None
+		f=self.parent._new_tempfile()
+
+		if hasattr(self.parent._backend,"_textbackend") :
+			pw=self.parent._backend._textbackend.pdf_additionalencryptionkey(None)
+
+			if pw!=None:
+				result=self.decrypt_pdffile(inputfilename,f.name,pw)
+
+		if not result:
+			pw=self.parent._backend.get_pdfpassword(from_addr)
+
+			if pw!=None:
+				result=self.decrypt_pdffile(inputfilename,f.name,pw)
+
+		if not result:
+			pw=self.parent._backend.get_pdfpassword(to_addr)
+
+			if pw!=None:
+				result=self.decrypt_pdffile(inputfilename,f.name,pw)
+
+		if not result:
+			pw=self.parent._backend.pdf_additionalencryptionkey(to_addr)
+
+			if pw!=None:
+				result=self.decrypt_pdffile(inputfilename,f.name,pw)
+
+		if not result:
+			pw=self.parent._backend.pdf_additionalencryptionkey(from_addr)
+
+			if pw!=None:
+				result=self.decrypt_pdffile(inputfilename,f.name,pw)
+
+		if result==True:
+			return result,f.name
+		else:
+			self.parent._del_tempfile(f.name)
+			return result,None
+
+	@_dbg
 	def is_available(self):
 
 		try:
@@ -208,5 +281,15 @@ class _PDF(_gmechild):
 			return True
 		else:
 			self.log("pdftk and/or wkhtmltopdf not available","e")
+			return False
+
+	@_dbg
+	def is_encrypted(self,pdffile):
+
+		try:
+			import PyPDF2
+			inputPdf = PyPDF2.PdfFileReader(open(pdffile, "rb"))
+			return inputPdf.isEncrypted
+		except:
 			return False
 
