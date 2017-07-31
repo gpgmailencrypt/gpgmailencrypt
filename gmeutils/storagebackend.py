@@ -1578,6 +1578,7 @@ class _sql_backend(_base_storage):
 		except:
 			self.debug("now additional pdf password found")
 
+		self.con_end()
 		return pw
 
 #################
