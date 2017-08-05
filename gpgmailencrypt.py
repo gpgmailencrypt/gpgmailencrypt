@@ -2954,19 +2954,38 @@ class gme:
 		if type(msg)==bytes:
 			return False
 
+		pdf=self.pdf_factory()
 		m=msg
 
-		if isinstance(msg,email.message.Message):
-			m=msg.as_string()
+		if not isinstance(msg,email.message.Message):
+			m=email.message_from_string(msg)
 
-		find=re.search("^%s:"%self._pdfencryptheader,
-						m,
-						re.I|re.MULTILINE)
-
-		if find:
-			return True
+		if isinstance(m,list):
+			p=m
 		else:
-			return False
+			p=m.walk()
+
+		for payload in p:
+
+			if payload.get_content_type()=="application/pdf":
+				raw_payload = payload.get_payload(decode=True)
+				fp=self._new_tempfile()
+				fp.write(raw_payload)
+				fp.close()
+
+				try:
+					r=pdf.is_encrypted(fp.name)
+				except:
+					self.log("is_pdfencrypted failed","w")
+					self._del_tempfile(fp.name)
+					return False
+
+				self._del_tempfile(fp.name)
+
+				if r==True:
+					return True
+
+		return False
 
 	#############
 	#is_encrypted
@@ -4532,6 +4551,53 @@ class gme:
 		else:
 			return None
 
+	############
+	#decrypt_pdf
+	############
+
+	@_dbg
+	def decrypt_pdf(self, mailtext,from_addr,to_addr):
+
+		if not isinstance(mailtext,email.message.Message):
+			m=email.message_from_string(mailtext)
+
+		if isinstance(m,list):
+			p=m
+		else:
+			p=m.walk()
+
+		result=False
+		pdf=self.pdf_factory()
+
+		for payload in p:
+
+			if payload.get_content_type()=="application/pdf":
+				raw_payload = payload.get_payload(decode=True)
+				fp=self._new_tempfile()
+				fp.write(raw_payload)
+				fp.close()
+				r,fname=pdf.decrypt_file(fp.name,from_addr,to_addr)
+
+				if r==True:
+					pdffile=open(fname,"rb")
+					pl=pdffile.read()
+					pdffile.close()
+					self._del_tempfile(fp.name)
+					payload.set_payload(str(base64.encodebytes(pl),"ascii"))
+					payload["Content-Transfer-Encoding"]="base64"
+					result=True
+
+		if result:
+
+			if m["X-PDFEncrypted"]:
+					del m["X-PDFEncrypted"]
+
+			if m and m[self._encryptheader]:
+				del m[self._encryptheader]
+
+			return m.as_string()
+		else:
+			return None
 
 	##############
 	#_decrypt_mail
@@ -4549,6 +4615,9 @@ class gme:
 
 		elif self.is_smimeencrypted(mailtext):
 			mresult=self.decrypt_smime(mailtext,from_addr,to_addr)
+
+		elif self.is_pdfencrypted(mailtext):
+			mresult=self.decrypt_pdf(mailtext,from_addr,to_addr)
 
 		return mresult
 

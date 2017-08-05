@@ -2,6 +2,7 @@
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 import email
 import os
+import PyPDF2
 import re
 import shutil
 import subprocess
@@ -182,6 +183,10 @@ class _PDF(_gmechild):
 
 		return cmd
 
+	################
+	#decrypt_pdffile
+	################
+
 	@_dbg
 	def decrypt_pdffile(  self,
 							inputfilename,
@@ -198,6 +203,10 @@ class _PDF(_gmechild):
 
 		return True
 
+	#########################
+	#_decryptcommand_fromfile
+	#########################
+
 	@_dbg
 	def _decryptcommand_fromfile(	self,
 									fromfile,
@@ -209,6 +218,10 @@ class _PDF(_gmechild):
 				"input_pw","\"%s\""%password,
 				"output",tofile]
 		return cmd
+
+	#############
+	#decrypt_file
+	#############
 
 	@_dbg
 	def decrypt_file(  self,
@@ -287,8 +300,9 @@ class _PDF(_gmechild):
 	def is_encrypted(self,pdffile):
 
 		try:
-			import PyPDF2
-			inputPdf = PyPDF2.PdfFileReader(open(pdffile, "rb"))
+			f=open(pdffile, "rb")
+			inputPdf = PyPDF2.PdfFileReader(f)
+			f.close()
 			return inputPdf.isEncrypted
 		except:
 			return False
