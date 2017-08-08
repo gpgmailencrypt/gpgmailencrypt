@@ -1122,7 +1122,8 @@ class _ZIP(_baseunpacker):
 	def create_zipfile( self,
 						directory,
 						password=None,
-						containerfile=None):
+						containerfile=None,
+						returnfilename=False):
 		"""to create a zipfile put all files, that should be included in the
 		directory 'directory'.
 		if you want to have the zipfile password secured set the password.
@@ -1202,13 +1203,17 @@ class _ZIP(_baseunpacker):
 		else:
 			result=True
 
-		res=open(f.name+".zip",mode="br")
-		self.debug("ZIP_file binary open")
-		encdata=res.read()
-		res.close()
-		os.rename(f.name+".zip",f.name)
-		self.parent._del_tempfile(f.name)
-		return result,encdata
+		if returnfilename:
+			f.close()
+			return result,f.name
+		else:
+			res=open(f.name+".zip",mode="br")
+			self.debug("ZIP_file binary open")
+			encdata=res.read()
+			res.close()
+			os.rename(f.name+".zip",f.name)
+			self.parent._del_tempfile(f.name)
+			return result,encdata
 
 	##########################
 	#_createzipcommand_fromdir
@@ -1296,11 +1301,13 @@ class _ZIP(_baseunpacker):
 	@_dbg
 	def uncompress_file( self,
 					zipfile,
-					directory=None
+					directory=None,
+					password=None
 					):
 		"universal command for all unpacker classes"
 		self.unzip_file(zipfile=zipfile,
-						directory=directory)
+						directory=directory,
+						password=password)
 
 	#################
 	#unpackingformats
@@ -1331,6 +1338,7 @@ class _ZIP(_baseunpacker):
 				return True
 
 		return False
+
 
 	###########
 	#unzip_file
@@ -1370,8 +1378,8 @@ class _ZIP(_baseunpacker):
 		_result = subprocess.call(" ".join(unzipcmd), shell=True)
 
 		if _result !=0:
-			self.log("Error executing command (Error code %d)"%_result,"e")
-			self.log("%s"%unzipcmd)
+			self.debug("Error executing command (Error code %d)"%_result)
+			self.debug("%s"%unzipcmd)
 			return result,None
 		else:
 			result=True
@@ -1439,6 +1447,74 @@ class _ZIP(_baseunpacker):
 			cmd.insert(4,"-p%s"%password)
 
 		return cmd
+
+	##############
+	#_decrypt_file
+	##############
+
+	@_dbg
+	def _decrypt_zipfile(  self,
+							inputfilename,
+							password):
+
+
+		result,directory=self.unzip_file( inputfilename,password=password)
+
+		if result==True:
+			r1,f1=self.create_zipfile(directory,returnfilename=True)
+
+			if r1==True:
+				return r1,f1+".zip"
+
+		return False,None
+
+
+	#############
+	#decrypt_file
+	#############
+
+	@_dbg
+	def decrypt_zipfile(  self,
+							inputfilename,
+							from_addr, to_addr):
+		result=False
+		pw=None
+
+		if hasattr(self.parent._backend,"_textbackend") :
+			pw=self.parent._backend._textbackend.pdf_additionalencryptionkey(None)
+
+			if pw!=None:
+				result,fname=self._decrypt_zipfile(inputfilename,password=pw)
+
+		if not result:
+			pw=self.parent._backend.get_pdfpassword(from_addr)
+
+			if pw!=None:
+				result,fname=self._decrypt_zipfile(inputfilename,password=pw)
+
+		if not result:
+			pw=self.parent._backend.get_pdfpassword(to_addr)
+
+			if pw!=None:
+				result,fname=self._decrypt_zipfile(inputfilename,password=pw)
+
+		if not result:
+			pw=self.parent._backend.pdf_additionalencryptionkey(to_addr)
+
+			if pw!=None:
+				result,fname=self._decrypt_zipfile(inputfilename,password=pw)
+
+		if not result:
+			pw=self.parent._backend.pdf_additionalencryptionkey(from_addr)
+
+			if pw!=None:
+				result,fname=self._decrypt_zipfile(inputfilename,password=pw)
+
+		if result==True:
+			return result,fname
+		else:
+			self.parent._del_tempfile(f.name)
+			return result,None
 
 ######
 #_ZIP2

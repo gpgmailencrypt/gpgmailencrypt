@@ -3835,7 +3835,7 @@ class gme:
 	def _decode_header(self,header):
 
 		if not header:
-			return None
+			return ""
 
 		h=email.header.decode_header(header)
 		result=""
@@ -4599,6 +4599,55 @@ class gme:
 		else:
 			return None
 
+
+	############
+	#decrypt_zip
+	############
+
+	@_dbg
+	def decrypt_zip(self, mailtext,from_addr,to_addr):
+
+		if not isinstance(mailtext,email.message.Message):
+			m=email.message_from_string(mailtext)
+
+		if isinstance(m,list):
+			p=m
+		else:
+			p=m.walk()
+
+		result=False
+		zip=self.zip_factory()
+
+		for payload in p:
+
+			if payload.get_content_type()=="application/zip":
+				raw_payload = payload.get_payload(decode=True)
+				fp=self._new_tempfile()
+				fp.write(raw_payload)
+				fp.close()
+				r,fname=zip.decrypt_zipfile(fp.name,from_addr,to_addr)
+
+				if r==True:
+					zipfile=open(fname,"rb")
+					pl=zipfile.read()
+					zipfile.close()
+					self._del_tempfile(fp.name)
+					payload.set_payload(str(base64.encodebytes(pl),"ascii"))
+					payload["Content-Transfer-Encoding"]="base64"
+					result=True
+
+		if result:
+
+			if m["X-PDFEncrypted"]:
+					del m["X-PDFEncrypted"]
+
+			if m and m[self._encryptheader]:
+				del m[self._encryptheader]
+
+			return m.as_string()
+		else:
+			return None
+
 	##############
 	#_decrypt_mail
 	##############
@@ -4618,6 +4667,12 @@ class gme:
 
 		elif self.is_pdfencrypted(mailtext):
 			mresult=self.decrypt_pdf(mailtext,from_addr,to_addr)
+
+			if mresult:
+				res=self.decrypt_zip(mresult,from_addr,to_addr)
+
+				if res:
+					mresult=res
 
 		return mresult
 
