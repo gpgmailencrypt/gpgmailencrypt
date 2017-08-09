@@ -192,13 +192,22 @@ class _PDF(_gmechild):
 							inputfilename,
 							outputfilename,
 							password):
-		cmd=' '.join(self._decryptcommand_fromfile( inputfilename,
-														outputfilename,
-														password))
+		cmd=self._decryptcommand_fromfile(	inputfilename,
+											outputfilename,
+											password)
 
-		_result = subprocess.call( cmd ,shell=True )
+		try:
+			p=subprocess.Popen(	cmd,
+								stdin=None,
+								stdout=subprocess.PIPE,
+								stderr=subprocess.PIPE)
+			output1,error1=p.communicate()
+			error=p.poll()
+		except:
+			self.debug("decrypt_pdffile Error execute command")
+			return False
 
-		if _result != 0:
+		if error != 0:
 			return False
 
 		return True
@@ -215,7 +224,7 @@ class _PDF(_gmechild):
 		#pdftk secured.pdf input_pw foopass output unsecured.pdf
 		cmd=[   self._pdfencryptcmd,
 				fromfile,
-				"input_pw","\"%s\""%password,
+				"input_pw","%s"%password,
 				"output",tofile]
 		return cmd
 
