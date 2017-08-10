@@ -1576,6 +1576,20 @@ class gme:
 		return z
 
 	############
+	#a7z_factory
+	############
+
+	@_dbg
+	def a7z_factory(self):
+		"returns a ZIP class"
+		z= archivemanagers._7Z(self)
+
+		if len(self._7ZIPCMD)>0:
+			z.cmd=self._7ZIPCMD
+
+		return z
+
+	############
 	#pdf_factory
 	############
 
@@ -1607,10 +1621,14 @@ class gme:
 	################
 
 	@_dbg
-	def zip_attachments(self,mailtext):
+	def zip_attachments(self,mailtext,a7z=True):
 		message = email.message_from_string( mailtext )
 		tempdir = tempfile.mkdtemp()
-		Zip=self.zip_factory()
+
+		if a7z:
+			Zip=self.a7z_factory()
+		else:
+			Zip=self.zip_factory()
 
 		for m in message.walk():
 			contenttype=m.get_content_type()
@@ -3868,7 +3886,9 @@ class gme:
 							message,
 							pdfuser,
 							from_addr,
-							to_addr):
+							to_addr,
+							a7z=True
+							):
 		splitmsg=re.split("\n\n",message,1)
 
 		if len(splitmsg)!=2:
@@ -3972,7 +3992,11 @@ class gme:
 		oldmsg=email.message_from_string(message)
 		attachments=0
 		tempdir = tempfile.mkdtemp()
-		Zip=self.zip_factory()
+
+		if a7z:
+			Zip=self.a7z_factory()
+		else:
+			Zip=self.zip_factory()
 
 		try:
 			Zip.set_zipcipher(self._backend.encryptionmap(pdfuser)[1])
@@ -4022,7 +4046,7 @@ class gme:
 
 		if attachments>0:
 
-			if self._PDFSECUREZIPCONTAINER==True:
+			if self._PDFSECUREZIPCONTAINER==True and a7z==False:
 
 				try:
 					content=self._LOCALEDB[self._LOCALE]["content"]
@@ -4037,7 +4061,14 @@ class gme:
 			result,zipfile=Zip.create_zipfile(tempdir,pw,containerfile=content)
 
 			if result==True:
-				msg= MIMEBase("application", "zip")
+
+				if a7z:
+					msg= MIMEBase("application", "7z")
+					extension="7z"
+				else:
+					msg= MIMEBase("application", "zip")
+					extension="zip"
+
 				msg.set_payload(zipfile)
 
 				try:
@@ -4046,7 +4077,7 @@ class gme:
 					self.log("wrong locale '%s'"%self._LOCALE,"w")
 					f=self._LOCALEDB["EN"]["attachment"]
 
-				filenamecD,filenamecT=encode_filename("%s.zip"%f)
+				filenamecD,filenamecT=encode_filename("%s.%s"%(f,extension))
 				msg.add_header( 'Content-Disposition',
 								'attachment; filename*="%s"' % filenamecD)
 				msg.set_param( 'name', filenamecT )
@@ -4620,7 +4651,8 @@ class gme:
 
 		for payload in p:
 
-			if payload.get_content_type()=="application/zip":
+			ct=payload.get_content_type()
+			if ct in ("application/zip","application/7z"):
 				raw_payload = payload.get_payload(decode=True)
 				fp=self._new_tempfile()
 				fp.write(raw_payload)
@@ -5309,6 +5341,5 @@ def main():
 ############################
 
 if __name__ == "__main__":
-	print("vor main")
 	main()
 

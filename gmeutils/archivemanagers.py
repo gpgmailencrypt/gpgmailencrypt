@@ -1104,6 +1104,7 @@ class _ZIP(_baseunpacker):
 		_baseunpacker.__init__(self,parent)
 		self.zipcipher=self.parent._ZIPCIPHER
 		self.cmd=shutil.which("7za")
+		self.extension=".zip"
 
 	##############
 	#set_zipcipher
@@ -1207,11 +1208,11 @@ class _ZIP(_baseunpacker):
 			f.close()
 			return result,f.name
 		else:
-			res=open(f.name+".zip",mode="br")
+			res=open(f.name+self.extension,mode="br")
 			self.debug("ZIP_file binary open")
 			encdata=res.read()
 			res.close()
-			os.rename(f.name+".zip",f.name)
+			os.rename(f.name+self.extension,f.name)
 			self.parent._del_tempfile(f.name)
 			return result,encdata
 
@@ -1241,7 +1242,7 @@ class _ZIP(_baseunpacker):
 				"-mem=%s"%cipher,">/dev/null"]
 
 		if password!=None:
-			cmd.insert(4,"-p%s"%password)
+			cmd.insert(4,"-p\"%s\""%password)
 
 		if compress==True:
 			cmd.insert(4,"-mx%i"%self.parent._ZIPCOMPRESSION)
@@ -1324,7 +1325,7 @@ class _ZIP(_baseunpacker):
 		#7z l a.7z -slt
 		cmd=[  	self.cmd,
 				"l","%s"%zipfile,
-				"-slt"
+				"-sltp"
 			]
 		p=subprocess.Popen(	cmd,
 							stdin=None,
@@ -1335,6 +1336,10 @@ class _ZIP(_baseunpacker):
 		for line in p.stdout.readlines():
 
 			if "Encrypted = +" in line.decode("UTF-8","replace"):
+				return True
+
+			if ("Can not open encrypted archive. Wrong password?"
+					in line.decode("UTF-8","replace")):
 				return True
 
 		return False
@@ -1390,7 +1395,8 @@ class _ZIP(_baseunpacker):
 			result=False
 			directory2 = tempfile.mkdtemp()
 			unzipcmd=self._createunzipcommand_indir(
-							os.path.join(directory1,"%s.zip"%containerfile),
+							os.path.join(directory1,"%s"%(containerfile,
+															self.extension)),
 										 directory2,
 										 password)
 			self.debug("UNZIP command2: '%s'" % unzipcmd)
@@ -1444,7 +1450,7 @@ class _ZIP(_baseunpacker):
 				">/dev/null"]
 
 		if password!=None:
-			cmd.insert(4,"-p%s"%password)
+			cmd.insert(4,"-p\"%s\""%password)
 
 		return cmd
 
@@ -1464,7 +1470,8 @@ class _ZIP(_baseunpacker):
 			r1,f1=self.create_zipfile(directory,returnfilename=True)
 
 			if r1==True:
-				return r1,f1+".zip"
+				return r1,f1+self.extension
+
 
 		return False,None
 
@@ -1515,6 +1522,38 @@ class _ZIP(_baseunpacker):
 		else:
 			self.parent._del_tempfile(f.name)
 			return result,None
+
+##########
+#CLASS _7z
+##########
+
+class _7Z(_ZIP):
+
+	def __init__(self,parent):
+		_ZIP.__init__(self,parent)
+		self.extension=".7z"
+
+	##########################
+	#_createzipcommand_fromdir
+	##########################
+
+	@_dbg
+	def _createzipcommand_fromdir(  self,
+									resultfile,
+									directory,
+									password,
+									compress=True):
+
+		cmd=[   self.cmd,
+				"a",resultfile,
+				os.path.join(directory,"*"),
+				">/dev/null"]
+
+		if password!=None:
+			cmd.insert(4,"-p%s"%password)
+			cmd.insert(4,"-mhe=on")
+
+		return cmd
 
 ######
 #_ZIP2
@@ -1682,6 +1721,8 @@ def get_archivemanager(manager, parent):
 		return _XZ(parent=parent)
 	elif manager=="ZIP":
 		return _ZIP(parent=parent)
+	elif manager=="7Z":
+		return _7Z(parent=parent)
 	elif manager=="ZIP2":
 		return _ZIP2(parent=parent)
 	elif manager=="ZOO":
@@ -1696,7 +1737,8 @@ def get_archivemanager(manager, parent):
 ################
 
 def get_managerlist():
-	return [	"ACE",
+	return [	"7Z",
+				"ACE",
 				"AR",
 				"ARC",
 				"ARJ",
