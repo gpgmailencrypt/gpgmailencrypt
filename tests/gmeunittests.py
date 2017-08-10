@@ -1263,6 +1263,40 @@ class archivetests(unittest.TestCase):
 		success=(data==teststring)
 		self.assertTrue(success)
 
+	def test_7zun7z(self):
+
+		ZIP=self.gme.a7z_factory()
+		teststring="dies ist ein Täst"
+		directory = tempfile.mkdtemp()
+		f=open("%s/testfile.txt"%directory,mode='w')
+		f.write(teststring)
+		f.close()
+		success=False
+		_result,encdata=ZIP.create_zipfile( directory,
+											password="secret",
+											containerfile="container")
+		data=None
+
+		if _result==True:
+			f=tempfile.NamedTemporaryFile(  mode='wb',
+											delete=False,
+											prefix='unittest-')
+			f.write(encdata)
+			f.close()
+			_result,encdata=ZIP.get_zipcontent( zipfile=f.name,
+												password="secret",
+												containerfile="container")
+			#self.assertTrue(_result==True)
+
+			try:
+				self.assertTrue(encdata[0][0]=="testfile.txt")
+				data=encdata[0][1].decode("UTF-8")
+			except:
+				raise
+
+		success=(data==teststring)
+		self.assertTrue(success)
+
 	@unittest.skipIf(not has_app("xz"),
 		"archive programm xz not installed")
 	def test_xzuncompress(self):
