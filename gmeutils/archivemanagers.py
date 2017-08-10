@@ -1409,7 +1409,7 @@ class _ZIP(_baseunpacker):
 				for s in source:
 					 shutil.move(os.path.join(directory2,s),directory)
 			else:
-		  		self.log("Error executing command (Error code %d)4"%_result,"e")
+				self.log("Error executing command (Error code %d)4"%_result,"e")
 				self.debug(unzipcmd)
 		else:
 			source = os.listdir(directory1)
