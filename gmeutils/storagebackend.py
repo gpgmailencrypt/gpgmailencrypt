@@ -224,7 +224,6 @@ class _TEXT_BACKEND(_base_storage):
 
 			try:
 				keys=cfg.get('gpg','encryptionkeys').split(",")
-				print(cfg.get('gpg','encryptionkeys'))
 				self.debug("read_config gpgkeys ='%s'"%keys)
 
 				for k in keys:
