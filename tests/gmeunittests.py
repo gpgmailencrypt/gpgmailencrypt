@@ -913,7 +913,7 @@ class gpgtests(unittest.TestCase):
 		#test fails if the test/gpg directory is on network file system
 		#due to gpg restrictions
 
-		pk=gpg.private_keys()
+		pk=self.gpg.private_keys()
 		controllist=list()
 		controllist.append("testaddress@gpgmailencry.pt")
 		controllist.append("second.user@gpgmailencry.pt")
@@ -1212,6 +1212,8 @@ class archivetests(unittest.TestCase):
 	def setUp(self):
 		self.gme=gpgmailencrypt.gme()
 		self.gme.set_configfile("./gmetest.conf")
+		self.password="secret"
+		self.teststring="dies ist ein Täst"
 
 	def tearDown(self):
 		self.gme.close()
@@ -1232,14 +1234,13 @@ class archivetests(unittest.TestCase):
 	def test_zipunzip(self):
 
 		ZIP=self.gme.zip_factory()
-		teststring="dies ist ein Täst"
 		directory = tempfile.mkdtemp()
 		f=open("%s/testfile.txt"%directory,mode='w')
-		f.write(teststring)
+		f.write(self.teststring)
 		f.close()
 		success=False
 		_result,encdata=ZIP.create_zipfile( directory,
-											password="secret",
+											password=self.password,
 											containerfile="container")
 		data=None
 
@@ -1250,7 +1251,7 @@ class archivetests(unittest.TestCase):
 			f.write(encdata)
 			f.close()
 			_result,encdata=ZIP.get_zipcontent( zipfile=f.name,
-												password="secret",
+												password=self.password,
 												containerfile="container")
 			#self.assertTrue(_result==True)
 
@@ -1260,20 +1261,19 @@ class archivetests(unittest.TestCase):
 			except:
 				raise
 
-		success=(data==teststring)
-		self.assertTrue(success)
+		success=(data==self.teststring)
+		self.assertEqual(data,self.teststring)
 
 	def test_7zun7z(self):
 
 		ZIP=self.gme.a7z_factory()
-		teststring="dies ist ein Täst"
 		directory = tempfile.mkdtemp()
 		f=open("%s/testfile.txt"%directory,mode='w')
-		f.write(teststring)
+		f.write(self.teststring)
 		f.close()
 		success=False
 		_result,encdata=ZIP.create_zipfile( directory,
-											password="secret",
+											password=self.password,
 											containerfile="container")
 		data=None
 
@@ -1284,7 +1284,7 @@ class archivetests(unittest.TestCase):
 			f.write(encdata)
 			f.close()
 			_result,encdata=ZIP.get_zipcontent( zipfile=f.name,
-												password="secret",
+												password=self.password,
 												containerfile="container")
 			#self.assertTrue(_result==True)
 
@@ -1294,8 +1294,7 @@ class archivetests(unittest.TestCase):
 			except:
 				raise
 
-		success=(data==teststring)
-		self.assertTrue(success)
+		self.assertEqual(data,self.teststring)
 
 	@unittest.skipIf(not has_app("xz"),
 		"archive programm xz not installed")
