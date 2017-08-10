@@ -2933,11 +2933,17 @@ class gme:
 		if isinstance(msg,email.message.Message):
 			m=msg.as_string()
 
-		find=re.search("^Content-Type: application/pgp-encrypted",
+		find=re.search("^Content-Type: multipart/encrypted",
 						m,
 						re.I|re.MULTILINE)
+		find2=None
 
 		if find:
+			find2=re.search("application/pgp-encrypted",
+						m[find.end():],
+						re.I|re.MULTILINE)
+
+		if find2:
 			return True
 		else:
 			return False
@@ -4473,7 +4479,7 @@ class gme:
 				if mt!= None:
 					t=mt
 
-				payload.set_type( mt)
+				payload.set_type(t)
 
 				if payload["Content-Disposition"]:
 					del payload["Content-Disposition"]
