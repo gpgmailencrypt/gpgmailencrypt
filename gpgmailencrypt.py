@@ -390,6 +390,7 @@ class gme:
 		self._PDFPASSWORDLENGTH=10
 		self._PDFPASSWORDLIFETIME=48*60*60
 		self._7ZIPCMD=""
+		self._USE7ZARCHIVE=False
 		self._ZIPCIPHER="ZipCrypto"
 		self._ZIPCOMPRESSION=5
 		self._ZIPATTACHMENTS=False
@@ -806,6 +807,11 @@ class gme:
 			try:
 				self._PDFSECUREZIPCONTAINER=_cfg.getboolean('zip',
 														'securezipcontainer')
+			except:
+				pass
+
+			try:
+				self._USE7ZARCHIVE=_cfg.getboolean('zip','use7zarchive')
 			except:
 				pass
 
@@ -1621,11 +1627,11 @@ class gme:
 	################
 
 	@_dbg
-	def zip_attachments(self,mailtext,a7z=True):
+	def zip_attachments(self,mailtext):
 		message = email.message_from_string( mailtext )
 		tempdir = tempfile.mkdtemp()
 
-		if a7z:
+		if self._USE7ZARCHIVE:
 			Zip=self.a7z_factory()
 		else:
 			Zip=self.zip_factory()
@@ -3886,8 +3892,7 @@ class gme:
 							message,
 							pdfuser,
 							from_addr,
-							to_addr,
-							a7z=True
+							to_addr
 							):
 		splitmsg=re.split("\n\n",message,1)
 
@@ -3993,7 +3998,7 @@ class gme:
 		attachments=0
 		tempdir = tempfile.mkdtemp()
 
-		if a7z:
+		if self._USE7ZARCHIVE:
 			Zip=self.a7z_factory()
 		else:
 			Zip=self.zip_factory()
@@ -4046,7 +4051,7 @@ class gme:
 
 		if attachments>0:
 
-			if self._PDFSECUREZIPCONTAINER==True and a7z==False:
+			if self._PDFSECUREZIPCONTAINER==True and self._USE7ZARCHIVE==False:
 
 				try:
 					content=self._LOCALEDB[self._LOCALE]["content"]
@@ -4062,7 +4067,7 @@ class gme:
 
 			if result==True:
 
-				if a7z:
+				if self._USE7ZARCHIVE:
 					msg= MIMEBase("application", "7z")
 					extension="7z"
 				else:

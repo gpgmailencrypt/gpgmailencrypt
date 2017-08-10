@@ -223,17 +223,23 @@ def print_exampleconfig():
 	print ("[zip]")
 	print ("7zipcommand=/usr/bin/7za".ljust(space)+
 	"#path where to find 7za")
+	print ("use7zarchive=False".ljust(space)+
+	"#if True the 7z archive type will be used to zip files")
+	print ("".ljust(space)+
+	"#if False the zip format will be used")
 	print ("defaultcipher=ZipCrypto".ljust(space)+
-	"#ZipCrypto|AES128||AES192|AES256")
+	"#ZipCrypto|AES128||AES192|AES256, used only when use7zarchive=False")
 	print ("compressionlevel=5".ljust(space)+
 	"#1,3,5,7,9  with 1:lowest compression, but very fast, 9 is ")
 	print ("".ljust(space)+
 	"#highest compression, but very slow, default is 5")
+	print ("".ljust(space)+
+	"#used only when use7zarchive=False")
 	print ("securezipcontainer=False".ljust(space)+
 	"#attachments will be stored in an encrypted zip file."
 	" If this option is true,")
 	print ("".ljust(space)+
-	"#the directory will be also encrypted")
+	"#the directory will be also encrypted, used only when use7zarchive=False")
 	print ("zipattachments=False".ljust(space)+
 	"#if True all attachments will be zipped, independent "
 	"from the encryption method")
