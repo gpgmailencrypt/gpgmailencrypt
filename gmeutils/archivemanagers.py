@@ -1395,7 +1395,7 @@ class _ZIP(_baseunpacker):
 			result=False
 			directory2 = tempfile.mkdtemp()
 			unzipcmd=self._createunzipcommand_indir(
-							os.path.join(directory1,"%s"%(containerfile,
+							os.path.join(directory1,"%s%s"%(containerfile,
 															self.extension)),
 										 directory2,
 										 password)
@@ -1410,7 +1410,7 @@ class _ZIP(_baseunpacker):
 					 shutil.move(os.path.join(directory2,s),directory)
 			else:
 		  		self.log("Error executing command (Error code %d)4"%_result,"e")
-		  		self.log(unzipcmd,"e")
+				self.debug(unzipcmd)
 		else:
 			source = os.listdir(directory1)
 
