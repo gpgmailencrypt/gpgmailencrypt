@@ -132,6 +132,7 @@ setup(
 	license='GPL v3',
 	install_requires=[	"pypdf2",
 						"beautifulsoup4",
+						"html5lib",
 						"python-magic",
 						"requests",
 						"lxml",
