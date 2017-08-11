@@ -828,6 +828,8 @@ class adm_verificationtests(unittest.TestCase):
 		self.gmeserver=gmeutils.gpgmailserver._gpgmailencryptserver(
 															self.gme,
 															("localhost",0))
+		self.user="testuser"
+		self.password="secret"
 
 	def tearDown(self):
 		del self.gmeserver
@@ -839,30 +841,24 @@ class adm_verificationtests(unittest.TestCase):
 			pass
 
 	def test_adm_verify_password(self):
-		user="test"
-		password="test"
-		self.assertTrue(self.gmeserver.authenticate(user,password))
+		self.assertTrue(self.gmeserver.authenticate(self.user,self.password))
 
 	def test_adm_verify_wrong_password(self):
-		user="test"
-		password="wrong"
-		self.assertFalse(self.gmeserver.authenticate(user,password))
+		self.assertFalse(self.gmeserver.authenticate(self.user,"wrong"))
 
 	def test_admsetpassword(self):
-		user="test"
-		password="test"
-		self.gme.adm_set_user(password,password)
-		self.assertTrue(gmeutils.password.pw_verify(password,
-											self.gme.adm_get_pwhash(user)))
+		self.gme.adm_set_user(self.user,self.password)
+		self.assertTrue(gmeutils.password.pw_verify(self.password,
+											self.gme.adm_get_pwhash(self.user)))
 
 	def test_admdeluser(self):
-		self.gme.adm_set_user("test","test")
+		self.gme.adm_set_user(self.user,self.password)
 		result=False
-		result=(self.gme.adm_get_pwhash("test")!=None)
+		result=(self.gme.adm_get_pwhash(self.user)!=None)
 
 		if result==True:
-			self.gme.adm_del_user("test")
-			result=(self.gme.adm_get_pwhash("test")==None)
+			self.gme.adm_del_user(self.user)
+			result=(self.gme.adm_get_pwhash(self.user)==None)
 
 		self.assertTrue(result)
 
@@ -1214,6 +1210,7 @@ class archivetests(unittest.TestCase):
 		self.gme.set_configfile("./gmetest.conf")
 		self.password="secret"
 		self.teststring="dies ist ein Täst"
+		self.containerfile="container"
 
 	def tearDown(self):
 		self.gme.close()
@@ -1232,7 +1229,6 @@ class archivetests(unittest.TestCase):
 		self.assertNotEqual(self.gme.get_zipcipher(),wrongcipher)
 
 	def test_zipunzip(self):
-
 		ZIP=self.gme.zip_factory()
 		directory = tempfile.mkdtemp()
 		f=open("%s/testfile.txt"%directory,mode='w')
@@ -1241,7 +1237,7 @@ class archivetests(unittest.TestCase):
 		success=False
 		_result,encdata=ZIP.create_zipfile( directory,
 											password=self.password,
-											containerfile="container")
+											containerfile=self.containerfile)
 		data=None
 
 		if _result==True:
@@ -1251,8 +1247,8 @@ class archivetests(unittest.TestCase):
 			f.write(encdata)
 			f.close()
 			_result,encdata=ZIP.get_zipcontent( zipfile=f.name,
-												password=self.password,
-												containerfile="container")
+											password=self.password,
+											containerfile=self.containerfile)
 			#self.assertTrue(_result==True)
 
 			try:
@@ -1265,7 +1261,6 @@ class archivetests(unittest.TestCase):
 		self.assertEqual(data,self.teststring)
 
 	def test_7zun7z(self):
-
 		ZIP=self.gme.a7z_factory()
 		directory = tempfile.mkdtemp()
 		f=open("%s/testfile.txt"%directory,mode='w')
@@ -1274,7 +1269,7 @@ class archivetests(unittest.TestCase):
 		success=False
 		_result,encdata=ZIP.create_zipfile( directory,
 											password=self.password,
-											containerfile="container")
+											containerfile=self.containerfile)
 		data=None
 
 		if _result==True:
@@ -1284,8 +1279,8 @@ class archivetests(unittest.TestCase):
 			f.write(encdata)
 			f.close()
 			_result,encdata=ZIP.get_zipcontent( zipfile=f.name,
-												password=self.password,
-												containerfile="container")
+											password=self.password,
+											containerfile=self.containerfile)
 			#self.assertTrue(_result==True)
 
 			try:
