@@ -1290,7 +1290,9 @@ class gme:
 						t="DEBUG "+t
 
 					syslog.syslog(level,t)
-				elif  self._LOGGING==self.l_file and self._logfile!=None:
+				elif  (self._LOGGING==self.l_file
+						and self._logfile!=None
+						and not self._logfile.closed):
 					#write to _logfile
 					self._logfile.write("%s %s:%s\n"%(tm,prefix,t ))
 					self._logfile.flush()
