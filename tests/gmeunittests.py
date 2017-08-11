@@ -1195,7 +1195,8 @@ class pdftests(unittest.TestCase):
 #############
 #ARCHIVETESTS
 #############
-def try_uncompress(armanager,expectedfilename,alternateextension=None):
+def try_uncompress(	armanager,expectedfilename,
+					alternateextension=None,password=None):
 		with gpgmailencrypt.gme() as gme:
 			originaltxt=""
 
@@ -1203,16 +1204,18 @@ def try_uncompress(armanager,expectedfilename,alternateextension=None):
 				originaltxt=rf.read()
 
 			gme.set_configfile("./gmetest.conf")
+			gme.set_debug(True)
+			gme.set_logging("stderr")
 			xz=gmeutils.archivemanagers.get_archivemanager(armanager,gme)
 
 			if xz==None:
 				print("kein Archivmanager %s gefunden"%armanager)
 				return False
 
-			result,rfile=xz.uncompress_file(
-						os.path.abspath("./archives/test.%s"%
+			filename=os.path.abspath("./archives/test.%s"%
 							(alternateextension if alternateextension else
-								armanager.lower())))
+								armanager.lower()))
+			result,rfile=xz.uncompress_file(filename,password=password)
 			contentresult=False
 			data=None
 
@@ -1310,11 +1313,14 @@ class archivetests(unittest.TestCase):
 
 		self.assertEqual(data,self.teststring)
 
+	def test_7zuncompress(self):
+		self.assertTrue(try_uncompress("7z","source.txt",password="secret"))
+
+
 	@unittest.skipIf(not has_app("xz"),
 		"archive programm xz not installed")
 	def test_xzuncompress(self):
 		self.assertTrue(try_uncompress("xz","test"))
-
 
 	@unittest.skipIf(not has_app("ar"),
 		"archive programm ar not installed")
