@@ -7,6 +7,7 @@ import gmeutils.archivemanagers
 import gmeutils.virusscanners
 import gmeutils.spamscanners
 import gmeutils.gpgmailserver
+import filecmp
 import os
 import os.path
 import shutil
@@ -1172,6 +1173,24 @@ class pdftests(unittest.TestCase):
 											"testaddress@gpgmailencry.pt",
 											"testaddress@gpgmailencry.pt")
 		self.assertIsNotNone(result)
+
+
+	@unittest.skipIf(not has_pdf(),
+		"pdf support not available")
+	def test_decryptpdf(self):
+		"test decryptpdf"
+		pdf=self.gme.pdf_factory()
+
+		f=tempfile.NamedTemporaryFile(  mode='wb',
+											delete=False,
+											prefix='unittest-')
+		f.close()
+		result=pdf.decrypt_pdffile( "./archives/encrypted.pdf",
+									f.name,
+									"secret")
+		self.assertTrue(result)
+		res=filecmp.cmp(f.name,"./archives/unencrypted.pdf",shallow=False)
+		self.assertTrue(res)
 
 #############
 #ARCHIVETESTS
