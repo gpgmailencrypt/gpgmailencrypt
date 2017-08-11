@@ -94,7 +94,7 @@ class _basedeleteunpacker(_baseunpacker):
 	################
 
 	@_dbg
-	def uncompress_file(self, filename,directory=None):
+	def uncompress_file(self, filename,directory=None,password=None):
 		result=False
 
 		if directory==None:
@@ -107,7 +107,7 @@ class _basedeleteunpacker(_baseunpacker):
 		origdir,fname=os.path.split(filename)
 		targetname=os.path.join(directory,fname)
 		shutil.move(filename,targetname)
-		uncompresscmd=self.uncompresscommand(targetname,directory)
+		uncompresscmd=self.uncompresscommand(targetname,directory,password=password)
 		self.debug("uncompresscommand:'%s'"%uncompresscmd)
 		_result = subprocess.call(' '.join(uncompresscmd), shell=True)
 
