@@ -1306,7 +1306,7 @@ class _ZIP(_baseunpacker):
 					password=None
 					):
 		"universal command for all unpacker classes"
-		self.unzip_file(zipfile=zipfile,
+		return self.unzip_file(zipfile=zipfile,
 						directory=directory,
 						password=password)
 
