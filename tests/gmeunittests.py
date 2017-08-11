@@ -1204,8 +1204,6 @@ def try_uncompress(	armanager,expectedfilename,
 				originaltxt=rf.read()
 
 			gme.set_configfile("./gmetest.conf")
-			gme.set_debug(True)
-			gme.set_logging("stderr")
 			xz=gmeutils.archivemanagers.get_archivemanager(armanager,gme)
 
 			if xz==None:
