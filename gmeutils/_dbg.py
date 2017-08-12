@@ -41,18 +41,20 @@ def _dbg(func):
 		except:
 			pass
 
-		if hasattr(parent,"_level"):
-			parent._level+=1
+		if (hasattr(parent,"_logger") and 
+			hasattr(parent._logger,"_level")):
+			parent._logger._level+=1
 
 		parent.debug("START %s"%func.__name__,lineno,filename)
 		result=func(*args,**kwargs)
 		parent.debug("END %s"%func.__name__,endlineno,filename)
 
-		if hasattr(parent,"_level"):
-			parent._level-=1
+		if (hasattr(parent,"_logger") and 
+			hasattr(parent._logger,"_level")):
+			parent._logger._level-=1
 
-			if parent._level<0:
-				parent._level=0
+			if parent._logger._level<0:
+				parent._logger._level=0
 
 		return result
 

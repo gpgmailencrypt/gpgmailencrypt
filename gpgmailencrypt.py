@@ -37,6 +37,7 @@ import getopt
 import gmeutils.spamscanners 	as spamscanners
 import gmeutils.archivemanagers as archivemanagers
 import gmeutils.storagebackend 	as backend
+import gmeutils.mylogger 		as mylogger
 from   gmeutils.child         	import _gmechild
 from   gmeutils._dbg 		  	import _dbg
 from   gmeutils.gpgclass 		import _GPG,_GPGEncryptedAttachment
@@ -84,10 +85,6 @@ class gme:
 	o_mail=1
 	o_stdout=2
 	o_file=3
-	l_none=1
-	l_syslog=2
-	l_file=3
-	l_stderr=4
 	m_daemon=1
 	m_script=2
 	s_may=1
@@ -191,11 +188,9 @@ class gme:
 		self._queue_id=0
 		self._daemonstarttime=datetime.datetime.now()
 		self._RUNMODE=None
-		self._LOGGING=self.l_none
-		self._level=0
 		self.reset_statistics()
+		self._logger=mylogger.mylogger(parent=self)
 		self.reset_messages()
-		self._DEBUG=False
 		self._GPGkeys=list()
 		self._GPGprivatekeys=list()
 		self._backend=backend.get_backend("TEXT",parent=self)
@@ -227,7 +222,7 @@ class gme:
 	def reset_messages(self):
 		self._systemerrors=0
 		self._systemwarnings=0
-		self._systemmessages=[]
+		self._logger._systemmessages=[]
 
 	###################
 	#reset_pdfpasswords
@@ -287,9 +282,7 @@ class gme:
 		if self._RUNMODE==self.m_daemon:
 			self.store_deferred_list()
 
-		if self._LOGGING and self._logfile!=None:
-			self._logfile.close()
-
+		self._logger.close()
 		self._backend.close()
 
 	#####
@@ -301,7 +294,6 @@ class gme:
 		"initiales the module and reads the config file"
 
 		#Internal variables
-		self._logfile=None
 		self._tempfiles = list()
 		self._mailcount=0
 		self._encryptgpgcomment="Encrypted by gpgmailencrypt version %s"%VERSION
@@ -332,9 +324,6 @@ class gme:
 		self._STATISTICS_PER_DAY=1
 		self._SYSTEMMAILFROM="gpgmailencrypt@localhost"
 		self._ALWAYSENCRYPT=False
-		self._DEBUG=False
-		self._LOGGING=self.l_none
-		self._LOGFILE=""
 		self._ADDHEADER=False
 		self._SMTP_HOST='localhost'
 		self._SMTP_PORT=25
@@ -373,8 +362,6 @@ class gme:
 		self._SMIMECIPHER="DES3"
 		self._SMIMEAUTOMATICEXTRACTKEYS=False
 		self._OUTPUT=self.o_mail
-		self._DEBUGSEARCHTEXT=[]
-		self._DEBUGEXCLUDETEXT=[]
 		self._LOCALE="EN"
 		self._RUNMODE=self.m_script
 		self._SMTPD_HOST="127.0.0.1"
@@ -414,6 +401,7 @@ class gme:
 		self._DKIMKEY=""
 		self._SENTADDRESS="SENT"
 		self._USE_SENTADDRESS=False
+		self._logger.init()
 		self._backend.init()
 		self._read_configfile()
 
@@ -435,52 +423,8 @@ class gme:
 			return
 
 		#logging
-		if _cfg.has_section('logging'):
-
-			try:
-				l=_cfg.get('logging','log').lower()
-
-				if l=="syslog":
-					self._LOGGING=self.l_syslog
-					self._prepare_syslog()
-				elif l=='file':
-					self._LOGGING=self.l_file
-				elif l=='stderr':
-					self._LOGGING=self.l_stderr
-				else:
-					self._LOGGING=self.l_none
-
-			except:
-				pass
-
-			try:
-				self._LOGFILE=_cfg.get('logging','file')
-			except:
-				pass
-
-			try:
-				self._DEBUG=_cfg.getboolean('logging','debug')
-			except:
-				pass
-
-			try:
-				s=_cfg.get('logging','debugsearchtext')
-
-				if len(s)>0:
-					self._DEBUGSEARCHTEXT=s.split(",")
-
-			except:
-				pass
-
-			try:
-				e=_cfg.get('logging','debugexcludetext')
-
-				if len(e)>0:
-					self._DEBUGEXCLUDETEXT=e.split(",")
-
-			except:
-				pass
-
+		self._logger.read_configfile(_cfg)
+		
 		#default
 		if _cfg.has_section('default'):
 
@@ -1037,29 +981,12 @@ class gme:
 				'viruscheck=',
 				'zip'])
 		except getopt.GetoptError as e:
-			self._LOGGING=self.l_stderr
+			self._logger._LOGGING=self._logger.l_stderr
 			self.log("unknown commandline parameter '%s'"%e,"e")
 			exit(2)
 
-		for _opt, _arg in _opts:
-
-			if _opt == '--version':
-				print("gpgmailencrypt version %s from %s"%(VERSION,DATE))
-				exit(0)
-
-			if _opt  =='-l' or  _opt == '--log':
-				self._LOGGING=self.l_stderr
-
-				if isinstance(_arg,str):
-
-					if _arg=="syslog":
-						self._LOGGING=self.l_syslog
-						self._prepare_syslog()
-					elif _arg=="stderr":
-						self._LOGGING=self.l_stderr
-					else:
-						self._LOGGING=self.l_none
-
+		self._logger._parse_commandline(_opts)
+		
 		for _opt, _arg in _opts:
 
 			if (_opt  =='-c' or  _opt == '--config') and _arg!=None:
@@ -1070,6 +997,7 @@ class gme:
 					   self.log("read new config file '%s'"%self._CONFIGFILE)
 					   self._read_configfile()
 					   break
+		self._logger._parse_commandline(_opts)
 
 		for _opt, _arg in _opts:
 
@@ -1077,7 +1005,7 @@ class gme:
 				   self._ADDHEADER=True
 
 			if _opt  =='-v' or  _opt == '--verbose':
-				   self._DEBUG=True
+				   self._logger._DEBUG=True
 
 			if _opt  =='-e':
 				a=_arg.lower()
@@ -1105,18 +1033,6 @@ class gme:
 			if _opt  =='-k' or  _opt == '--keyhome':
 				   self._GPGKEYHOME=_arg
 				   self.debug("Set gpgkeyhome to '%s'"%self._GPGKEYHOME)
-
-			if _opt  =='-l' or  _opt == '--log':
-				self._LOGGING=self.l_stderr
-
-				if isinstance(_arg,str):
-
-					if _arg=="syslog":
-						self._LOGGING=self.l_syslog
-					elif _arg=='file':
-						self._LOGGING=self.l_file
-					else:
-						self._LOGGING=self.l_stderr
 
 			if _opt  =='-o' or  _opt == '--output':
 
@@ -1171,7 +1087,7 @@ class gme:
 				recipient=_remainder[0:]
 				self.debug("set addresses from commandline to '%s'"%recipient)
 			else:
-				self._LOGGING=self.l_stderr
+				self._logger._LOGGING=self._logger.l_stderr
 				self.log("gpgmailencrypt needs at least one recipient "
 				"at the commandline, %i given"%len(_remainder),"e")
 				exit(1)
@@ -1223,83 +1139,8 @@ class gme:
 			infotype="m",
 			ln=-1,
 			filename=""):
-		"prints logging information"
-
-		if self._LOGGING!=self.l_none:
-
-			if infotype in ['d','m','w']:
-				space=" "*self._level
-			else:
-				space=" "
-
-			if ln==-1:
-				ln=inspect.currentframe().f_back.f_lineno
-
-			if filename==None or len(filename)==0:
-				filename=__file__
-
-			filename=os.path.split(filename)[1]
-			_lftmsg=20
-			prefix="Info"
-
-			if infotype=='w':
-				self._systemwarnings+=1
-				prefix="Warning"
-			elif infotype=='e':
-				self._systemerrors=+1
-				prefix="Error"
-			elif infotype=='d':
-				prefix="Debug"
-
-			prefix=prefix.ljust(7)
-			t=time.localtime(time.time())
-			_lntxt="%s %s:%s"%(filename.ljust(18),str(ln).rjust(4),space)
-			tm=("%02d.%02d.%04d %02d:%02d:%02d:" % (t[2],t[1],t[0],t[3],
-													t[4],t[5])).ljust(_lftmsg)
-
-			if infotype in["w","e"]:
-				self._systemmessages.append([tm[:-1],infotype,msg])
-
-			txt=splitstring(msg,800)
-			c=0
-
-			for t in txt:
-
-				if (ln>0):
-					t=_lntxt+t
-
-				l=len(txt)
-
-				if l>1 and c<l-1:
-					t=t+"\\"
-
-				c+=1
-
-				if self._LOGGING==self.l_syslog:
-					#write to syslog
-					level=syslog.LOG_INFO
-
-					if infotype=='w':
-						level=syslog.LOG_WARNING
-						t="WARNING "+t
-					elif infotype=='e':
-						level=syslog.LOG_ERR
-						t="ERROR "+t
-					elif infotype=='d':
-						level=syslog.LOG_DEBUG
-						t="DEBUG "+t
-
-					syslog.syslog(level,t)
-				elif  (self._LOGGING==self.l_file
-						and self._logfile!=None
-						and not self._logfile.closed):
-					#write to _logfile
-					self._logfile.write("%s %s:%s\n"%(tm,prefix,t ))
-					self._logfile.flush()
-				else:
-					# print to stdout if nothing else works
-					sys.stdout.write("%s %s:%s\n"%(tm,prefix,t ))
-
+		self._logger.log(msg,infotype,ln,filename)
+		
 	##############
 	#log_traceback
 	##############
@@ -1322,43 +1163,21 @@ class gme:
 				filename=""):
 		"prints debugging information"
 
-		if self._DEBUG:
-
-			if lineno==0:
-				ln=inspect.currentframe().f_back.f_lineno
-			else:
-				ln=lineno
-
-			self.log(msg,"d",ln,filename=filename)
+		self._logger.debug(msg,lineno,filename)
 
 	############
 	#set_logging
 	############
 
 	def set_logging( self, logmode):
-		if isinstance(logmode,str):
-			logmode=logmode.strip().lower()
-
-			if self._LOGGING!=self.l_syslog and logmode=="syslog":
-				self._LOGGING=self.l_syslog
-				self._prepare_syslog()
-			elif logmode=="stderr":
-				self._LOGGING=self.l_stderr
-			else:
-				self._LOGGING=self.l_none
+		self._logger.set_logging(logmode)
 
 	############
 	#get_logging
 	############
 
 	def get_logging( self):
-		if self._LOGGING==self.l_syslog:
-			return "syslog"
-		elif self._LOGGING==self.l_stderr:
-			return "stderr"
-		else:
-			return "none"
-
+		return self._logger.get_logging()
 
 	################
 	#_debug_keepmail
@@ -1369,11 +1188,11 @@ class gme:
 		searchtext=mailtext.lower()
 		#return True
 
-		for txt in self._DEBUGSEARCHTEXT:
+		for txt in self._logger._DEBUGSEARCHTEXT:
 
 			if txt.lower() in searchtext:
 
-				for exclude in self._DEBUGEXCLUDETEXT:
+				for exclude in self._logger._DEBUGEXCLUDETEXT:
 
 					if exclude.lower() in searchtext:
 						return False
@@ -1479,15 +1298,7 @@ class gme:
 	@_dbg
 	def _set_logmode(self):
 
-		try:
-
-			if self._LOGGING==self.l_file and len(self._LOGFILE)>0:
-				self._logfile = open(self._LOGFILE, mode='a',encoding="UTF-8",errors=unicodeerror)
-
-		except:
-			self._logfile=None
-			self._LOGGING=self.l_stderr
-			self.log_traceback()
+		self._logger._set_logmode()
 
 	#####################
 	#_store_temporaryfile
@@ -1535,15 +1346,6 @@ class gme:
 			self.log_traceback()
 
 		return None
-
-	################
-	#_prepare_syslog
-	################
-
-	@_dbg
-	def _prepare_syslog(self):
-			self._LOGGING=self.l_syslog
-			syslog.openlog("gpgmailencrypt",syslog.LOG_PID,syslog.LOG_MAIL)
 
 
 	########################
@@ -2409,10 +2211,7 @@ class gme:
 	def set_debug(self,dbg):
 		"set debug mode"
 
-		if dbg:
-			self._DEBUG=True
-		else:
-			self._DEBUG=False
+		self._logger.set_debug(dbg)
 
 	##########
 	#get_debug
@@ -2420,7 +2219,7 @@ class gme:
 
 	@_dbg
 	def get_debug(self):
-		return self._DEBUG
+		return self._logger.get_debug()
 
 	###########
 	#set_locale
@@ -2703,7 +2502,7 @@ class gme:
 	@_dbg
 	def is_debugging(self):
 		"returns True if gpgmailencrypt is in debuggin mode"
-		return self._DEBUG
+		return self._logger.is_debugging()
 
 	################################
 	#set_default_preferredencryption

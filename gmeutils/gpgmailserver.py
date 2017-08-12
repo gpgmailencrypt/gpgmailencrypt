@@ -768,7 +768,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			self.push("501 Syntax error: no arguments allowed")
 			return
 
-		_messages=self.parent._systemmessages
+		_messages=self.parent._logger._systemmessages
 		c=0
 		self.push("250-gpgmailencrypt version %s (%s)"%(VERSION,DATE))
 		_now=datetime.datetime.now()
