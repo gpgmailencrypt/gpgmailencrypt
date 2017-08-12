@@ -740,7 +740,7 @@ def maildomain(mailaddress):
 	domain=""
 
 	if len(addr)==2:
-		domain = addr[1]
+		domain = addr[1].lower()
 
 	return domain
 
