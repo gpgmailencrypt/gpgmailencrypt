@@ -27,6 +27,13 @@ htmlbodycontent="test"
 htmlbody="<body>%s</body>"%htmlbodycontent
 htmlheader="<header>meta charset=\"utf-8\""
 
+email_header="""Message-ID: <55D748F3.4020400@from.com>
+Date: Fri, 21 Aug 2015 17:51:15 +0200
+From: test@from.com
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:31.0) Gecko/20100101 Thunderbird/31.8.0
+MIME-Version: 1.0
+To: testaddress@gpgmailencry.pt
+Subject: testmail""".replace("\r\n","\n").replace("\n","\r\n")
 email_unencrypted="""Message-ID: <55D748F3.4020400@from.com>
 Date: Fri, 21 Aug 2015 17:51:15 +0200
 From: test@from.com
@@ -773,6 +780,11 @@ class gmetests(unittest.TestCase):
 				result=False
 
 		self.assertTrue(result)
+
+	def test_getheader(self):
+		res=self.gme._get_header(email_unencrypted)
+		self.assertEqual(res,email_header)
+		
 
 	def test_iscompressable(self):
 		self.assertTrue(self.gme.is_compressable("plain/text","file.txt"))

@@ -4449,7 +4449,6 @@ class gme:
 		else:
 			return None
 
-
 	############
 	#decrypt_zip
 	############
