@@ -17,16 +17,7 @@ from   gmeutils.dkim	import mydkim
 #utilites
 ############################################
 def is_networkfilesystem(dir):
-	root,tail=os.path.split(os.path.abspath(dir))
-
-	while tail!="":
-
-		if root!="/" and os.path.ismount(root):
-			return True
-		else:
-			root,tail=os.path.split(root)
-
-	return False
+	return gmeutils.helpers.is_networkfs(dir)
 
 def has_app(appname):
 	return shutil.which(appname)!=None
