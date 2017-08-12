@@ -21,11 +21,19 @@ LOG_INFO=2
 LOG_WARNING=3
 LOG_ERR=4
 
+################
+# CLASS mylogger
+################
+
 class mylogger(_gmechild):
 	l_none=1
 	l_syslog=2
 	l_file=3
 	l_stderr=4
+
+	#########
+	#__init__
+	#########
 
 	def __init__(self,parent):
 		self._level=0
@@ -33,7 +41,6 @@ class mylogger(_gmechild):
 		self._LOGGING=self.l_none
 		self._DEBUG=False
 		self._systemmessages=[]
-		
 		_gmechild.__init__(self,parent=parent,filename=__file__)
 
 		if os.name=="nt":
@@ -43,9 +50,23 @@ class mylogger(_gmechild):
 
 		self.init()
 
+	#############
+	#_initwindows
+	#############
+
+	@_dbg
 	def _initwindows(self):
-		pass
-	
+		self._logger=logging.getLogger("gpgmailencrypt")
+		self._loggingformatter=logging.Formatter("%(asctime)s: %(levelname)s: %(filename)s(%(lineno)d) %(message)s",datefmt="%a %d %H:%M:%S")
+		self._logginghandler=logging.NTEventLogHandler()
+		self._logginghandler.setFormatter(self._loggingformatter)
+		self._logger.addHandler(self._logginghandler)
+
+	###########
+	#_initlinux
+	###########
+
+	@_dbg
 	def _initlinux(self):
 		syslog.openlog("gpgmailencrypt",syslog.LOG_PID,syslog.LOG_MAIL)
 
@@ -53,6 +74,7 @@ class mylogger(_gmechild):
 	#init
 	#####
 
+	@_dbg
 	def init(self):
 		self._LOGFILE=""
 		self._DEBUG=False
@@ -61,6 +83,11 @@ class mylogger(_gmechild):
 		self._DEBUGSEARCHTEXT=[]
 		self._DEBUGEXCLUDETEXT=[]
 
+	######
+	#close
+	######
+
+	@_dbg
 	def close(self):
 		if self._LOGGING and self._logfile!=None:
 			self._logfile.close()
@@ -137,11 +164,13 @@ class mylogger(_gmechild):
 
 					if _arg=="syslog":
 						self._LOGGING=self.l_syslog
-						self._prepare_syslog()
+						if os.name!="nt":
+							self._prepare_syslog()
 					elif _arg=="stderr":
 						self._LOGGING=self.l_stderr
 					else:
 						self._LOGGING=self.l_none
+
 	################
 	#_prepare_syslog
 	################
@@ -160,8 +189,6 @@ class mylogger(_gmechild):
 			infotype="m",
 			ln=-1,
 			filename=""):
-
-
 		"prints logging information"
 
 		if self._LOGGING!=self.l_none:
@@ -215,20 +242,12 @@ class mylogger(_gmechild):
 				c+=1
 
 				if self._LOGGING==self.l_syslog:
-					#write to syslog
-					level=syslog.LOG_INFO
 
-					if infotype=='w':
-						level=syslog.LOG_WARNING
-						t="WARNING "+t
-					elif infotype=='e':
-						level=syslog.LOG_ERR
-						t="ERROR "+t
-					elif infotype=='d':
-						level=syslog.LOG_DEBUG
-						t="DEBUG "+t
+					if os.name=="nt":
+						self._syslogwindows(t,infotype,ln,filename)
+					else:
+						self._sysloglinux(t,infotype,ln,filename)
 
-					syslog.syslog(level,t)
 				elif  (self._LOGGING==self.l_file
 						and self._logfile!=None
 						and not self._logfile.closed):
@@ -239,12 +258,36 @@ class mylogger(_gmechild):
 					# print to stdout if nothing else works
 					sys.stdout.write("%s %s:%s\n"%(tm,prefix,t ))
 
-#		if os.name=="nt":
-#			self._syslogwindows(msg,infotype,ln,filename)
-#		else:
-#			self._sysloglinux(msg,infotype,ln,filename)
-		
+	###############
+	#_syslogwindows
+	###############
 
+	def _syslogwindows(self,msg,infotype,ln,filename):
+		if infotype=='w':
+			self._logger.warning(msg)
+		elif infotype=='d':
+			self._logger.debug(msg)
+		else:
+			self._logger.info(msg)
+
+	#############
+	#_sysloglinux
+	#############
+
+	def _sysloglinux(self,t,infotype,ln,filename):
+		level=syslog.LOG_INFO
+
+		if infotype=='w':
+			level=syslog.LOG_WARNING
+			t="WARNING "+t
+		elif infotype=='e':
+			level=syslog.LOG_ERR
+			t="ERROR "+t
+		elif infotype=='d':
+			level=syslog.LOG_DEBUG
+			t="DEBUG "+t
+
+		syslog.syslog(level,t)
 
 	######
 	#debug
@@ -285,6 +328,7 @@ class mylogger(_gmechild):
 	#get_logging
 	############
 
+	@_dbg
 	def get_logging( self):
 		if self._LOGGING==self.l_syslog:
 			return "syslog"
@@ -320,8 +364,14 @@ class mylogger(_gmechild):
 
 		if dbg:
 			self._DEBUG=True
+
+			if os.name=="nt":
+				self._logger.setLevel(logging.DEBUG)
 		else:
 			self._DEBUG=False
+
+			if os.name=="nt":
+				self._logger.setLevel(logging.INFO)
 
 	##########
 	#get_debug
@@ -340,23 +390,3 @@ class mylogger(_gmechild):
 		"returns True if gpgmailencrypt is in debuggin mode"
 		return self._DEBUG
 
-
-	############
-	#_syslogwindows
-	############
-	
-	@_dbg
-	def _syslogwindows(self,msg,infotype,ln,filename):
-		pass
-	
-	##########
-	#_sysloglinux
-	##########
-	
-	@_dbg
-	def _sysloglinux(self,
-			msg,
-			infotype="m",
-			ln=-1,
-			filename=""):
-		pass
