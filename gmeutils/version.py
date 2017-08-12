@@ -1,7 +1,7 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 VERSION="3.3.0dev"
-DATE="28.07.2017"
+DATE="12.08.2017"
 COPYRIGHTYEAR="2017"
 unicodeerror="replace"
 #330 mail decryption added
