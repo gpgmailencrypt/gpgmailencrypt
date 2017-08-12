@@ -637,6 +637,35 @@ class gmetests(unittest.TestCase):
 		x=self.gme._SMIMECIPHER
 		self.assertTrue(x=="DES3")
 
+	def test_helper_splitstring(self):
+			#123456789012345678901234567890123456789
+		txt="this is a testtext that should be split"
+		res=gmeutils.helpers.splitstring(txt,10)
+		res2=gmeutils.helpers.splitstring(txt,35)
+		self.assertEqual(res,["this is a ","testtext t","hat should"," be split"])
+		self.assertEqual(res2,["this is a testtext that should be s","plit"])
+
+	def test_helper_replace_variables(self):
+		txt="this is a %REPLACEME% testtext"
+		mydict={"REPLACEME":"small"}
+		res=gmeutils.helpers.replace_variables(txt,mydict)
+		self.assertEqual(res,"this is a small testtext")
+
+	def test_helper_decode_html(self):
+		txt="this is <li>a testtext</li>"
+		res=gmeutils.helpers.decode_html(None,txt)
+		self.assertEqual(res,"this is \r\n * a testtext")
+
+	def test_helper_maildomain(self):
+		txt="The address <testaddress@gpgmailencrY.pt>"
+		res=gmeutils.helpers.maildomain(txt)
+		self.assertEqual(res,"gpgmailencry.pt")
+
+	def test_helper_clean_filename(self):
+		txt="A [not] correct <testaddress|@gpgmailencrY.pt>"
+		res=gmeutils.helpers.clean_filename(txt)
+		self.assertEqual(res,"A__not__correct__testaddress_@gpgmailencrY.pt_")
+
 	def test_parsecommandline(self):
 
 		sys.argv=[  '/home/test/gpgmailencrypt.py',
