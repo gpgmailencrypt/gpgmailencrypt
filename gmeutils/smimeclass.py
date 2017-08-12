@@ -312,13 +312,13 @@ class _SMIME(_gmechild):
 		try:
 			_recipient=self.parent._backend.smimeuser(self._recipient)
 		except:
-			self.log("decryption failed. No smime user '%s' found"%
+			self.debug("decryption failed. No smime user '%s' found"%
 						self._recipient,"w")
 			return ["NO_PRIVATE_KEY"]
 		try:
 			privatekey=_recipient[2]
 		except:
-			self.log("decryption failed. No private key for '%s' found"%
+			self.debug("decryption failed. No private key for '%s' found"%
 						self._recipient,"w")
 			return ["NO_PRIVATE_KEY"]
 		
