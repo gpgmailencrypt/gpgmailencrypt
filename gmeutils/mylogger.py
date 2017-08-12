@@ -57,7 +57,8 @@ class mylogger(_gmechild):
 	@_dbg
 	def _initwindows(self):
 		self._logger=logging.getLogger("gpgmailencrypt")
-		self._loggingformatter=logging.Formatter("%(asctime)s: %(levelname)s: %(filename)s(%(lineno)d) %(message)s",datefmt="%a %d %H:%M:%S")
+		self._loggingformatter=logging.Formatter("%(asctime)s: %(levelname)s:"
+		" %(filename)s(%(lineno)d) %(message)s",datefmt="%a %d %H:%M:%S")
 		self._logginghandler=logging.NTEventLogHandler()
 		self._logginghandler.setFormatter(self._loggingformatter)
 		self._logger.addHandler(self._logginghandler)
@@ -347,7 +348,10 @@ class mylogger(_gmechild):
 		try:
 
 			if self._LOGGING==self.l_file and len(self._LOGFILE)>0:
-				self._logfile = open(self._LOGFILE, mode='a',encoding="UTF-8",errors=unicodeerror)
+				self._logfile = open(self._LOGFILE, 
+										mode='a',
+										encoding="UTF-8",
+										errors=unicodeerror)
 
 		except:
 			self._logfile=None

@@ -1217,7 +1217,8 @@ class gme:
 			f=open(templatefile,encoding="UTF-8",errors=unicodeerror)
 			self.debug("template found in %s"%templatefile)
 		except:
-			self.debug("(%s)template %s not found in %s"%(self._LOCALE,identifier,templatefile))
+			self.debug("(%s)template %s not found in %s"%(
+						self._LOCALE,identifier,templatefile))
 
 
 		if f==None:
@@ -1229,7 +1230,8 @@ class gme:
 				f=open(templatefile,encoding="UTF-8",errors=unicodeerror)
 				self.debug("template found in %s"%templatefile)
 			except:
-				self.debug("(%s)template %s not found in %s"%("EN",identifier,templatefile))
+				self.debug("(%s)template %s not found in %s"%(
+				"EN",identifier,templatefile))
 
 		if f==None:
 			self.debug("template not found, returning defaulttext")
@@ -1923,7 +1925,8 @@ class gme:
 
 		try:
 			self.debug("store_deferred_list '%s'"%self._deferlist)
-			f=open(self._deferlist,mode="w",encoding="UTF-8",errors=unicodeerror)
+			f=open(	self._deferlist,mode="w",
+					encoding="UTF-8",errors=unicodeerror)
 
 			for mail in self._deferred_emails:
 				mail[3]=str(mail[3])
@@ -1952,7 +1955,8 @@ class gme:
 
 		try:
 			self.debug("store_virus_list '%s'"%self._viruslist)
-			f=open(self._viruslist,mode="w",encoding="UTF-8",errors=unicodeerror)
+			f=open(self._viruslist,mode="w",
+					encoding="UTF-8",errors=unicodeerror)
 
 			for mail in self._virus_queue:
 				mail[3]=str(mail[3])
@@ -3645,7 +3649,8 @@ class gme:
 				except:
 					self.debug("get_preferredencryptionmethod User"
 							" '%s/%s' not found"%(user,_u))
-					self.debug("get_preferredencryptionmethod: returning default encryption method %s" % (method))
+					self.debug("get_preferredencryptionmethod: "
+					"returning default encryption method %s" % (method))
 					return method
 
 		if _m in ("PGPMIME","PGPINLINE","SMIME","PDF","NONE"):
@@ -3655,7 +3660,8 @@ class gme:
 		else:
 			self.debug("get_preferredencryptionmethod: Method "
 						"'%s' for user '%s' unknown" % (_m,_u))
-			self.debug("get_preferredencryptionmethod: returning default encryption method %s" % (method))
+			self.debug("get_preferredencryptionmethod: "
+			"returning default encryption method %s" % (method))
 			return method
 
 	###############
@@ -4301,7 +4307,8 @@ class gme:
 					del payload["Content-Transfer-Encoding"]
 
 				payload["Content-Transfer-Encoding"]="base64"
-				payload.set_payload(base64.encodestring(pl.encode("UTF-8",unicodeerror)))
+				payload.set_payload(base64.encodestring(pl.encode("UTF-8",
+														unicodeerror)))
 			else:
 				self.log("Error during decryption: payload will stay "
 						"encrypted!","m")
