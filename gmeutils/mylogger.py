@@ -255,9 +255,9 @@ class mylogger(_gmechild):
 					#write to _logfile
 					self._logfile.write("%s %s:%s\n"%(tm,prefix,t ))
 					self._logfile.flush()
-				else:
+				elif self._LOGGING==self.l_stderr:
 					# print to stdout if nothing else works
-					sys.stdout.write("%s %s:%s\n"%(tm,prefix,t ))
+					sys.stderr.write("%s %s:%s\n"%(tm,prefix,t ))
 
 	###############
 	#_syslogwindows
