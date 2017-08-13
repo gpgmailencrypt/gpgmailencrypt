@@ -64,6 +64,11 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 		self.parent=parent
 		self.sslcertfile=None
 
+		if self.parent:
+			self.parent._used_smtpdport=self.socket.getsockname()[1]
+			if self.parent._used_smtpdport!=self.parent._SMTPD_PORT:
+				print("used_smtpdport=%i"%self.parent._used_smtpdport)
+
 		if sslcertfile!=None:
 			self.sslcertfile=os.path.expanduser(sslcertfile)
 

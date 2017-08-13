@@ -401,6 +401,8 @@ class gme:
 		self._DKIMKEY=""
 		self._SENTADDRESS="SENT"
 		self._USE_SENTADDRESS=False
+		self._used_smtpdport=-1 # used to return the real port number 
+								#(e.g. when _SMTPD_PORT=0)
 		self._logger.init()
 		self._backend.init()
 		self._read_configfile()
@@ -5059,7 +5061,6 @@ class gme:
 		except SystemExit as m:
 			alarm.stop()
 			exit(0)
-
 		except (KeyboardInterrupt,EOFError):
 			self.log("Keyboard Exit")
 		except:
