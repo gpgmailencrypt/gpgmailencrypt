@@ -45,9 +45,9 @@ class _gmechild:
 			filename=self.filename
 
 		try:
-			self.parent._level+=self._level
+			self.parent._logger._level+=self._level
 			self.parent.debug(msg=msg,lineno=lineno,filename=filename)
-			self.parent._level-=self._level
+			self.parent._logger._level-=self._level
 		except:
 			pass
 
