@@ -353,19 +353,25 @@ class gme:
 		self._PREFERRED_ENCRYPTION="PGPINLINE"
 		self._GPGKEYHOME="~/.gnupg"
 		self._ALLOWGPGCOMMENT=False
-		self._GPGCMD='/usr/bin/gpg2'
+
+		if os.name=="nt":
+			self._GPGCMD='C:\Program Files (x86)\GNU\GnuPG\gpg2.exe'
+			self._SMIMECMD="C:\OpenSSL-Win64\\bin\openssl.exe"
+		else:
+			self._GPGCMD='/usr/bin/gpg2'
+			self._SMIMECMD="/usr/bin/openssl"
+
 		self._GPGKEYEXTRACTDIR=os.path.join(self._GPGKEYHOME,"extract")
 		self._GPGAUTOMATICEXTRACTKEYS=False
 		self._SMIMEKEYHOME="~/.smime"
 		self._SMIMEKEYEXTRACTDIR=os.path.join(self._SMIMEKEYHOME,"extract")
-		self._SMIMECMD="/usr/bin/openssl"
 		self._SMIMECIPHER="DES3"
 		self._SMIMEAUTOMATICEXTRACTKEYS=False
 		self._OUTPUT=self.o_mail
 		self._LOCALE="EN"
 		self._RUNMODE=self.m_script
 		self._SMTPD_HOST="127.0.0.1"
-		self._SMTPD_PORT=1025
+		self._SMTPD_PORT=10025
 		self._SMTPD_USE_SMTPS=False
 		self._SMTPD_USE_STARTTLS=False
 		self._SMTPD_USE_AUTH=False
@@ -3707,7 +3713,8 @@ class gme:
 							message,
 							pdfuser,
 							from_addr,
-							to_addr
+							to_addr,
+							send_password=True
 							):
 		splitmsg=re.split("\n\n",message,1)
 
@@ -3746,39 +3753,40 @@ class gme:
 		if result==True:
 			domain=maildomain(from_addr)
 
-			if domain in self._HOMEDOMAINS:
-				msgtxt=self._load_mailmaster("01-pdfpassword",
-					"<table><tr><td>Subject:</td><td>%SUBJECT%</td></tr>"
-					"<tr><td>From:</td><td>%FROM%</td></tr><tr><td>To:</td>"
-					"<td>%TO%</td></tr><tr><td>Date:</td><td>%DATE%</td></tr>"
-					"<tr><td>Password:</td><td>%PASSWORD%</td></tr></table>")
-				msgtxt=replace_variables(msgtxt,
-						{"FROM":html.escape(from_addr),
-						 "TO":html.escape(self._decode_header(newmsg["To"])),
-						 "DATE":newmsg["Date"],
-						 "PASSWORD":html.escape(pw),
-						 "SUBJECT":html.escape(self._decode_header(
-															newmsg["Subject"]
-						 ))})
-				msg=MIMEMultipart()
-				msg.set_type("multipart/alternative")
-				res,htmlheader,htmlbody,htmlfooter=self._split_html(msgtxt)
-				htmlmsg=MIMEText(msgtxt,"html")
-				plainmsg=MIMEText(htmlbody)
-				msg.attach(plainmsg)
-				msg.attach(htmlmsg)
+			if send_password:
+				if domain in self._HOMEDOMAINS:
+					msgtxt=self._load_mailmaster("01-pdfpassword",
+						"<table><tr><td>Subject:</td><td>%SUBJECT%</td></tr>"
+						"<tr><td>From:</td><td>%FROM%</td></tr><tr><td>To:</td>"
+						"<td>%TO%</td></tr><tr><td>Date:</td><td>%DATE%</td></tr>"
+						"<tr><td>Password:</td><td>%PASSWORD%</td></tr></table>")
+					msgtxt=replace_variables(msgtxt,
+							{"FROM":html.escape(from_addr),
+							 "TO":html.escape(self._decode_header(newmsg["To"])),
+							 "DATE":newmsg["Date"],
+							 "PASSWORD":html.escape(pw),
+							 "SUBJECT":html.escape(self._decode_header(
+																newmsg["Subject"]
+							 ))})
+					msg=MIMEMultipart()
+					msg.set_type("multipart/alternative")
+					res,htmlheader,htmlbody,htmlfooter=self._split_html(msgtxt)
+					htmlmsg=MIMEText(msgtxt,"html")
+					plainmsg=MIMEText(htmlbody)
+					msg.attach(plainmsg)
+					msg.attach(htmlmsg)
 
-				try:
-					pwheader=self._LOCALEDB[self._LOCALE]["passwordfor"]
-				except:
-					self.log("wrong locale '%s'"%self._LOCALE,"w")
-					pwheader=self._LOCALEDB["EN"]["passwordfor"]
+					try:
+						pwheader=self._LOCALEDB[self._LOCALE]["passwordfor"]
+					except:
+						self.log("wrong locale '%s'"%self._LOCALE,"w")
+						pwheader=self._LOCALEDB["EN"]["passwordfor"]
 
-				msg['Subject'] = ('%s: %s' %(pwheader,
-									self._decode_header(newmsg["To"])))
-				msg['To'] = from_addr
-				msg['From'] = self._SYSTEMMAILFROM
-				self.send_mails(msg.as_string(),from_addr)
+					msg['Subject'] = ('%s: %s' %(pwheader,
+										self._decode_header(newmsg["To"])))
+					msg['To'] = from_addr
+					msg['From'] = self._SYSTEMMAILFROM
+					self.send_mails(msg.as_string(),from_addr)
 
 			msgtxt=self._load_mailmaster("02-pdfmail",
 					   "Content of this e-mail is stored in an pdf attachment.")
