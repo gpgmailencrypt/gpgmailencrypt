@@ -1,6 +1,6 @@
 include README.md
-recursive-include tests *
+include tests/* tests/gmeunittests.py tests/gpg/*.gpg tests/gpg/private-keys-v1.d/* tests/test*
 exclude tests/gpg/random_seed tests/gpg/*~ tests/archives/test.lzip.out
-prune tests/gpg/*
+prune tests/gpg/*@*
 prune tests/emails
 prune tests/emails.orig

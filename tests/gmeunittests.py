@@ -11,7 +11,10 @@ import filecmp
 import os
 import os.path
 import shutil
+import time
 from   gmeutils.dkim	import mydkim
+from multiprocessing import Process
+
 
 ############################################
 #utilites
@@ -641,7 +644,6 @@ class gmetests(unittest.TestCase):
 	#General tests
 
 	def test_configcomment(self):
-
 		x=self.gme._SMIMECIPHER
 		self.assertTrue(x=="DES3")
 
@@ -675,29 +677,34 @@ class gmetests(unittest.TestCase):
 		self.assertEqual(res,"A__not__correct__testaddress_@gpgmailencrY.pt_")
 
 	def test_parsecommandline(self):
-
 		sys.argv=[  '/home/test/gpgmailencrypt.py',
 					'-o', 'file',
 					'-m', 'res.eml',
 					'-e', 'smime',
+					'-v',
 					'testaddress@gpgmailencry.pt']
 		self.gme._parse_commandline()
 		self.assertEqual(self.gme.get_output(),self.gme.o_file)
 		self.assertEqual(self.gme.get_default_preferredencryption(),"SMIME")
+		self.assertEqual(self.gme.get_debug(),True)
+		sys.argv=[  '/home/test/gpgmailencrypt.py',
+					'-f', 'myfile.eml',
+					'--output', 'stdout',
+					'testaddress@gpgmailencry.pt']
+		self.gme._parse_commandline()
+		self.assertEqual(self.gme._INFILE,"myfile.eml")
+		self.assertEqual(self.gme.get_output(),self.gme.o_stdout)
 
 	def test_load_mailmaster(self):
-
 		template=self.gme._load_mailmaster("03-virusinformation","")
 		self.assertTrue("The following e-mail was stopped" in template)
 
 	def test_preferredmethod(self):
-
 		self.assertTrue(
 			self.gme.get_preferredencryptionmethod(
 				"testaddress@gpgmailencry.pt")=="PGPMIME")
 
 	def test_zipattachment(self):
-
 		f=open("./attachment.eml","r")
 		mail=f.read()
 		f.close()
@@ -706,11 +713,9 @@ class gmetests(unittest.TestCase):
 
 
 	def test_getcharset(self):
-
 		self.assertEqual(self.gme._find_charset(email_unencrypted),"utf-8")
 
 	def test_usermap(self):
-
 		mapped=""
 
 		try:
@@ -721,7 +726,6 @@ class gmetests(unittest.TestCase):
 		self.assertEqual(mapped,"testaddress@gpgmailencry.pt")
 
 	def test_usermap2(self):
-
 		mapped=""
 
 		try:
@@ -732,7 +736,6 @@ class gmetests(unittest.TestCase):
 		self.assertEqual(mapped,"testaddress@gpgmailencry.pt")
 
 	def test_encryptionmap(self):
-
 		mapped=[]
 
 		try:
@@ -743,7 +746,6 @@ class gmetests(unittest.TestCase):
 		self.assertEqual(mapped,["pgpmime"])
 
 	def test_encryptionmap2(self):
-
 		mapped=[]
 
 		try:
@@ -754,37 +756,39 @@ class gmetests(unittest.TestCase):
 		self.assertEqual(mapped,[])
 
 	def test_check_encryptsubject(self):
-
 		success=self.gme.check_encryptsubject(email_unencryptedencryptsubject)
 		self.assertTrue(success)
 
 	def test_check_encryptsubject(self):
-
 		success=self.gme.check_encryptsubject(email_unencrypted)
 		self.assertFalse(success)
 
 	def test_splithtml(self):
-
-
 		result,header,body,footer=self.gme._split_html(htmlheader+htmlbody)
 		self.assertTrue(result==True and body==htmlbodycontent)
 
 	def test_guessfileextension(self):
 		ext={"image/jpeg":"jpg",
-				"APPLICATIOn/x-pKCs7-signature":"p7a"
+				"APPLICATIOn/x-pKCs7-signature":"p7a",
+				"application/PDF ":"pdf",
+				"image/svg+xml":"svg",
+				"application/powerPoint":"ppt",
+				"audio/mp3":"mp3",
+				"text/javascript":"js",
+				"text/directory":"vcf",
+				"text/unbekannt":"txt",
+				"application/unbekannt":"bin"
 			}
-		result=True
+
 		for a in ext:
+			with self.subTest(a=a):
+				self.assertEqual(gmeutils.helpers.guess_fileextension(a),ext[a])
 
-			if gmeutils.helpers.guess_fileextension(a)!=ext[a]:
-				result=False
-
-		self.assertTrue(result)
+		
 
 	def test_getheader(self):
 		res=self.gme._get_header(email_unencrypted)
 		self.assertEqual(res,email_header)
-		
 
 	def test_iscompressable(self):
 		self.assertTrue(self.gme.is_compressable("plain/text","file.txt"))
@@ -928,27 +932,25 @@ class gpgtests(unittest.TestCase):
 		self.gme.close()
 
 	def test_GPGpublickeys(self):
-
 		pk=self.gpg.public_keys()
 		controllist=list()
 		controllist.append("testaddress@gpgmailencry.pt")
 		controllist.append("second.user@gpgmailencry.pt")
 		controllist.append("a@test.de")
 
-		self.assertTrue(pk.sort()==controllist.sort())
+		self.assertEqual(pk.sort(),controllist.sort())
 
 	@unittest.skipIf(is_networkfilesystem("./gpg"),
 									"gpg directory on network file system")
 	def test_GPGprivatekeys(self):
 		#test fails if the test/gpg directory is on network file system
 		#due to gpg restrictions
-
 		pk=self.gpg.private_keys()
 		controllist=list()
 		controllist.append("testaddress@gpgmailencry.pt")
 		controllist.append("second.user@gpgmailencry.pt")
 
-		self.assertTrue(pk==controllist)
+		self.assertEqual(pk.sort(),controllist.sort())
 
 	def test_hasgpgkey(self):
 		success,user=self.gme.check_gpgrecipient("second.user@gpgmailencry.pt")
@@ -984,7 +986,6 @@ class gpgtests(unittest.TestCase):
 
 	def test_encryptgpginlinemail(self):
 		"test encryptgpginlinemail"
-
 		result=self.gme.encrypt_gpg_mail(  email_unencrypted,
 											False,
 											"testaddress@gpgmailencry.pt",
@@ -1012,7 +1013,6 @@ class gpgtests(unittest.TestCase):
 
 	def test_encryptgpgmimemail2(self):
 		"test encryptgpgmimemail wrong address"
-
 		result=self.gme.encrypt_gpg_mail(  email_unencrypted,
 											True,
 											"xtestaddress@gpgmailencry.pt",
@@ -1073,7 +1073,6 @@ class smimetests(unittest.TestCase):
 		self.gme.close()
 
 	def test_SMIMEpublickeys(self):
-
 		pk=self.smime.public_keys()
 		controllist=list()
 		controllist.append("testaddress2@gpgmailencry.pt")
@@ -1081,7 +1080,6 @@ class smimetests(unittest.TestCase):
 		self.assertTrue(pk.sort()==controllist.sort())
 
 	def test_SMIMEprivatekeys(self):
-
 		pk=self.smime.private_keys()
 		controllist=list()
 		controllist.append("testaddress2@gpgmailencry.pt")
@@ -1093,11 +1091,9 @@ class smimetests(unittest.TestCase):
 
 	def test_isnotsmimeencrypted(self):
 		"test is_notsmimeencrypted"
-
 		self.assertFalse(self.gme.is_smimeencrypted(email_gpgmimeencrypted))
 
 	def test_hassmimekey(self):
-
 		success,user=self.gme.check_smimerecipient("smime@gpgmaiLEncry.pt")
 		self.assertTrue(success)
 
@@ -1147,7 +1143,6 @@ class smimetests(unittest.TestCase):
 
 	def test_encryptgsmimemail2(self):
 		"test encryptsmimemail wrong address"
-
 		result=self.gme.encrypt_smime_mail(  email_unencrypted,
 											"xtestaddress@gpgmailencry.pt",
 											"xtestaddress@gpgmailencry.pt",
@@ -1183,7 +1178,6 @@ class pdftests(unittest.TestCase):
 
 	def test_setpdfpassword(self):
 		"test set_pdfpassword"
-
 		self.gme.set_configfile("./gmetest.conf")
 		pw="test"
 		user="test@gpgmailencry.pt"
@@ -1192,7 +1186,6 @@ class pdftests(unittest.TestCase):
 
 	def test_ispdfeencrypted(self):
 		"test is_pdfencrypted"
-
 		self.gme.set_configfile("./gmetest.conf")
 		self.assertTrue(self.gme.is_pdfencrypted(email_pdfencrypted))
 
@@ -1200,20 +1193,18 @@ class pdftests(unittest.TestCase):
 		"pdf support not available")
 	def test_encryptpdfmail(self):
 		"test encryptpdfmail"
-
 		result=self.gme.encrypt_pdf_mail(  email_unencrypted,
 											"testaddress@gpgmailencry.pt",
 											"testaddress@gpgmailencry.pt",
-											"testaddress@gpgmailencry.pt")
+											"testaddress@gpgmailencry.pt",
+											send_password=False)
 		self.assertIsNotNone(result)
-
 
 	@unittest.skipIf(not has_pdf(),
 		"pdf support not available")
 	def test_decryptpdf(self):
 		"test decryptpdf"
 		pdf=self.gme.pdf_factory()
-
 		f=tempfile.NamedTemporaryFile(  mode='wb',
 											delete=False,
 											prefix='unittest-')
@@ -1302,7 +1293,6 @@ class archivetests(unittest.TestCase):
 			_result,encdata=ZIP.get_zipcontent( zipfile=f.name,
 											password=self.password,
 											containerfile=self.containerfile)
-			#self.assertTrue(_result==True)
 
 			try:
 				self.assertTrue(encdata[0][0]=="testfile.txt")
@@ -1310,7 +1300,6 @@ class archivetests(unittest.TestCase):
 			except:
 				raise
 
-		success=(data==self.teststring)
 		self.assertEqual(data,self.teststring)
 
 	def test_7zun7z(self):
@@ -1334,7 +1323,6 @@ class archivetests(unittest.TestCase):
 			_result,encdata=ZIP.get_zipcontent( zipfile=f.name,
 											password=self.password,
 											containerfile=self.containerfile)
-			#self.assertTrue(_result==True)
 
 			try:
 				self.assertTrue(encdata[0][0]=="testfile.txt")
@@ -1434,7 +1422,6 @@ def check_virus(scanner,virusdir):
 
 		if scanner:
 			result=scanner.has_virus(os.path.abspath(virusdir))
-			#print("\n!!!!!SCANNERRESULT",result,scanner)
 
 		return (result[0] and scanner!=None)
 
@@ -1518,7 +1505,6 @@ class dkimtests(unittest.TestCase):
 		self.gme.close()
 
 	def test_dkimsign(self):
-
 		dk=mydkim(	parent=self.gme,
 				selector="test",
 				domain="gpgmailencry.pt",
@@ -1540,12 +1526,10 @@ class spamscannertests(unittest.TestCase):
 	def tearDown(self):
 		self.gme.close()
 
-	#@unittest.skipIf(not has_app("spamc"),
-	#	"spamassassin not installed")
-	@unittest.skip
+	@unittest.skipIf(not has_app("spamc"),
+		"spamassassin not installed")
+	#@unittest.skip
 	def test_spamassassin_spam(self):
-
-
 		self.spam_leveldict["SPAMASSASSIN"]=[6.2,
 											3.0,
 											"localhost",
@@ -1556,12 +1540,12 @@ class spamscannertests(unittest.TestCase):
 												leveldict=self.spam_leveldict)
 		spamlevel,score=sc.is_spam(spamgtube)
 		print("spamlevel",spamlevel,"score",score,self.spam_leveldict["SPAMASSASSIN"])
-		self.assertTrue(spamlevel==gmeutils.spamscanners.S_SPAM)
+		self.assertEqual(spamlevel,gmeutils.spamscanners.S_SPAM)
 
 
-	#@unittest.skipIf(not has_app("spamc"),
-	#	"spamassassin not installed")
-	@unittest.skip
+	@unittest.skipIf(not has_app("spamc"),
+		"spamassassin not installed")
+	#@unittest.skip
 	def test_spamassassin_nospam(self):
 		self.spam_leveldict["SPAMASSASSIN"]=[6.2,
 											3.0,
@@ -1571,15 +1555,14 @@ class spamscannertests(unittest.TestCase):
 		sc=gmeutils.spamscanners.get_spamscanner("SPAMASSASSIN",
 												parent=self.gme,
 												leveldict=self.spam_leveldict)
-		spamlevel,score=sc.is_spam(spamgtube)
+		spamlevel,score=sc.is_spam(email_unencrypted)
 		print("spamlevel",spamlevel,"score",score,self.spam_leveldict["SPAMASSASSIN"])
-		self.assertTrue(spamlevel==gmeutils.spamscanners.S_NOSPAM)
+		self.assertEqual(spamlevel,gmeutils.spamscanners.S_NOSPAM)
 
 	#@unittest.skipIf(not has_app("bogofilter"),
 	#	"bogofilter not installed")
 	@unittest.skip
 	def test_bogofilter_spam(self):
-
 		sc=gmeutils.spamscanners.get_spamscanner("BOGOFILTER",
 												parent=self.gme,
 												leveldict=self.spam_leveldict)
@@ -1592,16 +1575,39 @@ class spamscannertests(unittest.TestCase):
 	#	"bogofilter not installed")
 	@unittest.skip
 	def test_bogofilter_nospam(self):
-
 		sc=gmeutils.spamscanners.get_spamscanner("BOGOFILTER",
 												parent=self.gme,
 												leveldict=self.spam_leveldict)
-		spamlevel,score=sc.is_spam(spamgtube)
+		spamlevel,score=sc.is_spam(email_unencrypted)
 		print("spamlevel",spamlevel,"score",score)
 		self.assertTrue(spamlevel==gmeutils.spamscanners.S_NOSPAM)
 
 
+###########
+#SERVERTEST
+###########
 
+class servertests(unittest.TestCase):
+
+	def setUp(self):
+		self.gme=gpgmailencrypt.gme()
+		self.gme.set_configfile("./gmetest.conf")
+
+	def tearDown(self):
+		self.gme.close()
+
+	def test_start_server(self):
+		def startserver():
+			print("STARTSERVER")
+			#gme=gpgmailencrypt.gme()
+			#gme.set_configfile("./gmetest.conf")
+			self.gme.daemonmode()
+		
+		p=Process(target=startserver)
+		p.start()
+		self.assertTrue(p.is_alive())
+		p.terminate()
+	
 
 if __name__ == '__main__':
 	unittest.main()
