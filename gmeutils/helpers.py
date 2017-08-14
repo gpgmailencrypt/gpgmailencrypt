@@ -344,7 +344,7 @@ def guess_fileextension(ct):
 	"returns a filetype based on its contenttype/mimetype 'ct'"
 
 	try:
-		maintype,subtype=ct.lower().split("/")
+		maintype,subtype=ct.lower().strip().split("/")
 	except:
 		maintype=ct
 		subtype="plain"
@@ -474,6 +474,8 @@ def guess_fileextension(ct):
 
 		elif subtype in ("asp","css","html","rtf","xml"):
 			return subtype
+		else:
+			return "txt"
 
 	e=mimetypes.guess_extension(ct)
 
