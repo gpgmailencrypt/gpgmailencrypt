@@ -1846,9 +1846,9 @@ class gme:
 
 			try:
 				fname=self._OUTFILE
-
+				f1,ext=os.path.splitext(self._OUTFILE)
 				if self._mailcount>0:
-					fname=self._OUTFILE+"."+str(self._mailcount)
+					fname=f1+str(self._mailcount)+ext
 
 				f=open(fname,mode='w',encoding="UTF-8")
 				f.write(message)
