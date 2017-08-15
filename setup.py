@@ -46,7 +46,6 @@ def install_dir(fromdir,todir):
 				tofile=os.path.join(to,f)
 				tofiledefault=tofile+".default"
 
-
 				with open(tofiledefault,"wb") as to_f:
 					from_f=open(fromfile,"rb")
 					to_f.write(from_f.read())
@@ -74,16 +73,25 @@ def _post_install(dir):
 		os.makedirs(_templatepath)
 
 	install_dir(os.path.join(dir,"mailtemplates"),_templatepath)
-	initscript="/etc/init.d/gpgmailencrypt"
+
+	if os.name!="nt":
+		initscript="/etc/init.d/gpgmailencrypt"
+
+		try:
+			shutil.copyfile(os.path.join(dir,"/misc/gpgmailencrypt.init"),initscript)
+			os.chmod(initscript,0o755)
+		except:
+			pass
 
 	try:
-		shutil.copyfile(os.path.join(dir,"/misc/gpgmailencrypt.init"),initscript)
-		os.chmod(initscript,0o755)
-	except:
-		pass
+		if os.name=="nt":
+			gme="python3.exe %ProgramFiles%\\gpgmailencrypt\\gme.py"
+			example="%ProgramFiles%\\gpgmailencrypt\\gpgmailencrypt.conf.example"
+		else:
+			gme="gme.py"
+			example="/etc/gpgmailencrypt.conf.example"
 
-	try:
-		cmd="gme.py -l none -x > /etc/gpgmailencrypt.conf.example"
+		cmd="%s -l none -x > %s"%(gme,example)
 		_result = subprocess.check_output(	cmd,
 											shell=True)
 	except:
