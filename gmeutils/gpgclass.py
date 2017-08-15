@@ -365,22 +365,24 @@ class _GPG(_gmechild):
 		f=self.parent._new_tempfile()
 		self.debug("_GPG.encrypt_file _new_tempfile %s"%f.name)
 		f.close()
-		_result = subprocess.call(
-					' '.join(self._encryptcommand_fromfile(	
+		cmd=self._encryptcommand_fromfile(
 							f.name,
 							binary,
 							self.parent.gpg_additionalencryptionkeys(recipient)
-								)),
-					shell=True )
+								)
 		self.debug("Encryption command: '%s'" %
-					' '.join(self._encryptcommand_fromfile(f.name,
-							binary,
-							self.parent.gpg_additionalencryptionkeys(recipient)
-							)))
+					' '.join(cmd))
+		p1 = subprocess.Popen(	cmd,
+								stdin=subprocess.PIPE,
+								stdout=subprocess.PIPE,
+								stderr=subprocess.PIPE )
+		output1,error1=p1.communicate()
+		_result=p1.poll()
 
 		if _result != 0:
 			self.log("Error executing command (Error code %d)"%_result,
 							"e")
+			self.log(error1.decode("utf8",unicodeerror),"e")
 			self.log(' '.join(self._encryptcommand_fromfile(f.name,binary)),"e")
 			return result,None
 		else:
