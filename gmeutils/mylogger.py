@@ -90,9 +90,31 @@ class mylogger(_gmechild):
 
 	@_dbg
 	def close(self):
-		if self._LOGGING and self._logfile!=None:
+
+		if self._LOGGING==self.l_file and self._logfile!=None:
 			self._logfile.close()
+
+		if os.name=="nt":
+			self.close_windows()
+		else:
+			self.close_linux()
 		
+	############
+	#close_linux
+	############
+
+	@_dbg
+	def close_linux(self):
+		syslog.closelog()
+
+	##############
+	#close_windows
+	##############
+
+	@_dbg
+	def close_windows(self):
+		logging.shutdown()
+
 	################
 	#read_configfile
 	################
