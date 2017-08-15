@@ -91,7 +91,13 @@ class gme:
 	s_redirect=2
 	s_bounce=3
 	_LOCALEDB={
-	#"CN":("审读","文件","内容","文件附件"),
+	#"CN":{	"appointment":"约会",
+	#		"file":"文件",
+	#		"content":"内容",
+	#		"attachment":"文件附件",
+	#		"passwordfor":"口令",
+	#		"bouncemail":"电子邮件无法发送",
+	#		},
 	"DA":{	"appointment":"aftale",
 			"file":"fil",
 			"content":"indhold",
@@ -343,27 +349,24 @@ class gme:
 		self._SMTP_CACERTS2=None
 		self._DOMAINS=""
 		self._HOMEDOMAINS=["localhost"]
-		self._CONFIGFILE='/etc/gpgmailencrypt.conf'
-		self._MAILTEMPLATEDIR="/usr/share/gpgmailencrypt/mailtemplates"
 		self._INFILE=""
 		self._OUTFILE=""
 		self._SECURITYLEVEL=self.s_may
 		self._DECRYPT=False
 		self._BOUNCEHOMEDOMAIN=True
 		self._PREFERRED_ENCRYPTION="PGPINLINE"
-		self._GPGKEYHOME="~/.gnupg"
 		self._ALLOWGPGCOMMENT=False
-
-		if os.name=="nt":
-			self._GPGCMD='C:\Program Files (x86)\GNU\GnuPG\gpg2.exe'
-			self._SMIMECMD="C:\OpenSSL-Win64\\bin\openssl.exe"
-		else:
-			self._GPGCMD='/usr/bin/gpg2'
-			self._SMIMECMD="/usr/bin/openssl"
-
+		v=default_values()
+		self._GPGCMD=v["GPGCMD"]
+		self._SMIMECMD=v["SMIMECMD"]
+		self._GPGKEYHOME=v["GPGKEYHOME"]
+		self._SMIMEKEYHOME=v["SMIMEKEYHOME"]
+		self._CONFIGFILE=v["CONFIGFILE"]
+		self._MAILTEMPLATEDIR=v["MAILTEMPLATEDIR"]
+		self._SMTPD_SSL_KEYFILE=v["SMTPD_SSL_KEYFILE"]
+		self._SMTPD_SSL_CERTFILE=v["SMTPD_SSL_CERTFILE"]
 		self._GPGKEYEXTRACTDIR=os.path.join(self._GPGKEYHOME,"extract")
 		self._GPGAUTOMATICEXTRACTKEYS=False
-		self._SMIMEKEYHOME="~/.smime"
 		self._SMIMEKEYEXTRACTDIR=os.path.join(self._SMIMEKEYHOME,"extract")
 		self._SMIMECIPHER="DES3"
 		self._SMIMEAUTOMATICEXTRACTKEYS=False
@@ -376,8 +379,6 @@ class gme:
 		self._SMTPD_USE_STARTTLS=False
 		self._SMTPD_USE_AUTH=False
 		self._SMTPD_FORCETLS=False
-		self._SMTPD_SSL_KEYFILE="/etc/gpgsmtpd.key"
-		self._SMTPD_SSL_CERTFILE="/etc/gpgsmtpd.cert"
 		self._USEPDF=False
 		self._PDFSECUREZIPCONTAINER=False
 		self._PDFPASSWORDLENGTH=10

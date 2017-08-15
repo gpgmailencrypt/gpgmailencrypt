@@ -28,6 +28,35 @@ from	.version		import *
 #Definition of general functions and variables
 ##############################################
 
+###############
+#default_values
+###############
+def default_values():
+	values={}
+	if os.name=="nt":
+		values={
+		"GPGCMD":'C:\\Program Files (x86)\\GNU\GnuPG\\gpg2.exe',
+		"SMIMECMD":"C:\\OpenSSL-Win64\\bin\\openssl.exe",
+		"GPGKEYHOME":"%APPDATA%\\gnupg",
+		"SMIMEKEYHOME":"%APPDATA%\\smime",
+		"CONFIGFILE":'%ProgramFiles%\\gpgmailencrypt\\gpgmailencrypt.conf',
+		"MAILTEMPLATEDIR":"%ProgramFiles%\\gpgmailencrypt\\mailtemplates",
+		"SMTPD_SSL_KEYFILE":"%APPDATA%\\ssl\\gpgsmtpd.key",
+		"SMTPD_SSL_CERTFILE":"%APPDATA%\\ssl\\gpgsmtpd.cert",
+		}
+	else:
+		values={
+		"GPGCMD":'/usr/bin/gpg2',
+		"SMIMECMD":"/usr/bin/openssl",
+		"GPGKEYHOME":"~/.gnupg",
+		"SMIMEKEYHOME":"~/.smime",
+		"CONFIGFILE":'/etc/gpgmailencrypt.conf',
+		"MAILTEMPLATEDIR":"/usr/share/gpgmailencrypt/mailtemplates",
+		"SMTPD_SSL_KEYFILE":"/etc/gpgsmtpd.key",
+		"SMTPD_SSL_CERTFILE":"/etc/gpgsmtpd.cert",
+		}
+	return values
+
 ############
 #splitstring
 ############
@@ -314,6 +343,96 @@ class _htmldecode(html.parser.HTMLParser,_gmechild):
 
 	def mydata(self):
 		return self.data
+
+#############
+#is_networkfs
+#############
+
+def is_networkfs(filename):
+
+	if os.name=="nt":
+		return _windows_is_networkfs(filename)
+	else:
+		return _linux_is_networkfs(filename)
+
+######################
+#_windows_is_networkfs
+######################
+
+def _windows_is_networkfs(filename):
+	netdrives=[]
+	p=subprocess.Popen(["net","use"],	stdin=subprocess.PIPE,
+										stdout=subprocess.PIPE,
+										stderr=subprocess.PIPE)
+	
+	for l in p.stdout.readlines():
+		_l=l.decode("utf8","replace")
+		if _l.startswith("OK"):
+			sp=_l.split()
+			netdrives.append(sp[1].lower())
+
+	drv=os.path.splitdrive(filename)[0].lower()
+	
+	if drv in netdrives:
+		return True
+	else:
+		return False
+
+####################
+#_linux_is_networkfs
+####################
+
+def _linux_is_networkfs(filename):
+	networkfs=["cifs","davfs","davfs2","ftp","ftps","curlftpfs","cupsftp",
+				"nfs","nfs5","nfs4","nfs3","nfs2","nfs1","smbfs",
+				"sshfs"]
+	fusenetworkfs=["fuse"]
+
+	for nfs in networkfs:
+		fusenetworkfs.append("fuse."+nfs)
+	
+	networkfs=networkfs+fusenetworkfs
+	#df -P -T ./cloud/Telekom/ | tail -n +2| awk '{print $2}'",shell=True
+	cmd1=["/bin/df","-P","-T",filename.strip()]
+	cmd2=["/usr/bin/tail","-n","+2"]
+	cmd3=["/usr/bin/awk","{print $2}"]
+	p1 = subprocess.Popen(   cmd1,
+							stdin=subprocess.PIPE,
+							stdout=subprocess.PIPE,
+							stderr=subprocess.PIPE )
+	output1,error1=p1.communicate(input=None)
+	error=p1.poll()
+	
+	if error!=0:
+		return False
+
+	p2 = subprocess.Popen(   cmd2,
+							stdin=subprocess.PIPE,
+							stdout=subprocess.PIPE,
+							stderr=subprocess.PIPE )
+	output2,error2=p2.communicate(input=output1)
+	error=p2.poll()
+	
+	if error!=0:
+		return False
+
+	p3 = subprocess.Popen(   cmd3,
+							stdin=subprocess.PIPE,
+							stdout=subprocess.PIPE,
+							stderr=subprocess.PIPE )
+
+	output3,error3=p3.communicate(input=output2)
+	error=p3.poll()
+
+	if error==0:
+		fs=output3.decode("utf8").strip()
+
+		if fs in networkfs:
+			return True
+		else:
+			return False
+
+	return False
 
 ###################################
 #Definition of encryption functions
@@ -638,96 +757,6 @@ def get_certfingerprint(cert,parent=None):
 
 	pubkey=bytearray.fromhex(output3[8:-1].decode("UTF-8",unicodeerror))
 	return hashlib.sha512(pubkey).hexdigest()
-
-#############
-#is_networkfs
-#############
-
-def is_networkfs(filename):
-
-	if os.name=="nt":
-		return _windows_is_networkfs(filename)
-	else:
-		return _linux_is_networkfs(filename)
-
-######################
-#_windows_is_networkfs
-######################
-
-def _windows_is_networkfs(filename):
-	netdrives=[]
-	p=subprocess.Popen(["net","use"],	stdin=subprocess.PIPE,
-										stdout=subprocess.PIPE,
-										stderr=subprocess.PIPE)
-	
-	for l in p.stdout.readlines():
-		_l=l.decode("utf8","replace")
-		if _l.startswith("OK"):
-			sp=_l.split()
-			netdrives.append(sp[1].lower())
-
-	drv=os.path.splitdrive(filename)[0].lower()
-	
-	if drv in netdrives:
-		return True
-	else:
-		return False
-
-####################
-#_linux_is_networkfs
-####################
-
-def _linux_is_networkfs(filename):
-	networkfs=["cifs","davfs","davfs2","ftp","ftps","curlftpfs","cupsftp",
-				"nfs","nfs5","nfs4","nfs3","nfs2","nfs1","smbfs",
-				"sshfs"]
-	fusenetworkfs=["fuse"]
-
-	for nfs in networkfs:
-		fusenetworkfs.append("fuse."+nfs)
-	
-	networkfs=networkfs+fusenetworkfs
-	#df -P -T ./cloud/Telekom/ | tail -n +2| awk '{print $2}'",shell=True
-	cmd1=["/bin/df","-P","-T",filename.strip()]
-	cmd2=["/usr/bin/tail","-n","+2"]
-	cmd3=["/usr/bin/awk","{print $2}"]
-	p1 = subprocess.Popen(   cmd1,
-							stdin=subprocess.PIPE,
-							stdout=subprocess.PIPE,
-							stderr=subprocess.PIPE )
-	output1,error1=p1.communicate(input=None)
-	error=p1.poll()
-	
-	if error!=0:
-		return False
-
-	p2 = subprocess.Popen(   cmd2,
-							stdin=subprocess.PIPE,
-							stdout=subprocess.PIPE,
-							stderr=subprocess.PIPE )
-	output2,error2=p2.communicate(input=output1)
-	error=p2.poll()
-	
-	if error!=0:
-		return False
-
-	p3 = subprocess.Popen(   cmd3,
-							stdin=subprocess.PIPE,
-							stdout=subprocess.PIPE,
-							stderr=subprocess.PIPE )
-
-	output3,error3=p3.communicate(input=output2)
-	error=p3.poll()
-
-	if error==0:
-		fs=output3.decode("utf8").strip()
-
-		if fs in networkfs:
-			return True
-		else:
-			return False
-
-	return False
 
 ###########
 #maildomain
