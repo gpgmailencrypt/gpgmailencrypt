@@ -10,7 +10,7 @@ class _gmechild:
 
 	def __init__(self,parent,filename):
 		self.parent=parent
-		self._level=0
+		self._level=1
 		self.filename=filename
 
 	def log(self,
@@ -23,9 +23,9 @@ class _gmechild:
 			filename=self.filename
 
 		try:
-			self.parent._level+=self._level
+			self.parent._logger._level+=self._level
 			self.parent.log(msg=msg,infotype=infotype,ln=ln,filename=filename)
-			self.parent._level-=self._level
+			self.parent._logger._level-=self._level
 		except:
 			pass
 
