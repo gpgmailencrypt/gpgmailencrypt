@@ -20,7 +20,7 @@ class _mytimer(_gmechild):
 
 	case 1: A countdown timer
 
-	timer.set_timer(10,60)
+	timer.start(10,60)
 
 	(10 times multiplicated with 60 seconds = 10 minutes)
 	will be called once after 10 minutes
@@ -28,7 +28,7 @@ class _mytimer(_gmechild):
 
 	case 2: a revolving timer
 
-	timer.set_timer(0,600,your_alarmfunction)
+	timer.start(0,600,your_alarmfunction)
 	will  your_alarmfunction every 600 seconds
 
 
@@ -38,9 +38,9 @@ class _mytimer(_gmechild):
 
 	mytimer.start(10,60)
 
-	and then in your useraction function call timer.set_alive() in case of
+	and then call timer.set_alive() in your useraction function in case of
 	user activity.
-	To check if the the timer already expired check timer.is_running()
+	To check if the the timer already has expired check timer.is_running()
 	"""
 
 	def __init__(self,parent=None):
