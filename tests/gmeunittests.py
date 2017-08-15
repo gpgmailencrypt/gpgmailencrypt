@@ -631,7 +631,9 @@ XJS*C4JDBQADN1.NSBN3*2IDNEN*GTUBE-STANDARD-ANTI-UBE-TEST-EMAIL*C.34X
 You should send this test mail from an account outside of your network.
 
 """
-
+#########
+#gmetests
+#########
 class gmetests(unittest.TestCase):
 
 	def setUp(self):
@@ -755,6 +757,13 @@ class gmetests(unittest.TestCase):
 
 		self.assertEqual(mapped,[])
 
+	def test_check_encodefilename(self):
+		origname="файл.jpg"
+		f1,f2=gmeutils.helpers.encode_filename(origname)
+		self.assertEqual(f1,"UTF-8''%D1%84%D0%B0%D0%B9%D0%BB.jpg")
+		self.assertEqual(f2,"?UTF-8?B?0YTQsNC50LsuanBn")
+		self.assertEqual("UTF-8''%s"%origname,gmeutils.helpers.decode_filename(f1))
+
 	def test_check_encryptsubject(self):
 		success=self.gme.check_encryptsubject(email_unencryptedencryptsubject)
 		self.assertTrue(success)
@@ -855,9 +864,9 @@ class gmetests(unittest.TestCase):
 		self.assertFalse(self.gme._check_bounce_mail(x,h))
 		self.assertFalse(self.gme._check_bounce_mail(x,u))
 
-#########
+######################
 #ADM_VERIFICATIONTESTS
-#########
+######################
 class adm_verificationtests(unittest.TestCase):
 	def setUp(self):
 		self.gme=gpgmailencrypt.gme()
@@ -1599,12 +1608,11 @@ class servertests(unittest.TestCase):
 	def test_start_server(self):
 		def startserver():
 			print("STARTSERVER")
-			#gme=gpgmailencrypt.gme()
-			#gme.set_configfile("./gmetest.conf")
 			self.gme.daemonmode()
 		
 		p=Process(target=startserver)
 		p.start()
+		time.sleep(3)
 		self.assertTrue(p.is_alive())
 		p.terminate()
 	
