@@ -497,6 +497,7 @@ class _GPG(_gmechild):
 		encdata=res.read()
 		res.close()
 		self.parent._del_tempfile(f.name)
+		self.debug("Result=%s"%str(result))
 		return result,encdata
 
 	#########################
