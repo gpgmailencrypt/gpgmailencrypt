@@ -986,12 +986,12 @@ class _sql_backend(_base_storage):
 		except:
 			pass
 
-		if r==None:
+		if r==None or r[0]==None:
 			self.con_end()
 			raise KeyError(user)
 
-		self.con_end()
 		self.debug("sqlbackend %s usermap %s=>%s"%(self._backend,user,r[0]))
+		self.con_end()
 		return r[0]
 
 	########
