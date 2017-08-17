@@ -215,6 +215,7 @@ class gme:
 		self._count_alarms=0
 		self._count_smimemails=0
 		self._count_pgpmimemails=0
+		self._count_decryptedemails=0
 		self._count_pgpinlinemails=0
 		self._count_pdfmails=0
 		self._count_viruses=0
@@ -2089,6 +2090,7 @@ class gme:
 				self._count_pgpinlinemails,
 				self._count_smimemails ,
 				self._count_pdfmails))
+		self.log("Decrypted mails: %i"%(self._count_decryptedemails))
 		self.log("total deferred: %i, still deferred: %i" %(
 				self._count_deferredmails,
 				len(self._deferred_emails)))
@@ -2491,6 +2493,7 @@ class gme:
 			"total pdf":self._count_pdfmails,
 			"total pgpmime":self._count_pgpmimemails,
 			"total pgpinline":self._count_pgpinlinemails,
+			"total decrypted":self._count_decryptedemails,
 			"systemerrors":self._systemerrors,
 			"systemwarnings":self._systemwarnings,
 			"virus infected mails":self._count_viruses,
@@ -4534,7 +4537,8 @@ class gme:
 
 				if res:
 					mresult=res
-
+		if mresult!=None:
+			self._count_decryptedemails+=1
 		return mresult
 
 	#############################
