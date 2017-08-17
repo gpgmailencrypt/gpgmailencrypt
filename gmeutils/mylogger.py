@@ -222,10 +222,10 @@ class mylogger(_gmechild):
 				space=" "
 
 			if ln==-1:
-				ln=inspect.currentframe().f_back.f_lineno
+				ln=inspect.currentframe().f_back.f_back.f_lineno
 
 			if filename==None or len(filename)==0:
-				filename=__file__
+				filename=inspect.getfile(inspect.currentframe().f_back)
 
 			filename=os.path.split(filename)[1]
 			_lftmsg=20
@@ -328,7 +328,10 @@ class mylogger(_gmechild):
 				ln=inspect.currentframe().f_back.f_lineno
 			else:
 				ln=lineno
-
+			if filename==None or len(filename)==0:
+				filename=inspect.getfile(inspect.currentframe().f_back)
+			
+			inspect.currentframe().f_back
 			self.log(msg,"d",ln,filename=filename)
 
 	############
