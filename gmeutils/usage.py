@@ -200,6 +200,20 @@ def print_exampleconfig():
 	print ("[pdf]")
 	print ("useencryptpdf=False".ljust(space)+
 	"#if True, emails can be encrypted as PDF")
+	print ("passwordmode=sender".ljust(space)+
+	"#valid values are 'sender','none' or 'script'")
+	print ("".ljust(space)+
+	"#'sender': the sender of an e-mail will get an e-mail with the password,")
+	print ("".ljust(space)+
+	"#        so that he can gives it to the receiver")
+	print ("".ljust(space)+
+	"#'none': password will not be forwared")
+	print ("".ljust(space)+
+	"#'script': the script 'passwordscript' will be executed")
+	print ("passwordscript=".ljust(space)+
+	"#script that will be executed to transport the password to the users")
+	print ("".ljust(space)+
+	"#when password mode ist 'script'")
 	print ("passwordlength=10".ljust(space)+
 	"#Length of the automatic created password")
 	print ("passwordlifetime=172800".ljust(space)+

@@ -90,6 +90,9 @@ class gme:
 	s_may=1
 	s_redirect=2
 	s_bounce=3
+	pdf_none=1
+	pdf_script=2
+	pdf_sender=3
 	_LOCALEDB={
 	#"CN":{	"appointment":"约会",
 	#		"file":"文件",
@@ -381,6 +384,8 @@ class gme:
 		self._SMTPD_USE_AUTH=False
 		self._SMTPD_FORCETLS=False
 		self._USEPDF=False
+		self._PDFPASSWORDMODE=self.pdf_sender
+		self._PDFPASSWORDSCRIPT="/home/horst/mailscript.sh"
 		self._PDFSECUREZIPCONTAINER=False
 		self._PDFPASSWORDLENGTH=10
 		self._PDFPASSWORDLIFETIME=48*60*60
@@ -752,6 +757,29 @@ class gme:
 
 			try:
 				self._PDFPASSWORDLIFETIME=_cfg.getint('pdf','passwordlifetime')
+			except:
+				pass
+
+			try:
+				o=_cfg.get('pdf','passwordmode').lower().strip()
+				print("O:",o)
+
+				if o=="none":
+					self._PDFPASSWORDMODE=self.pdf_none
+				elif o=="script":
+					self._PDFPASSWORDMODE=self.pdf_script
+				else:
+					self._PDFPASSWORDMODE=self.pdf_sender
+
+			except:
+				pass
+
+			try:
+				script=_cfg.get('pdf','passwordscript')
+
+				if len(script.trim())>0:
+					self._PDFPASSWORDSCRIPT=script
+
 			except:
 				pass
 
@@ -3707,7 +3735,94 @@ class gme:
 
 		return result
 
+	#######################
+	# _send_pdfpasswordmail
+	#######################
 
+	@_dbg
+	def _send_pdfpasswordmail(self,from_addr,to_addr,password,newmsg):
+	
+		domain=maildomain(from_addr)
+
+		if not domain in self._HOMEDOMAINS:
+			return
+
+		msgtxt=self._load_mailmaster("01-pdfpassword",
+			"<table><tr><td>Subject:</td><td>%SUBJECT%</td></tr>"
+			"<tr><td>From:</td><td>%FROM%</td></tr><tr><td>To:</td>"
+			"<td>%TO%</td></tr><tr><td>Date:</td><td>%DATE%</td></tr>"
+			"<tr><td>Password:</td><td>%PASSWORD%</td></tr></table>")
+		msgtxt=replace_variables(msgtxt,
+				{"FROM":html.escape(from_addr),
+				 "TO":html.escape(self._decode_header(newmsg["To"])),
+				 "DATE":newmsg["Date"],
+				 "PASSWORD":html.escape(password),
+				 "SUBJECT":html.escape(self._decode_header(
+													newmsg["Subject"]
+				 ))})
+		msg=MIMEMultipart()
+		msg.set_type("multipart/alternative")
+		res,htmlheader,htmlbody,htmlfooter=self._split_html(msgtxt)
+		htmlmsg=MIMEText(msgtxt,"html")
+		plainmsg=MIMEText(htmlbody)
+		msg.attach(plainmsg)
+		msg.attach(htmlmsg)
+
+		try:
+			pwheader=self._LOCALEDB[self._LOCALE]["passwordfor"]
+		except:
+			self.log("wrong locale '%s'"%self._LOCALE,"w")
+			pwheader=self._LOCALEDB["EN"]["passwordfor"]
+
+		msg['Subject'] = ('%s: %s' %(pwheader,
+							self._decode_header(newmsg["To"])))
+		msg['To'] = from_addr
+		msg['From'] = self._SYSTEMMAILFROM
+		self.send_mails(msg.as_string(),from_addr)
+
+	#########################
+	# _send_pdfpasswordscript
+	#########################
+
+	@_dbg
+	def _send_pdfpasswordscript(self,from_addr,to_addr,password,newmsg):
+		cmd=[self._PDFPASSWORDSCRIPT,
+				from_addr,
+				to_addr,
+				password
+			]
+
+		if self._PDFPASSWORDSCRIPT==None:
+			self.log("PDF password script is not defined","e")
+			return
+
+		p1 = subprocess.Popen(	cmd,
+								stdin=None,
+								stdout=None,
+								stderr=subprocess.PIPE )
+		output1,error1=p1.communicate()
+		_result=p1.poll()
+		print("OUTPUT SCRIPT",output1)
+
+		if _result != 0:
+			self.log("Error executing command (Error code %d)"%_result,
+							"e")
+			self.log(error1.decode("utf8",unicodeerror),"e")
+
+	###################
+	# send_pdf_password
+	###################
+
+	@_dbg
+	def send_pdfpassword(self,from_addr,to_addr,password,newmsg):
+
+		if self._PDFPASSWORDMODE==self.pdf_none:
+			return
+		elif self._PDFPASSWORDMODE==self.pdf_script:
+			self._send_pdfpasswordscript(from_addr,to_addr,password,newmsg)
+		else:
+			self._send_pdfpasswordmail(from_addr,to_addr,password,newmsg)
+ 
 	##################
 	# encrypt_pdf_mail
 	##################
@@ -3755,42 +3870,9 @@ class gme:
 		result,pdffile=pdf.create_pdffile(pw,from_addr)
 
 		if result==True:
-			domain=maildomain(from_addr)
 
 			if send_password:
-				if domain in self._HOMEDOMAINS:
-					msgtxt=self._load_mailmaster("01-pdfpassword",
-						"<table><tr><td>Subject:</td><td>%SUBJECT%</td></tr>"
-						"<tr><td>From:</td><td>%FROM%</td></tr><tr><td>To:</td>"
-						"<td>%TO%</td></tr><tr><td>Date:</td><td>%DATE%</td></tr>"
-						"<tr><td>Password:</td><td>%PASSWORD%</td></tr></table>")
-					msgtxt=replace_variables(msgtxt,
-							{"FROM":html.escape(from_addr),
-							 "TO":html.escape(self._decode_header(newmsg["To"])),
-							 "DATE":newmsg["Date"],
-							 "PASSWORD":html.escape(pw),
-							 "SUBJECT":html.escape(self._decode_header(
-																newmsg["Subject"]
-							 ))})
-					msg=MIMEMultipart()
-					msg.set_type("multipart/alternative")
-					res,htmlheader,htmlbody,htmlfooter=self._split_html(msgtxt)
-					htmlmsg=MIMEText(msgtxt,"html")
-					plainmsg=MIMEText(htmlbody)
-					msg.attach(plainmsg)
-					msg.attach(htmlmsg)
-
-					try:
-						pwheader=self._LOCALEDB[self._LOCALE]["passwordfor"]
-					except:
-						self.log("wrong locale '%s'"%self._LOCALE,"w")
-						pwheader=self._LOCALEDB["EN"]["passwordfor"]
-
-					msg['Subject'] = ('%s: %s' %(pwheader,
-										self._decode_header(newmsg["To"])))
-					msg['To'] = from_addr
-					msg['From'] = self._SYSTEMMAILFROM
-					self.send_mails(msg.as_string(),from_addr)
+				self.send_pdfpassword(from_addr,to_addr,pw,newmsg)
 
 			msgtxt=self._load_mailmaster("02-pdfmail",
 					   "Content of this e-mail is stored in an pdf attachment.")
