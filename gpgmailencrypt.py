@@ -3786,10 +3786,14 @@ class gme:
 
 	@_dbg
 	def _send_pdfpasswordscript(self,from_addr,to_addr,password,newmsg):
-		cmd=[self._PDFPASSWORDSCRIPT,
+		mail=self._new_tempfile()
+		mail.write(newmsg.as_bytes())
+		mail.close()
+		cmd=[os.path.expanduser(self._PDFPASSWORDSCRIPT),
 				from_addr,
 				to_addr,
-				password
+				password,
+				mail.name
 			]
 
 		if self._PDFPASSWORDSCRIPT==None:
@@ -3802,7 +3806,7 @@ class gme:
 								stderr=subprocess.PIPE )
 		output1,error1=p1.communicate()
 		_result=p1.poll()
-		print("OUTPUT SCRIPT",output1)
+		self._del_tempfile(mail.name)
 
 		if _result != 0:
 			self.log("Error executing command (Error code %d)"%_result,
@@ -5231,7 +5235,6 @@ class gme:
 	def adm_get_pwhash(self,user):
 		"returns the password hash from the user"
 		return self._backend.adm_get_pwhash(user)
-
 
 #####
 #main
