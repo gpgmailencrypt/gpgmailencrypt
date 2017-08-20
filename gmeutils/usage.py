@@ -68,10 +68,16 @@ def print_exampleconfig():
 	print ("".ljust(space)+"#and users might receive system mail "
 	"and can use pdf encrypt")
 	print ("securitylevel=may".ljust(space)+
-	"#valid values are 'may','redirect' or 'bounce'")
+	"#valid values are 'may','script','redirect' or 'bounce'")
 	print ("bouncehomedomain=true".ljust(space)+
 	"#when true and security level is 'bounce' unencrypted emails ")
 	print ("".ljust(space)+"#to an address in 'homedomains' will bounce. ")
+	print ("".ljust(space)+"#so e-mails from 'homedomains' to 'homedomains'")
+	print ("".ljust(space)+"#and from 'homedomains'	to external domains will bounce.")
+	print ("".ljust(space)+"#bouncedomain=False only mails from 'homedomains'")
+	print ("".ljust(space)+"#to external domains will bounce")
+	print ("bouncescript=".ljust(space)+
+	"#the script to be executed when securitylevel is 'script'")
 	print ("output=mail".ljust(space)+
 	"#valid values are 'mail'or 'stdout'")
 	print ("locale=en".ljust(space)+
