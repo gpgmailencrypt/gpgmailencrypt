@@ -90,6 +90,7 @@ class gme:
 	s_may=1
 	s_redirect=2
 	s_bounce=3
+	s_script=4
 	pdf_none=1
 	pdf_script=2
 	pdf_sender=3
@@ -356,6 +357,7 @@ class gme:
 		self._INFILE=""
 		self._OUTFILE=""
 		self._SECURITYLEVEL=self.s_may
+		self._BOUNCESCRIPT=None
 		self._DECRYPT=False
 		self._BOUNCEHOMEDOMAIN=True
 		self._PREFERRED_ENCRYPTION="PGPINLINE"
@@ -480,6 +482,8 @@ class gme:
 					self._SECURITYLEVEL=self.s_bounce
 				elif o=="redirect":
 					self._SECURITYLEVEL=self.s_redirect
+				elif o=="script":
+					self._SECURITYLEVEL=self.s_script
 				else:
 					self._SECURITYLEVEL=self.s_may
 					if not o=="may":
@@ -499,6 +503,12 @@ class gme:
 			try:
 				self._BOUNCEHOMEDOMAIN=_cfg.getboolean('default',
 												'bouncehomedomain')
+			except:
+				pass
+
+			try:
+				self._BOUNCESCRIPT=_cfg.get('default',
+												'bouncescript')
 			except:
 				pass
 
@@ -3786,6 +3796,11 @@ class gme:
 
 	@_dbg
 	def _send_pdfpasswordscript(self,from_addr,to_addr,password,newmsg):
+
+		if self._PDFPASSWORDSCRIPT==None:
+			self.log("PDF password script is not defined","e")
+			return
+
 		mail=self._new_tempfile()
 		mail.write(newmsg.as_bytes())
 		mail.close()
@@ -3795,11 +3810,6 @@ class gme:
 				password,
 				mail.name
 			]
-
-		if self._PDFPASSWORDSCRIPT==None:
-			self.log("PDF password script is not defined","e")
-			return
-
 		p1 = subprocess.Popen(	cmd,
 								stdin=None,
 								stdout=None,
@@ -4123,8 +4133,41 @@ class gme:
 								in_bounce_process=False
 								):
 
-		if (self._check_bounce_mail(from_addr,to_addr)
+		if self._SECURITYLEVEL==self.s_script:
+
+			if self._BOUNCESCRIPT==None:
+				self.log("Bounce script is not defined","e")
+				return
+
+			self.debug("_send_unencrypted bouncescript '%s'"%os.path.expanduser(
+															self._BOUNCESCRIPT))
+			mail=self._new_tempfile()
+			mail.write(mailtext.encode("UTF-8",unicodeerror))
+			mail.close()
+			cmd=[os.path.expanduser(self._BOUNCESCRIPT),
+					from_addr,
+					to_addr,
+					mail.name
+				]
+
+			p1 = subprocess.Popen(	cmd,
+									stdin=None,
+									stdout=None,
+									stderr=subprocess.PIPE )
+			output1,error1=p1.communicate()
+			_result=p1.poll()
+			self._del_tempfile(mail.name)
+
+			if _result != 0:
+				self.log("Error executing command (Error code %d)"%_result,
+								"e")
+				self.log(error1.decode("utf8",unicodeerror),"e")
+
+			return
+			
+		elif (self._check_bounce_mail(from_addr,to_addr)
 			and not in_bounce_process):
+				self.debug("_send_unencrypted bouncemail")
 				newmsg=email.message_from_string( mailtext)
 				msgtxt=self._load_mailmaster("04-bouncemail",
 					"Mail was not encrypted and thus not delivered<br>"
@@ -4163,7 +4206,7 @@ class gme:
 				self._remove_mail_from_queue(queue_id)
 				return
 
-		self.debug("send_unencrypted: %s"%message)
+		self.debug("send_unencrypted may: %s"%message)
 		self._send_rawmsg(  queue_id,
 							mailtext,
 							message,
