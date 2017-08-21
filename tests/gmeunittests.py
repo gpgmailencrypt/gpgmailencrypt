@@ -962,9 +962,9 @@ class textstoragebackendtests(unittest.TestCase):
 		self.assertEqual(pk,controllist)
 
 
-########################
+#######################
 #sqlstoragebackendtests
-########################
+#######################
 
 def has_sqlite():
 	try:
@@ -973,7 +973,7 @@ def has_sqlite():
 		return False
 
 	return True
-
+########################
 @unittest.skipIf(not has_sqlite(),"sqlite3 not installed")
 class sqlstoragebackendtests(textstoragebackendtests):
 	def setUp(self):
@@ -1155,15 +1155,15 @@ class gpgtests(unittest.TestCase):
 
 		self.assertTrue(success)
 
-	def test_additionalencryptionkeys(self):
-		user="testaddress@gpgmailencry.pt"
+	def test_additionalgpgencryptionkeys(self):
+		user=["testaddress@gpgmailencry.pt","another@key.pt"]
 		self.gme.set_configfile("./gmetest2.conf")
-		self.assertEqual(self.gme.gpg_additionalencryptionkeys(""),[user])
+		self.assertEqual(self.gme.gpg_additionalencryptionkeys(""),user)
 		
-######################
-#SMIMETESTStextbackend
-######################
-class smimeteststextbackend(unittest.TestCase):
+###########
+#SMIMETESTS
+###########
+class smimetests(unittest.TestCase):
 	def setUp(self):
 		self.gme=gpgmailencrypt.gme()
 		self.gme.set_configfile("./gmetest.conf")
@@ -1231,6 +1231,11 @@ class smimeteststextbackend(unittest.TestCase):
 
 		fingerprint=gmeutils.helpers.get_certfingerprint(cert)
 		self.assertEqual(fingerprint,smimecertfingerprint)
+
+	def test_additionalsmimeencryptionkeys(self):
+		user=["centralsmime@gpgmailencry.pt","u2@somebody.pt"]
+		self.gme.set_configfile("./gmetest2.conf")
+		self.assertEqual(self.gme.smime_additionalencryptionkeys(""),user)
 
 #########
 #PDFTESTS
