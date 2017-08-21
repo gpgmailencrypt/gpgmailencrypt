@@ -1325,8 +1325,6 @@ class _sql_backend(_base_storage):
 			if len(tmpcipher)>0 and tmpcipher!="DEFAULT":
 				cipher=tmpcipher
 
-			#result= [user.lower(),privatekey,cipher]
-
 			if privatekey!=None:
 				rows.append(user.lower())
 
