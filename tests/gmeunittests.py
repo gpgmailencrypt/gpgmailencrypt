@@ -717,45 +717,6 @@ class gmetests(unittest.TestCase):
 	def test_getcharset(self):
 		self.assertEqual(self.gme._find_charset(email_unencrypted),"utf-8")
 
-	def test_usermap(self):
-		mapped=""
-
-		try:
-			mapped=self.gme._backend.usermap("NOKEY@gpgmailencry.pt")
-		except:
-			pass
-
-		self.assertEqual(mapped,"testaddress@gpgmailencry.pt")
-
-	def test_usermap2(self):
-		mapped=""
-
-		try:
-			mapped=self.gme._backend.usermap(" no key <NOKEY@gpgmailencry.pt>")
-		except:
-			pass
-
-		self.assertEqual(mapped,"testaddress@gpgmailencry.pt")
-
-	def test_encryptionmap(self):
-		mapped=[]
-
-		try:
-			mapped=self.gme._backend.encryptionmap("mapped@gpgmailencry.pt")
-		except:
-			pass
-
-		self.assertEqual(mapped,["pgpmime"])
-
-	def test_encryptionmap2(self):
-		mapped=[]
-
-		try:
-			mapped=self.gme._backend.encryptionmap("xyz@gpgmailencry.pt")
-		except:
-			pass
-
-		self.assertEqual(mapped,[])
 
 	def test_check_encodefilename(self):
 		origname="файл.jpg"
@@ -792,8 +753,6 @@ class gmetests(unittest.TestCase):
 		for a in ext:
 			with self.subTest(a=a):
 				self.assertEqual(gmeutils.helpers.guess_fileextension(a),ext[a])
-
-		
 
 	def test_getheader(self):
 		res=self.gme._get_header(email_unencrypted)
@@ -864,10 +823,11 @@ class gmetests(unittest.TestCase):
 		self.assertFalse(self.gme._check_bounce_mail(x,h))
 		self.assertFalse(self.gme._check_bounce_mail(x,u))
 
-######################
-#ADM_VERIFICATIONTESTS
-######################
-class adm_verificationtests(unittest.TestCase):
+########################
+#textstoragebackendtests
+########################
+class textstoragebackendtests(unittest.TestCase):
+
 	def setUp(self):
 		self.gme=gpgmailencrypt.gme()
 		self.gme.set_configfile("./gmetest.conf")
@@ -879,13 +839,53 @@ class adm_verificationtests(unittest.TestCase):
 		self.password="secret"
 
 	def tearDown(self):
-		del self.gmeserver
 		self.gme.close()
+		del self.gmeserver
 
 		try:
 			os.remove("./gpgmailencrypt.pw")
 		except:
 			pass
+
+	def test_usermap(self):
+		mapped=""
+
+		try:
+			mapped=self.gme._backend.usermap("NOKEY@gpgmailencry.pt")
+		except:
+			pass
+
+		self.assertEqual(mapped,"testaddress@gpgmailencry.pt")
+
+	def test_usermap2(self):
+		mapped=""
+
+		try:
+			mapped=self.gme._backend.usermap(" no key <NOKEY@gpgmailencry.pt>")
+		except:
+			pass
+
+		self.assertEqual(mapped,"testaddress@gpgmailencry.pt")
+
+	def test_encryptionmap(self):
+		mapped=[]
+
+		try:
+			mapped=self.gme._backend.encryptionmap("mapped@gpgmailencry.pt")
+		except:
+			pass
+
+		self.assertEqual(mapped,["pgpmime"])
+
+	def test_encryptionmap2(self):
+		mapped=[]
+
+		try:
+			mapped=self.gme._backend.encryptionmap("xyz@gpgmailencry.pt")
+		except:
+			pass
+
+		self.assertEqual(mapped,[])
 
 	def test_adm_verify_password(self):
 		self.assertTrue(self.gmeserver.authenticate(self.user,self.password))
@@ -926,7 +926,68 @@ class adm_verificationtests(unittest.TestCase):
 			if u["user"]in ["testadmin","testadmin2"]:
 				print("in admin")
 				self.assertEqual(u["admin"],True)
+###PDF
+	def test_setpdfpassword(self):
+		"test set_pdfpassword"
+		self.gme.set_configfile("./gmetest.conf")
+		pw="test"
+		user="test@gpgmailencry.pt"
+		self.gme.set_pdfpassword(user,pw)
+		self.assertEqual(self.gme.get_pdfpassword(user),pw)
+###SMIME
+	def test_SMIMEpublickeys(self):
+		pk=self.gme._backend.smimepublic_keys()
+		controllist=list()
+		controllist.append("testaddress2@gpgmailencry.pt")
+		controllist.append("testaddress@gpgmailencry.pt")
+		self.assertTrue(pk.sort()==controllist.sort())
 
+	def test_hassmimekey(self):
+		success,user=self.gme.check_smimerecipient("smime@gpgmaiLEncry.pt")
+		self.assertTrue(success)
+
+	def test_individualsmimecipher(self):
+			self.assertTrue(
+			self.gme._backend.smimeuser(
+			"testaddRess@gpgmailencry.pt")[1]=="AES256")
+
+	def test_hasnotsmimekey(self):
+		success,user=self.gme.check_smimerecipient("second.user@gpgmailencry.pt")
+		self.assertFalse(success)
+
+	def test_SMIMEprivatekeys(self):
+		pk=self.gme._backend.smimeprivate_keys()
+		controllist=list()
+		controllist.append("testaddress2@gpgmailencry.pt")
+		self.assertEqual(pk,controllist)
+
+
+########################
+#sqlstoragebackendtests
+########################
+
+def has_sqlite():
+	try:
+		import sqlite3
+	except:
+		return False
+
+	return True
+
+@unittest.skipIf(not has_sqlite(),"sqlite3 not installed")
+class sqlstoragebackendtests(textstoragebackendtests):
+	def setUp(self):
+		import sqlite3
+		self.gme=gpgmailencrypt.gme()
+		self.gme.set_configfile("./gmetest.sqlite.conf")
+		shutil.copyfile("./gpgmailencrypt.pw.orig","./gpgmailencrypt.pw")
+		self.gmeserver=gmeutils.gpgmailserver._gpgmailencryptserver(
+															self.gme,
+															("localhost",0))
+		self.user="testuser"
+		self.password="secret"
+
+########################
 
 #########
 #GPGTESTS
@@ -1069,10 +1130,10 @@ class gpgtests(unittest.TestCase):
 		
 		pass
 		
-###########
-#SMIMETESTS
-###########
-class smimetests(unittest.TestCase):
+######################
+#SMIMETESTStextbackend
+######################
+class smimeteststextbackend(unittest.TestCase):
 	def setUp(self):
 		self.gme=gpgmailencrypt.gme()
 		self.gme.set_configfile("./gmetest.conf")
@@ -1081,19 +1142,6 @@ class smimetests(unittest.TestCase):
 	def tearDown(self):
 		self.gme.close()
 
-	def test_SMIMEpublickeys(self):
-		pk=self.smime.public_keys()
-		controllist=list()
-		controllist.append("testaddress2@gpgmailencry.pt")
-		controllist.append("testaddress@gpgmailencry.pt")
-		self.assertTrue(pk.sort()==controllist.sort())
-
-	def test_SMIMEprivatekeys(self):
-		pk=self.smime.private_keys()
-		controllist=list()
-		controllist.append("testaddress2@gpgmailencry.pt")
-		self.assertEqual(pk,controllist)
-
 	def test_issmimeencrypted(self):
 		"test is_smimeencrypted"
 		self.assertTrue(self.gme.is_smimeencrypted(email_smimeencrypted))
@@ -1101,19 +1149,6 @@ class smimetests(unittest.TestCase):
 	def test_isnotsmimeencrypted(self):
 		"test is_notsmimeencrypted"
 		self.assertFalse(self.gme.is_smimeencrypted(email_gpgmimeencrypted))
-
-	def test_hassmimekey(self):
-		success,user=self.gme.check_smimerecipient("smime@gpgmaiLEncry.pt")
-		self.assertTrue(success)
-
-	def test_individualcipher(self):
-			self.assertTrue(
-			self.gme._backend.smimeuser(
-			"testaddRess@gpgmailencry.pt")[1]=="AES256")
-
-	def test_hasnotsmimekey(self):
-		success,user=self.gme.check_smimerecipient("second.user@gpgmailencry.pt")
-		self.assertFalse(success)
 
 	def test_encryptdecryptsmime(self):
 		teststring="dies ist ein Täst"
@@ -1184,14 +1219,6 @@ class pdftests(unittest.TestCase):
 
 	def tearDown(self):
 		self.gme.close()
-
-	def test_setpdfpassword(self):
-		"test set_pdfpassword"
-		self.gme.set_configfile("./gmetest.conf")
-		pw="test"
-		user="test@gpgmailencry.pt"
-		self.gme.set_pdfpassword(user,pw)
-		self.assertEqual(self.gme.get_pdfpassword(user),pw)
 
 	def test_ispdfeencrypted(self):
 		"test is_pdfencrypted"
