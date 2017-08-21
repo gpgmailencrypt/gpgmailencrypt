@@ -1002,6 +1002,23 @@ class sqlstoragebackendtests(textstoragebackendtests):
 		except:
 			pass
 
+	def test_additionalgpgencryptionkeys(self):
+		user="test1@gpgmailencry.pt"
+		result=["centralgpgkey@gpgmailencry.pt",
+				"key1@gpgmailencry.pt",
+				"key2@gpgmailencry.pt",
+				"key3@gpgmailencry.pt",]
+		self.assertEqual(self.gme.gpg_additionalencryptionkeys(user),result)
+
+	def test_additionalsmimeencryptionkeys(self):
+		user="test2@gpgmailencry.pt"
+		result=["centralsmimekey@gpgmailencry.pt",
+				"key3@gpgmailencry.pt",
+				"key4@gpgmailencry.pt",
+				"key5@gpgmailencry.pt",
+				"key6@gpgmailencry.pt",]
+		self.assertEqual(self.gme.smime_additionalencryptionkeys(user),result)
+
 ########################
 
 #########
@@ -1142,8 +1159,6 @@ class gpgtests(unittest.TestCase):
 		user="testaddress@gpgmailencry.pt"
 		self.gme.set_configfile("./gmetest2.conf")
 		self.assertEqual(self.gme.gpg_additionalencryptionkeys(""),[user])
-		
-		pass
 		
 ######################
 #SMIMETESTStextbackend
