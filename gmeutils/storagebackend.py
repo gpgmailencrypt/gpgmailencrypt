@@ -723,11 +723,11 @@ class _sql_backend(_base_storage):
 		self._fieldenddelimiter="\""
 		self._textbackend=get_backend("TEXT",self.parent)
 		self._tabledefinition={}
-		self._tabledefinition["usermap"]=("create table \"gpgusermap\" ("
+		self._tabledefinition["usermap"]=("create table \"usermap\" ("
 					"\"user\" varchar (255) not null ,"
-					"\"gpguser\" varchar(255));")
+					"\"mapuser\" varchar(255));")
 		self._tabledefinition["usermapindex"]=("create unique index uindex"
-					" on gpgusermap (\"user\");")
+					" on usermap (\"user\");")
 		self._tabledefinition["encryptionmap"]=("create table \"encryptionmap\""
 					" (\"user\" varchar (255) not null ,"
 					"\"encrypt\" varchar(255));")
@@ -974,7 +974,7 @@ class _sql_backend(_base_storage):
 		if not self._USE_SQLUSERMAP:
 			return self._textbackend.usermap(user)
 
-		self.debug(self._USERMAPSQL.replace("?",user))
+		self.debug(self._USERMAPSQL.replace("?",user.lower()))
 
 		if not self.execute(self._USERMAPSQL,user.lower()):
 			return ""
@@ -988,6 +988,7 @@ class _sql_backend(_base_storage):
 
 		if r==None or r[0]==None:
 			self.con_end()
+			self.debug("no such user '%s'"%user.lower())
 			raise KeyError(user)
 
 		self.debug("sqlbackend %s usermap %s=>%s"%(self._backend,user,r[0]))
@@ -1233,7 +1234,7 @@ class _sql_backend(_base_storage):
 		if not self._USE_SQLSMIME:
 			return self._textbackend.smimeuser(user)
 
-		if not 	self.execute(self._SMIMEUSERSQL,user):
+		if not 	self.execute(self._SMIMEUSERSQL,user.lower()):
 			return ""
 
 		r=self._cursor.fetchone()
@@ -1249,7 +1250,7 @@ class _sql_backend(_base_storage):
 
 		cipher=self.parent._SMIMECIPHER
 
-		if len(user)>1:
+		if len(user)>1 and r[1]!=None:
 			tmpcipher=r[1].upper().strip()
 
 			if len(tmpcipher)>0 and tmpcipher!="DEFAULT":
@@ -1277,22 +1278,24 @@ class _sql_backend(_base_storage):
 		rows=list()
 
 		if not 	self.execute(self._SMIMEPUBLICKEYSQL):
+			print("smimepublic exec fails")
 			return rows
 
 		for r in self._cursor:
 
+			print("public",r)
 			user=r[0]
 			publickey=r[1]
 			cipher=self.parent._SMIMECIPHER
-			tmpcipher=r[2].upper().strip()
+
+			if r[2]:
+				tmpcipher=r[2].upper().strip()
 
 			if len(tmpcipher)>0 and tmpcipher!="DEFAULT":
 				cipher=tmpcipher
 
-			result= [user,publickey,cipher]
-
 			if publickey!=None:
-				rows.append(result)
+				rows.append(user.lower())
 
 		self.con_end()
 		return rows
@@ -1322,10 +1325,10 @@ class _sql_backend(_base_storage):
 			if len(tmpcipher)>0 and tmpcipher!="DEFAULT":
 				cipher=tmpcipher
 
-			result= [user.lower(),privatekey,cipher]
+			#result= [user.lower(),privatekey,cipher]
 
 			if privatekey!=None:
-				rows.append(result)
+				rows.append(user.lower())
 
 		self.con_end()
 		return rows
@@ -1484,6 +1487,15 @@ class _sql_backend(_base_storage):
 	def adm_set_user(self,user,password):
 		self.debug("sql_backend adm_set_user")
 		return self._textbackend.adm_set_user(user,password)
+
+	#############
+	#adm_del_user
+	#############
+
+	@_dbg
+	def adm_del_user(self,user):
+		self.debug("sql_backend adm_del_user")
+		return self._textbackend.adm_del_user(user)
 
 	###############
 	#adm_get_pwhash
