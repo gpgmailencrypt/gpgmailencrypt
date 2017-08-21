@@ -929,7 +929,7 @@ class textstoragebackendtests(unittest.TestCase):
 ###PDF
 	def test_setpdfpassword(self):
 		"test set_pdfpassword"
-		self.gme.set_configfile("./gmetest.conf")
+		#self.gme.set_configfile("./gmetest.conf")
 		pw="test"
 		user="test@gpgmailencry.pt"
 		self.gme.set_pdfpassword(user,pw)
@@ -978,14 +978,29 @@ def has_sqlite():
 class sqlstoragebackendtests(textstoragebackendtests):
 	def setUp(self):
 		import sqlite3
+		shutil.copyfile("./gmetest.sqlite.orig","./gmetest.sqlite")
+		shutil.copyfile("./gpgmailencrypt.pw.orig","./gpgmailencrypt.pw")
 		self.gme=gpgmailencrypt.gme()
 		self.gme.set_configfile("./gmetest.sqlite.conf")
-		shutil.copyfile("./gpgmailencrypt.pw.orig","./gpgmailencrypt.pw")
 		self.gmeserver=gmeutils.gpgmailserver._gpgmailencryptserver(
 															self.gme,
 															("localhost",0))
 		self.user="testuser"
 		self.password="secret"
+
+	def tearDown(self):
+		self.gme.close()
+		del self.gmeserver
+
+		try:
+			os.remove("./gpgmailencrypt.pw")
+		except:
+			pass
+
+		try:
+			os.remove("./gmetest.sqlite")
+		except:
+			pass
 
 ########################
 
