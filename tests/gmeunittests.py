@@ -642,6 +642,7 @@ class gmetests(unittest.TestCase):
 
 	def tearDown(self):
 		self.gme.close()
+
 		try:
 			os.remove("./scriptresult.txt")
 		except:
@@ -1278,6 +1279,8 @@ def has_pdf():
 		return pdf.is_available()
 ###################################
 
+@unittest.skipIf(not has_pdf(),
+		"pdf support not available")
 class pdftests(unittest.TestCase):
 	def setUp(self):
 		self.gme=gpgmailencrypt.gme()
@@ -1286,13 +1289,16 @@ class pdftests(unittest.TestCase):
 	def tearDown(self):
 		self.gme.close()
 
+		try:
+			os.remove("./scriptresult.txt")
+		except:
+			pass
+
 	def test_ispdfeencrypted(self):
 		"test is_pdfencrypted"
 		self.gme.set_configfile("./gmetest.conf")
 		self.assertTrue(self.gme.is_pdfencrypted(email_pdfencrypted))
 
-	@unittest.skipIf(not has_pdf(),
-		"pdf support not available")
 	def test_encryptpdfmail(self):
 		"test encryptpdfmail"
 		result=self.gme.encrypt_pdf_mail(  email_unencrypted,
@@ -1302,8 +1308,31 @@ class pdftests(unittest.TestCase):
 											send_password=False)
 		self.assertIsNotNone(result)
 
-	@unittest.skipIf(not has_pdf(),
-		"pdf support not available")
+	def test_pdfpasswordmodescript(self):
+		self.gme._PDFPASSWORDMODE=self.gme.pdf_script
+		self.gme._PDFPASSWORDSCRIPT="./testscript.sh"
+
+		result=self.gme.encrypt_pdf_mail(  email_unencrypted,
+											"dunno@dunno.pt",
+											"test@from.com",
+											"testaddress@gpgmailencry.pt",
+											send_password=True)
+		self.assertIsNotNone(result)
+
+
+
+		f=open("./scriptresult.txt")
+		txt=f.read()
+		f.close()
+		res=txt.split()
+		print(res)
+		self.assertEqual(res[0],"1:test@from.com")
+		self.assertEqual(res[1],"2:testaddress@gpgmailencry.pt")
+		self.assertRegex(res[2],"3:\S*")
+		self.assertIn("4:/tmp/mail-",res[3])
+		self.assertEqual(res[4],"5:")
+
+
 	def test_decryptpdf(self):
 		"test decryptpdf"
 		pdf=self.gme.pdf_factory()
