@@ -642,8 +642,27 @@ class gmetests(unittest.TestCase):
 
 	def tearDown(self):
 		self.gme.close()
+		try:
+			os.remove("./scriptresult.txt")
+		except:
+			pass
 
 	#General tests
+
+	def test_securitylevelscript(self):
+		self.gme._SECURITYLEVEL=self.gme.s_script
+		self.gme._BOUNCESCRIPT="./testscript.sh"
+		self.gme.send_mails(email_unencrypted,"dunno@dunno.pt")
+		f=open("./scriptresult.txt")
+		txt=f.read()
+		f.close()
+		res=txt.split()
+		print(res)
+		self.assertEqual(res[0],"1:test@from.com")
+		self.assertEqual(res[1],"2:dunno@dunno.pt")
+		self.assertIn("3:/tmp/mail-",res[2])
+		self.assertEqual(res[3],"4:")
+		self.assertEqual(res[4],"5:")
 
 	def test_configcomment(self):
 		x=self.gme._SMIMECIPHER
@@ -867,6 +886,17 @@ class textstoragebackendtests(unittest.TestCase):
 
 		self.assertEqual(mapped,"testaddress@gpgmailencry.pt")
 
+	def test_nousermap(self):
+		mapped=""
+
+		try:
+			mapped=self.gme._backend.usermap("dunno@gpgmailencry.pt")
+		except:
+			pass
+
+		self.assertEqual(mapped,"")
+
+
 	def test_encryptionmap(self):
 		mapped=[]
 
@@ -877,7 +907,7 @@ class textstoragebackendtests(unittest.TestCase):
 
 		self.assertEqual(mapped,["pgpmime"])
 
-	def test_encryptionmap2(self):
+	def test_noencryptionmap(self):
 		mapped=[]
 
 		try:
@@ -919,6 +949,7 @@ class textstoragebackendtests(unittest.TestCase):
 
 		for u in users:
 			print("user",u)
+
 			if u["user"]in ["normal1","normal2"]:
 				print("in Normal")
 				self.assertEqual(u["admin"],False)
@@ -1018,7 +1049,7 @@ class sqlstoragebackendtests(textstoragebackendtests):
 				"key5@gpgmailencry.pt",
 				"key6@gpgmailencry.pt",]
 		self.assertEqual(self.gme.smime_additionalencryptionkeys(user),result)
-
+		
 ########################
 
 #########
