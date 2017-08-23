@@ -1623,9 +1623,13 @@ class _sql_backend(_base_storage):
 			pass
 
 		try:
-			pw=r[0]
+			w=r[0]
+
+			if w:
+				pw=w
+
 		except:
-			self.debug("now additional pdf password found")
+			self.debug("no additional pdf password found")
 
 		self.con_end()
 		return pw
