@@ -960,7 +960,6 @@ class textstoragebackendtests(unittest.TestCase):
 				self.assertEqual(u["admin"],True)
 ###PDF
 	def test_setpdfpassword(self):
-		"test set_pdfpassword"
 		#self.gme.set_configfile("./gmetest.conf")
 		pw="test"
 		user="test@gpgmailencry.pt"
@@ -1034,6 +1033,12 @@ class sqlstoragebackendtests(textstoragebackendtests):
 		except:
 			pass
 
+
+		try:
+			os.remove("./new.sqlite")
+		except:
+			pass
+
 	def test_additionalgpgencryptionkeys(self):
 		user="test1@gpgmailencry.pt"
 		result=["centralgpgkey@gpgmailencry.pt",
@@ -1050,7 +1055,13 @@ class sqlstoragebackendtests(textstoragebackendtests):
 				"key5@gpgmailencry.pt",
 				"key6@gpgmailencry.pt",]
 		self.assertEqual(self.gme.smime_additionalencryptionkeys(user),result)
-		
+
+	def test_create_all_tables(self):
+		self.gme.set_configfile("./gmetest.sqlitecreatetables.conf")
+		r,t=self.gme._backend.create_all_tables()
+		print(r,t)
+		self.assertEqual([],t)
+				
 ########################
 
 #########
@@ -1099,27 +1110,21 @@ class gpgtests(unittest.TestCase):
 		self.assertFalse(success)
 
 	def test_isencrypted(self):
-		"test isencrypted"
 		self.assertTrue(self.gme.is_encrypted(email_gpgmimeencrypted))
 
 	def test_ispgpmimeencrypted(self):
-		"test is_pgpmimeencrypted"
 		self.assertTrue(self.gme.is_pgpmimeencrypted(email_gpgmimeencrypted))
 
 	def test_ispgpinlineencrypted(self):
-		"test is_pgpinlineencrypted"
 		self.assertTrue(self.gme.is_pgpinlineencrypted(email_gpginlineencrypted))
 
 	def test_isnotpgpinlineencrypted(self):
-		"test is_notpgpinlineencrypted"
 		self.assertFalse(self.gme.is_pgpinlineencrypted(email_gpgmimeencrypted))
 
 	def test_isunencrypted(self):
-		"test is_unencrypted"
 		self.assertFalse(self.gme.is_encrypted(email_unencrypted))
 
 	def test_encryptgpginlinemail(self):
-		"test encryptgpginlinemail"
 		result=self.gme.encrypt_gpg_mail(  email_unencrypted,
 											False,
 											"testaddress@gpgmailencry.pt",
@@ -1128,7 +1133,6 @@ class gpgtests(unittest.TestCase):
 		self.assertIsNotNone(result)
 
 	def test_encryptgpginlinemail2(self):
-		"test encryptgpginlinemail wrong address"
 		result=self.gme.encrypt_gpg_mail(  email_unencrypted,
 											False,
 											"xtestaddress@gpgmailencry.pt",
@@ -1137,7 +1141,6 @@ class gpgtests(unittest.TestCase):
 		self.assertIsNone(result)
 
 	def test_encryptgpgmimemail(self):
-		"test encryptgpgmimemail"
 		result=self.gme.encrypt_gpg_mail(  email_unencrypted,
 											True,
 											"testaddress@gpgmailencry.pt",
@@ -1146,7 +1149,6 @@ class gpgtests(unittest.TestCase):
 		self.assertIsNotNone(result)
 
 	def test_encryptgpgmimemail2(self):
-		"test encryptgpgmimemail wrong address"
 		result=self.gme.encrypt_gpg_mail(  email_unencrypted,
 											True,
 											"xtestaddress@gpgmailencry.pt",
@@ -1205,11 +1207,9 @@ class smimetests(unittest.TestCase):
 		self.gme.close()
 
 	def test_issmimeencrypted(self):
-		"test is_smimeencrypted"
 		self.assertTrue(self.gme.is_smimeencrypted(email_smimeencrypted))
 
 	def test_isnotsmimeencrypted(self):
-		"test is_notsmimeencrypted"
 		self.assertFalse(self.gme.is_smimeencrypted(email_gpgmimeencrypted))
 
 	def test_encryptdecryptsmime(self):
@@ -1248,7 +1248,6 @@ class smimetests(unittest.TestCase):
 		self.assertIsNotNone(result)
 
 	def test_encryptgsmimemail2(self):
-		"test encryptsmimemail wrong address"
 		result=self.gme.encrypt_smime_mail(  email_unencrypted,
 											"xtestaddress@gpgmailencry.pt",
 											"xtestaddress@gpgmailencry.pt",
@@ -1295,12 +1294,10 @@ class pdftests(unittest.TestCase):
 			pass
 
 	def test_ispdfeencrypted(self):
-		"test is_pdfencrypted"
 		self.gme.set_configfile("./gmetest.conf")
 		self.assertTrue(self.gme.is_pdfencrypted(email_pdfencrypted))
 
 	def test_encryptpdfmail(self):
-		"test encryptpdfmail"
 		result=self.gme.encrypt_pdf_mail(  email_unencrypted,
 											"testaddress@gpgmailencry.pt",
 											"testaddress@gpgmailencry.pt",
@@ -1331,7 +1328,6 @@ class pdftests(unittest.TestCase):
 
 
 	def test_decryptpdf(self):
-		"test decryptpdf"
 		pdf=self.gme.pdf_factory()
 		f=tempfile.NamedTemporaryFile(  mode='wb',
 											delete=False,
