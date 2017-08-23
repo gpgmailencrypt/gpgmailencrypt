@@ -1318,9 +1318,6 @@ class pdftests(unittest.TestCase):
 											"testaddress@gpgmailencry.pt",
 											send_password=True)
 		self.assertIsNotNone(result)
-
-
-
 		f=open("./scriptresult.txt")
 		txt=f.read()
 		f.close()
@@ -1610,6 +1607,12 @@ class virustests(unittest.TestCase):
 	def test_drwebnovirus(self):
 		virusdir="./smime"
 		self.assertFalse(check_virus("drweb",virusdir))
+
+	@unittest.skipIf(not has_scanner("fprot"),
+		"virusscanner fprot not found")
+	def test_fprotvirus(self):
+		virusdir="./virus"
+		self.assertTrue(check_virus("fprot",virusdir))
 
 	@unittest.skipIf(not has_scanner("sophos"),
 		"virusscanner sophos not found")
