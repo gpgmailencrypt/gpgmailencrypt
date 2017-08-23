@@ -857,6 +857,7 @@ class textstoragebackendtests(unittest.TestCase):
 															("localhost",0))
 		self.user="testuser"
 		self.password="secret"
+		self.pdfpassword="textsecret"
 
 	def tearDown(self):
 		self.gme.close()
@@ -974,6 +975,12 @@ class textstoragebackendtests(unittest.TestCase):
 		user="test@gpgmailencry.pt"
 		self.gme.set_pdfpassword(user,pw)
 		self.assertEqual(self.gme.get_pdfpassword(user),pw)
+
+	def test_additionalpdfencryptionkey(self):
+		user="pdf@gpgmailencry.pt"
+		self.assertEqual(self.gme.pdf_additionalencryptionkey(user),
+						self.pdfpassword)
+
 ###SMIME
 	def test_SMIMEpublickeys(self):
 		pk=self.gme._backend.smimepublic_keys()
@@ -1027,6 +1034,7 @@ class sqlstoragebackendtests(textstoragebackendtests):
 															("localhost",0))
 		self.user="testuser"
 		self.password="secret"
+		self.pdfpassword="sqlsecret"
 
 	def tearDown(self):
 		self.gme.close()
@@ -1064,6 +1072,13 @@ class sqlstoragebackendtests(textstoragebackendtests):
 				"key5@gpgmailencry.pt",
 				"key6@gpgmailencry.pt",]
 		self.assertEqual(self.gme.smime_additionalencryptionkeys(user),result)
+
+	def test_additionalpdfencryptionkeyforunknown(self):
+		user="unknown@gpgmailencry.pt"
+		self.pdfpassword="textsecret"
+		self.assertEqual(self.gme.pdf_additionalencryptionkey(user),
+						self.pdfpassword)
+
 
 	def test_create_all_tables(self):
 		self.gme.set_configfile("./gmetest.sqlitecreatetables.conf")
