@@ -1216,13 +1216,38 @@ class _sql_backend(_base_storage):
 
 	@_dbg
 	def create_all_tables(self,logerror=True):
-		self.create_table("usermap",logerror=logerror)
-		self.create_table("encryptionmap",logerror=logerror)
-		self.create_table("smime",logerror=logerror)
-		self.create_table("pdf",logerror=logerror)
-		self.create_table("gpgencryptionkeys",logerror=logerror)
-		self.create_table("smimeencryptionkeys",logerror=logerror)
-		self.create_table("pdfencryptionkeys",logerror=logerror)
+		failed=[]
+		result=True
+
+		if not self.create_table("usermap",logerror=logerror):
+			failed.append("usermap")
+			result=False
+
+		if not self.create_table("encryptionmap",logerror=logerror):
+			failed.append("encryptionmap")
+			result=False
+
+		if not self.create_table("smime",logerror=logerror):
+			failed.append("smime")
+			result=False
+
+		if not self.create_table("pdf",logerror=logerror):
+			failed.append("pdf")
+			result=False
+
+		if not self.create_table("gpgencryptionkeys",logerror=logerror):
+			failed.append("gpgencryptionkeys")
+			result=False
+
+		if not self.create_table("smimeencryptionkeys",logerror=logerror):
+			failed.append("smimeencryptionkeys")
+			result=False
+
+		if not self.create_table("pdfencryptionkeys",logerror=logerror):
+			failed.append("pdfencryptionkeys")
+			result=False
+
+		return result,failed
 
 	##########
 	#smimeuser
