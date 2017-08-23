@@ -59,7 +59,7 @@ class mylogger(_gmechild):
 		self._logger=logging.getLogger("gpgmailencrypt")
 		self._loggingformatter=logging.Formatter("%(asctime)s: %(levelname)s:"
 		" %(filename)s(%(lineno)d) %(message)s",datefmt="%a %d %H:%M:%S")
-		self._logginghandler=logging.NTEventLogHandler()
+		self._logginghandler=logging.FileHandler(filename="gpgmailencrypt.log")
 		self._logginghandler.setFormatter(self._loggingformatter)
 		self._logger.addHandler(self._logginghandler)
 

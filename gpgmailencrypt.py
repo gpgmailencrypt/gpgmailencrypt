@@ -61,7 +61,6 @@ import signal
 import smtplib
 import ssl
 import sys
-import syslog
 import tempfile
 import time
 import traceback
