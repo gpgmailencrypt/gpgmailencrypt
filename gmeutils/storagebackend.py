@@ -728,6 +728,7 @@ class _sql_backend(_base_storage):
 		self._fieldenddelimiter="\""
 		self._textbackend=get_backend("TEXT",self.parent)
 		self._tabledefinition={}
+		self._sqlcreateprefix=""
 		self._tabledefinition["usermap"]=("create table \"usermap\" ("
 					"\"user\" varchar (255) not null ,"
 					"\"mapuser\" varchar(255));")
@@ -1226,6 +1227,10 @@ class _sql_backend(_base_storage):
 
 	@_dbg
 	def create_all_tables(self,logerror=True):
+		"""
+		creates default tables
+		returns result, failedtables in the form: False,["table1","table2"]
+		"""
 		failed=[]
 		result=True
 
