@@ -897,7 +897,6 @@ class textstoragebackendtests(unittest.TestCase):
 
 		self.assertEqual(mapped,"")
 
-
 	def test_encryptionmap(self):
 		mapped=[]
 
@@ -907,6 +906,16 @@ class textstoragebackendtests(unittest.TestCase):
 			pass
 
 		self.assertEqual(mapped,["pgpmime"])
+
+	def test_encryptionmappdf(self):
+		mapped=[]
+
+		try:
+			mapped=self.gme._backend.encryptionmap("pdf@gpgmailencry.pt")
+		except:
+			pass
+
+		self.assertEqual(mapped,["pdf","AES256"])
 
 	def test_noencryptionmap(self):
 		mapped=[]
