@@ -254,7 +254,12 @@ class _TEXT_BACKEND(_base_storage):
 		if cfg.has_section('encryptionmap'):
 
 			for (name, value) in cfg.items('encryptionmap'):
-					self._encryptionmap[name.lower()] = value.split(":")
+					e=value.split(":")
+
+					if len(e)>1:
+						e[1]=e[1].upper()
+
+					self._encryptionmap[name.lower()] = e
 
 		if cfg.has_section('smimeuser'):
 			self._smimeuser = dict()
@@ -279,7 +284,7 @@ class _TEXT_BACKEND(_base_storage):
 
 				if os.path.isfile(publicpath):
 					self._smimeuser[name.lower()] = [	publicpath,
-														cipher,
+														cipher.upper(),
 														privatepath]
 
 		s=self.parent.smime_factory()
@@ -1093,7 +1098,12 @@ class _sql_backend(_base_storage):
 														user,
 														r[0]))
 		self.con_end()
-		return r[0].split(":")
+		e=r[0].split(":")
+
+		if len(e)>1:
+			e[1]=e[1].upper()
+
+		return e
 
 	########################
 	#_replace_sql_delimiters
