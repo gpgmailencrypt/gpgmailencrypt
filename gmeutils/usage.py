@@ -211,9 +211,9 @@ def print_exampleconfig():
 	print ("".ljust(space)+
 	"#'sender': the sender of an e-mail will get an e-mail with the password,")
 	print ("".ljust(space)+
-	"#        so that he can gives it to the receiver")
+	"#          so that he can gives it to the receiver")
 	print ("".ljust(space)+
-	"#'none': password will not be forwared")
+	"#'none':   password will not be forwared")
 	print ("".ljust(space)+
 	"#'script': the script 'passwordscript' will be executed")
 	print ("passwordscript=".ljust(space)+
@@ -326,14 +326,14 @@ def print_exampleconfig():
 	print ("port=3306".ljust(space)+
 	"#sql server port")
 	print ("usermapsql=SELECT mapuser FROM usermap WHERE "
-			"user=? ".ljust(space)+
+			"user=lower(?) ".ljust(space)+
 	"#SQL command that returns one row with the alternatve e-mail address")
-	print ("encryptionmapsql=SELECT encrypt FROM encryptionmap WHERE user= ?")
+	print ("encryptionmapsql=SELECT encrypt FROM encryptionmap WHERE user=lower(?)")
 	print ("".ljust(space)+
 	"#SQL command that returns one row with the preferred encryption method")
 
 	print ("smimeusersql=SELECT publickey,cipher FROM smimeuser "
-							"WHERE user= ?".ljust(space)+"")
+							"WHERE user=lower(?)".ljust(space)+"")
 	print ("".ljust(space)+
 	"#SQL command that returns one row with information about an SMIME user")
 
@@ -378,7 +378,7 @@ def print_exampleconfig():
 	print ("".ljust(space)+	
 			"#for additional keys delivered by 'gpgencryptionkeysql'")
 	print ("gpgencryptionkeysql=SELECT encryptionkey"
-									" FROM gpgencryptionkeys WHERE user= ?")
+									" FROM gpgencryptionkeys WHERE user=lower(?)")
 	print("".ljust(space)+
 	"#SQL command that returns a list of gpg keys "
 	"with which emails will be additionally encrypted")
@@ -387,7 +387,7 @@ def print_exampleconfig():
 	print ("".ljust(space)+
 	"#for additional keys delivered by 'smimeencryptionkeysql'")
 	print ("smimeencryptionkeysql=SELECT encryptionkey"
-									" FROM smimeencryptionkeys WHERE user= ?")
+									" FROM smimeencryptionkeys WHERE user=lower(?)")
 	print("".ljust(space)+
 	"#SQL command that returns a list of smime keys "
 	"with which emails will be additionally encrypted")
@@ -396,7 +396,7 @@ def print_exampleconfig():
 	print ("".ljust(space)+
 	"#with one additional password delivered by 'pdfencryptionkeysql'")
 	print ("pdfencryptionkeysql=SELECT encryptionkey"
-									" FROM pdfencryptionkeys WHERE user= ?")
+									" FROM pdfencryptionkeys WHERE user=lower(?)")
 	print("".ljust(space)+
 	"#SQL command that returns one single pdf password "
 	"with which emails will be")

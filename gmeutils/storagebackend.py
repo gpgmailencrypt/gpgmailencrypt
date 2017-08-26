@@ -371,6 +371,7 @@ class _TEXT_BACKEND(_base_storage):
 	@_dbg
 	def smimeuser(self, user):
 		self.debug("textbackend smimeuser check ",user)
+		user=email.utils.parseaddr(user)[1]
 
 		try:
 			self.debug("smimeuser %s"%user)
@@ -421,6 +422,8 @@ class _TEXT_BACKEND(_base_storage):
 	@_dbg
 	def set_pdfpassword(self,user,password,autodelete=True):
 
+		user=email.utils.parseaddr(user)[1]
+
 		if autodelete==True:
 			starttime=time.time()
 		else:
@@ -435,6 +438,7 @@ class _TEXT_BACKEND(_base_storage):
 	@_dbg
 	def get_pdfpassword(self,user):
 		pw=None
+		user=email.utils.parseaddr(user)[1]
 
 		try:
 			pw=self._pdfpasswords[user]
@@ -692,10 +696,10 @@ class _sql_backend(_base_storage):
 	@_dbg
 	def init(self):
 		self._DATABASE="gpgmailencrypt"
-		self._USERMAPSQL="SELECT gpguser FROM gpgusermap WHERE user=?"
-		self._ENCRYPTIONMAPSQL="SELECT encrypt FROM encryptionmap WHERE user= ?"
-		self._SMIMEUSERSQL=("SELECT publickey,cipher FROM smimeuser "
-							"WHERE user= ?")
+		self._USERMAPSQL="SELECT mapuser FROM usermap WHERE user=lower(?)"
+		self._ENCRYPTIONMAPSQL="SELECT encrypt FROM encryptionmap WHERE user=lower(?)"
+		self._SMIMEUSERSQL=("SELECT publickey,cipher,privatekey FROM smimeuser "
+							"WHERE user=lower(?)")
 		self._SMIMEPUBLICKEYSQL="SELECT user,publickey,cipher FROM smimeuser"
 		self._SMIMEPRIVATEKEYSQL=("SELECT user,privatekey,cipher FROM "
 									"smimeuser WHERE privatekey IS NOT NULL")
@@ -704,11 +708,11 @@ class _sql_backend(_base_storage):
 		self._PDFPASSWORDPASSWORDFIELD="password"
 		self._PDFPASSWORDSTARTTIMEFIELD="starttime"
 		self._GPGENCRYPTIONKEYSSQL=	("SELECT encryptionkey"
-									" FROM gpgencryptionkeys WHERE user= ?")
+									" FROM gpgencryptionkeys WHERE user=lower(?)")
 		self._SMIMEENCRYPTIONKEYSSQL=	("SELECT encryptionkey"
-									" FROM smimeencryptionkeys WHERE user= ?")
+									" FROM smimeencryptionkeys WHERE user=lower(?)")
 		self._PDFENCRYPTIONKEYSSQL=	("SELECT encryptionkey"
-									" FROM pdfencryptionkeys WHERE user= ?")
+									" FROM pdfencryptionkeys WHERE user=lower(?)")
 		self._USER="gpgmailencrypt"
 		self._PASSWORD=""
 		self._HOST="127.0.0.1"
@@ -1075,7 +1079,6 @@ class _sql_backend(_base_storage):
 
 	@_dbg
 	def encryptionmap(self, user):
-
 		user=email.utils.parseaddr(user)[1]
 
 		if not self._USE_SQLENCRYPTIONMAP:
@@ -1271,6 +1274,8 @@ class _sql_backend(_base_storage):
 	@_dbg
 	def smimeuser(self, user):
 
+		user=email.utils.parseaddr(user)[1]
+
 		if not self._USE_SQLSMIME:
 			return self._textbackend.smimeuser(user)
 
@@ -1296,9 +1301,20 @@ class _sql_backend(_base_storage):
 			if len(tmpcipher)>0 and tmpcipher!="DEFAULT":
 				cipher=tmpcipher
 
+		privatekey=None
+
+		if len(user)>2 and r[2]!=None:
+			privatekey=r[2].strip()
+			upath=os.path.join(self.parent._SMIMEKEYHOME,privatekey)
+			privatekey=os.path.expanduser(upath)
+
 		upath=os.path.join(self.parent._SMIMEKEYHOME,r[0])
 		publicpath=os.path.expanduser(upath)
 		result= [publicpath,cipher]
+
+		if privatekey:
+			result.append(privatekey)
+
 		self.debug("sqlbackend %s smimuser %s=>%s"%(self._backend,
 														user,
 														result))
@@ -1360,10 +1376,12 @@ class _sql_backend(_base_storage):
 			user=r[0]
 			privatekey=r[1]
 			cipher=self.parent._SMIMECIPHER
-			tmpcipher=r[2].upper().strip()
 
-			if len(tmpcipher)>0 and tmpcipher!="DEFAULT":
-				cipher=tmpcipher
+			if len(r)>2 and r[2]:
+				tmpcipher=r[2].upper().strip()
+
+				if len(tmpcipher)>0 and tmpcipher!="DEFAULT":
+					cipher=tmpcipher
 
 			if privatekey!=None:
 				rows.append(user.lower())
@@ -1377,6 +1395,8 @@ class _sql_backend(_base_storage):
 
 	@_dbg
 	def set_pdfpassword(self,user,password,autodelete=True):
+
+		user=email.utils.parseaddr(user)[1]
 
 		if not self._USE_SQLPDFPASSWORDS:
 			return self._textbackend.set_pdfpassword(user,password,autodelete)
@@ -1427,6 +1447,8 @@ class _sql_backend(_base_storage):
 
 	@_dbg
 	def get_pdfpassword(self,user):
+
+		user=email.utils.parseaddr(user)[1]
 
 		if not self._USE_SQLPDFPASSWORDS:
 			return self._textbackend.get_pdfpassword(user)
