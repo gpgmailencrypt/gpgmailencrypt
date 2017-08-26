@@ -872,7 +872,7 @@ class textstoragebackendtests(unittest.TestCase):
 		mapped=""
 
 		try:
-			mapped=self.gme._backend.usermap("NOKEY@gpgmailencry.pt")
+			mapped=self.gme._backend.usermap("nk <NOKEY@gpgmailencry.pt>")
 		except:
 			pass
 
@@ -902,7 +902,7 @@ class textstoragebackendtests(unittest.TestCase):
 		mapped=[]
 
 		try:
-			mapped=self.gme._backend.encryptionmap("mapped@gpgmailencry.pt")
+			mapped=self.gme._backend.encryptionmap("maPPed@gpgmailencry.pt")
 		except:
 			pass
 
@@ -912,7 +912,7 @@ class textstoragebackendtests(unittest.TestCase):
 		mapped=[]
 
 		try:
-			mapped=self.gme._backend.encryptionmap("pdf@gpgmailencry.pt")
+			mapped=self.gme._backend.encryptionmap("pdf@gPgmailencry.pt")
 		except:
 			pass
 
@@ -922,7 +922,7 @@ class textstoragebackendtests(unittest.TestCase):
 		mapped=[]
 
 		try:
-			mapped=self.gme._backend.encryptionmap("xyz@gpgmailencry.pt")
+			mapped=self.gme._backend.encryptionmap("xyz@gpgmailencRy.pt")
 		except:
 			pass
 
@@ -972,7 +972,7 @@ class textstoragebackendtests(unittest.TestCase):
 	def test_setpdfpassword(self):
 		#self.gme.set_configfile("./gmetest.conf")
 		pw="test"
-		user="test@gpgmailencry.pt"
+		user="Test <test@gpgmailencry.pT>"
 		self.gme.set_pdfpassword(user,pw)
 		self.assertEqual(self.gme.get_pdfpassword(user),pw)
 
@@ -990,23 +990,29 @@ class textstoragebackendtests(unittest.TestCase):
 		self.assertTrue(pk.sort()==controllist.sort())
 
 	def test_hassmimekey(self):
-		success,user=self.gme.check_smimerecipient("smime@gpgmaiLEncry.pt")
+		success,user=self.gme.check_smimerecipient("test <smime@gpgmaiLEncry.pt>")
 		self.assertTrue(success)
 
 	def test_individualsmimecipher(self):
 			self.assertTrue(
 			self.gme._backend.smimeuser(
-			"testaddRess@gpgmailencry.pt")[1]=="AES256")
+			"Test <testaddRess@gpgmailencry.pt>")[1]=="AES256")
+
+	def test_getprivatekey(self):
+		user=self.gme._backend.smimeuser("test <testadDress3@gpgmailencry.pt>")
+		controllist=['./smime/cert.crt', 'DES3', './smime/newkey.key']
+		self.assertEqual(user,controllist)
 
 	def test_hasnotsmimekey(self):
-		success,user=self.gme.check_smimerecipient("second.user@gpgmailencry.pt")
+		success,user=self.gme.check_smimerecipient("test <second.User@gpgmailencry.pt>")
 		self.assertFalse(success)
 
 	def test_SMIMEprivatekeys(self):
 		pk=self.gme._backend.smimeprivate_keys()
 		controllist=list()
 		controllist.append("testaddress2@gpgmailencry.pt")
-		self.assertEqual(pk,controllist)
+		controllist.append("testaddress3@gpgmailencry.pt")
+		self.assertEqual(pk.sort(),controllist.sort())
 
 
 #######################
