@@ -4674,10 +4674,15 @@ class gme:
 	#############################
 
 	@_dbg
-	def _send_already_encrypted_mail(self,queue_id,mailtext,from_addr,to_addr):
+	def _send_already_encrypted_mail(	self,
+										queue_id,
+										mailtext,
+										from_addr,
+										to_addr,
+										decrypt=True):
 		mresult=None
 
-		if self._DECRYPT:
+		if self._DECRYPT and decrypt:
 			mresult=self.decrypt_mail(mailtext,from_addr,to_addr)
 			has_virus=False
 
@@ -4723,7 +4728,8 @@ class gme:
 								is_spam=spamscanners.S_NOSPAM,
 								has_virus=False,
 								virusinfo=None,
-								in_bounce_process=False):
+								in_bounce_process=False,
+								decrypt=True):
 		_pgpmime=False
 		_prefer_gpg=True
 		_prefer_pdf=False
@@ -4737,7 +4743,8 @@ class gme:
 			self._send_already_encrypted_mail(	queue_id,
 												mailtext,
 												from_addr,
-												to_addr)
+												to_addr,
+												decrypt)
 			return
 
 		if has_virus:
@@ -4892,7 +4899,8 @@ class gme:
 	def send_mails(  self,
 						mailtext,
 						recipients,
-						in_bounce_process=False):
+						in_bounce_process=False,
+						decrypt=True):
 		"""
 		Main function of this library:
 			mailtext is the mail as a string
@@ -5061,7 +5069,7 @@ class gme:
 				maildomain(from_addr) in self._HOMEDOMAINS):
 					 del raw_message['From']
 					 raw_message['From']=newfrom
-					 self.send_mails(raw_message.as_string(),from_addr)
+					 self.send_mails(raw_message.as_string(),from_addr,decrypt=False)
 
 		except:
 			self._count_deferredmails+=1
