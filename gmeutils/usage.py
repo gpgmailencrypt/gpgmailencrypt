@@ -79,7 +79,11 @@ def print_exampleconfig():
 	print ("bouncescript=".ljust(space)+
 	"#the script to be executed when securitylevel is 'script'")
 	print ("output=mail".ljust(space)+
-	"#valid values are 'mail'or 'stdout'")
+	"#valid values are 'mail'.'file' or 'stdout'")
+
+	print ("outfile=".ljust(space)+
+	"#filename to be used when output=file")
+
 	print ("locale=en".ljust(space)+
 	"#DA|DE|EN|ES|FI|FR|IT|NL|NO|PL|PT|RU|SE")
 	print ("mailtemplatedir=/usr/share/gpgmailencrypt"
