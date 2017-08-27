@@ -7,7 +7,9 @@ import gmeutils.archivemanagers
 import gmeutils.virusscanners
 import gmeutils.spamscanners
 import gmeutils.gpgmailserver
+import email
 import filecmp
+import glob
 import os
 import os.path
 import shutil
@@ -648,6 +650,14 @@ class gmetests(unittest.TestCase):
 		except:
 			pass
 
+		try:
+
+			for f in glob.glob("./result*.eml"):
+				os.remove(f)
+
+		except:
+			pass
+
 	#General tests
 
 	def test_securitylevelscript(self):
@@ -843,6 +853,77 @@ class gmetests(unittest.TestCase):
 		self.assertFalse(self.gme._check_bounce_mail(x,h))
 		self.assertFalse(self.gme._check_bounce_mail(x,u))
 
+	def test_sendmail(self):
+		self.gme.set_output2file("result.eml")
+		self.gme.send_mails(email_unencrypted,"Test <testaddress@gpgmailencry.pt")
+		res=None
+		try:
+			with open("result.eml") as f:
+				res=f.read()
+		except:
+			raise
+
+		self.assertTrue(res!=None)
+		
+	def test_sendmail_use_sent(self):
+		self.gme.set_output2file("result.eml")
+		self.gme._USE_SENTADDRESS=True
+		self.gme._DECRYPT=True
+		mail=email.message_from_string(email_unencrypted)
+		del mail["From"]
+		mail["From"]="testaddress@gpgmailencry.pt"
+		self.gme.send_mails(mail.as_string(),"Test <testaddress@gpgmailencry.pt")
+		res=None
+		try:
+			with open("result1.eml") as f:
+				res=f.read()
+		except:
+			raise
+
+		self.assertTrue(res!=None)
+		
+	@unittest.skipIf(is_networkfilesystem("./gpg"),
+									"gpg directory on network file system")
+	def test_sendmail_dont_decrypt(self):
+		self.gme.set_output2file("result.eml")
+		self.gme._USE_SENTADDRESS=True
+		self.gme._DECRYPT=True
+		self.gme.send_mails(email_gpgmimeencrypted,
+							"Test <testaddress@gpgmailencry.pt",
+							decrypt=False
+							)
+		res=None
+		try:
+			with open("result.eml") as f:
+				res=f.read()
+
+			mail=email.message_from_string(res)
+			self.assertNotEqual(mail["X-GPGMailencrypt"],"decrypted")
+		except:
+			raise
+
+
+	@unittest.skipIf(is_networkfilesystem("./gpg"),
+									"gpg directory on network file system")
+	def test_sendmail_decrypt(self):
+		self.gme.set_output2file("result.eml")
+		self.gme._USE_SENTADDRESS=True
+		self.gme._DECRYPT=True
+		self.gme.send_mails(email_gpgmimeencrypted,
+							"Test <testaddress@gpgmailencry.pt",
+							decrypt=True
+							)
+		res=None
+		try:
+			with open("result.eml") as f:
+				res=f.read()
+
+			mail=email.message_from_string(res)
+			self.assertEqual(mail["X-GPGMailencrypt"],"decrypted")
+		except:
+			raise
+
+		
 ########################
 #textstoragebackendtests
 ########################
@@ -902,7 +983,7 @@ class textstoragebackendtests(unittest.TestCase):
 		mapped=[]
 
 		try:
-			mapped=self.gme._backend.encryptionmap("maPPed@gpgmailencry.pt")
+			mapped=self.gme._backend.encryptionmap("test <maPPed@gpgmailencry.pt>")
 		except:
 			pass
 
@@ -977,7 +1058,7 @@ class textstoragebackendtests(unittest.TestCase):
 		self.assertEqual(self.gme.get_pdfpassword(user),pw)
 
 	def test_additionalpdfencryptionkey(self):
-		user="pdf@gpgmailencry.pt"
+		user="test <pdf@gpgmailencry.pt>"
 		self.assertEqual(self.gme.pdf_additionalencryptionkey(user),
 						self.pdfpassword)
 
@@ -1063,7 +1144,7 @@ class sqlstoragebackendtests(textstoragebackendtests):
 			pass
 
 	def test_additionalgpgencryptionkeys(self):
-		user="test1@gpgmailencry.pt"
+		user="test <tEst1@gpgmailencry.pt>"
 		result=["centralgpgkey@gpgmailencry.pt",
 				"key1@gpgmailencry.pt",
 				"key2@gpgmailencry.pt",
@@ -1071,7 +1152,7 @@ class sqlstoragebackendtests(textstoragebackendtests):
 		self.assertEqual(self.gme.gpg_additionalencryptionkeys(user),result)
 
 	def test_additionalsmimeencryptionkeys(self):
-		user="test2@gpgmailencry.pt"
+		user="test <test2@gpgmailencrY.pt>"
 		result=["centralsmimekey@gpgmailencry.pt",
 				"key3@gpgmailencry.pt",
 				"key4@gpgmailencry.pt",
@@ -1202,7 +1283,7 @@ class gpgtests(unittest.TestCase):
 		success=False
 		_result,encdata=self.gpg.encrypt_file(
 									filename=f.name,
-									recipient="testaddress@gpgmailencry.pt")
+									recipient="test <testaddress@gpgmailencry.pT>")
 
 		if _result==True:
 			f=tempfile.NamedTemporaryFile(  mode='w',
@@ -1212,7 +1293,7 @@ class gpgtests(unittest.TestCase):
 			f.close()
 			_result,encdata=self.gpg.decrypt_file(
 							filename=f.name,
-							recipient="testaddress@gpgmailencry.pt")
+							recipient="test <Testaddress@gpgmailencry.pt>")
 
 			if _result==True:
 				success=(encdata==teststring)
