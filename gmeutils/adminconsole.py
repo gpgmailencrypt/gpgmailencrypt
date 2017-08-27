@@ -8,6 +8,7 @@ from gmeutils.gpgmailserver 	import _gpgmailencryptserver
 import getpass
 import smtplib
 import binascii
+import sys
 
 try:
 	import readline
@@ -116,6 +117,14 @@ def start_adminconsole(host,port):
 						print("Automatic logout due to inactivity")
 						i="QUIT"
 
+					try:
+						i.encode("ascii")
+					except:
+						print("non allowed character in command '%s'"%i)
+						i=""
+						args=""
+
+
 					res=i.split(" ")
 					i=res[0].upper()
 					args=""
@@ -135,10 +144,12 @@ def start_adminconsole(host,port):
 							self._sendcmd(i,args)
 
 					else:
-						print("Error: command '%s' unknown"%i)
+						if len(i)>0:
+							print("Error: command '%s' unknown"%i)
 
 				except:
 					print("Error sending admin command, perhaps server is down")
+					raise
 					#print( sys.exc_info())
 					i="QUIT"
 
