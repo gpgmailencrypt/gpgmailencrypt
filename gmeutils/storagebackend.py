@@ -1447,7 +1447,6 @@ class _sql_backend(_base_storage):
 
 	@_dbg
 	def get_pdfpassword(self,user):
-
 		user=email.utils.parseaddr(user)[1]
 
 		if not self._USE_SQLPDFPASSWORDS:
@@ -1581,6 +1580,7 @@ class _sql_backend(_base_storage):
 
 	@_dbg
 	def gpg_additionalencryptionkeys(self,user):
+		user=email.utils.parseaddr(user)[1]
 
 		if not self._USE_SQLGPGADDITIONALENCRYPTIONKEYS:
 			return self._textbackend.gpg_additionalencryptionkeys(user)
@@ -1605,6 +1605,7 @@ class _sql_backend(_base_storage):
 
 	@_dbg
 	def smime_additionalencryptionkeys(self,user):
+		user=email.utils.parseaddr(user)[1]
 
 		if not self._USE_SQLSMIMEADDITIONALENCRYPTIONKEYS:
 			return self._textbackend.smime_additionalencryptionkeys(user)
@@ -1629,6 +1630,7 @@ class _sql_backend(_base_storage):
 
 	@_dbg
 	def pdf_additionalencryptionkey(self,user):
+		user=email.utils.parseaddr(user)[1]
 		pw=self._textbackend.pdf_additionalencryptionkey(user)
 
 		if not self._USE_SQLPDFADDITIONALENCRYPTIONKEY:
