@@ -473,6 +473,11 @@ class gme:
 
 			except:
 				pass
+	
+			try:
+				self._OUTFILE=os.path.expanduser(_cfg.get('default','outfile'))
+			except:
+				pass
 
 			try:
 				o=_cfg.get('default','securitylevel').lower().strip()
@@ -4745,7 +4750,7 @@ class gme:
 												from_addr,
 												to_addr,
 												decrypt)
-			return
+			return None
 
 		if has_virus:
 				self._handle_virusmail(	virusinfo,
@@ -4753,7 +4758,7 @@ class gme:
 										mailtext,
 										from_addr,
 										to_addr)
-				return
+				return None
 		elif virusinfo!=None and len(virusinfo)>0:
 				self.log(
 				"No virus found, but received the following messages",
@@ -4765,7 +4770,7 @@ class gme:
 		if is_spam!=spamscanners.S_NOSPAM:
 			m="Email is SPAM"
 			self._send_unencrypted_mail(queue_id,mailtext,m,from_addr,to_addr)
-			return
+			return None
 
 		_encrypt_subject=self.check_encryptsubject(mailtext)
 
@@ -4828,7 +4833,7 @@ class gme:
 										from_addr,
 										to_addr,
 										in_bounce_process=in_bounce_process)
-			return
+			return None
 
 		if ((   not _prefer_pdf
 				and not _encrypt_subject)
@@ -4890,6 +4895,7 @@ class gme:
 								from_addr,
 								to_addr,
 								in_bounce_process=in_bounce_process)
+		return mresult
 
 	############
 	# send_mails
@@ -5058,7 +5064,8 @@ class gme:
 											spamlevel,
 											has_virus,
 											virusinfo,
-											in_bounce_process=in_bounce_process)
+											in_bounce_process=in_bounce_process,
+											decrypt=decrypt)
 
 			newfrom="%s <%s>"%(	self._SENTADDRESS,
 					 			email.utils.parseaddr(from_addr)[1])
