@@ -211,10 +211,11 @@ class mylogger(_gmechild):
 			msg,
 			infotype="m",
 			ln=-1,
-			filename=""):
+			filename="",
+			force=False):
 		"prints logging information"
 
-		if self._LOGGING!=self.l_none:
+		if ((self._LOGGING!=self.l_none) or (force==True)):
 
 			if infotype in ['d','m','w']:
 				space=" "*self._level
@@ -277,8 +278,8 @@ class mylogger(_gmechild):
 					#write to _logfile
 					self._logfile.write("%s %s:%s\n"%(tm,prefix,t ))
 					self._logfile.flush()
-				elif self._LOGGING==self.l_stderr:
-					# print to stdout if nothing else works
+				else: # self._LOGGING==self.l_stderr:
+					# print to stderr if nothing else works
 					sys.stderr.write("%s %s:%s\n"%(tm,prefix,t ))
 
 	###############

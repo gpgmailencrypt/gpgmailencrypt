@@ -434,7 +434,8 @@ class gme:
 		try:
 			_cfg.read(self._CONFIGFILE)
 		except:
-			self.log("Could not read config file '%s'"%self._CONFIGFILE,"e")
+			self.log("Could not read config file '%s'"%self._CONFIGFILE,"e",
+			force=True)
 			self.log_traceback()
 			return
 
@@ -776,7 +777,6 @@ class gme:
 
 			try:
 				o=_cfg.get('pdf','passwordmode').lower().strip()
-				print("O:",o)
 
 				if o=="none":
 					self._PDFPASSWORDMODE=self.pdf_none
@@ -1033,8 +1033,7 @@ class gme:
 				'viruscheck=',
 				'zip'])
 		except getopt.GetoptError as e:
-			self._logger._LOGGING=self._logger.l_stderr
-			self.log("unknown commandline parameter '%s'"%e,"e")
+			self.log("unknown commandline parameter '%s'"%e,"e",force=True)
 			exit(2)
 
 		self._logger._parse_commandline(_opts)
@@ -1049,6 +1048,7 @@ class gme:
 					   self.log("read new config file '%s'"%self._CONFIGFILE)
 					   self._read_configfile()
 					   break
+
 		self._logger._parse_commandline(_opts)
 
 		for _opt, _arg in _opts:
@@ -1139,9 +1139,8 @@ class gme:
 				recipient=_remainder[0:]
 				self.debug("set addresses from commandline to '%s'"%recipient)
 			else:
-				self._logger._LOGGING=self._logger.l_stderr
 				self.log("gpgmailencrypt needs at least one recipient "
-				"at the commandline, %i given"%len(_remainder),"e")
+				"at the commandline, %i given"%len(_remainder),"e",force=True)
 				exit(1)
 
 		return recipient
@@ -1190,8 +1189,9 @@ class gme:
 			msg,
 			infotype="m",
 			ln=-1,
-			filename=""):
-		self._logger.log(msg,infotype,ln,filename)
+			filename="",
+			force=False):
+		self._logger.log(msg,infotype,ln,filename,force=force)
 		
 	##############
 	#log_traceback
@@ -1203,7 +1203,7 @@ class gme:
 		error=traceback.format_exception(exc_type, exc_value, exc_tb)
 
 		for e in error:
-			self.log(" ***%s"%e.replace("\n",""),"e")
+			self.log(" ***%s"%e.replace("\n",""),"e",force=True)
 
 	######
 	#debug
@@ -3470,9 +3470,9 @@ class gme:
 
 		return mail
 
-	#####################
+	####################
 	# encrypt_smime_mail
-	#####################
+	####################
 
 	@_dbg
 	def encrypt_smime_mail( self,
@@ -3853,6 +3853,12 @@ class gme:
 							to_addr,
 							send_password=True
 							):
+		"""
+		returns the string 'message' as an PDF encrypted mail as an 
+		email.Message object, attachments will be moved to a zip file as 
+		attachment
+		returns None if encryption was not possible
+		"""
 		splitmsg=re.split("\n\n",message,1)
 
 		if len(splitmsg)!=2:
@@ -5076,7 +5082,9 @@ class gme:
 				maildomain(from_addr) in self._HOMEDOMAINS):
 					 del raw_message['From']
 					 raw_message['From']=newfrom
-					 self.send_mails(raw_message.as_string(),from_addr,decrypt=False)
+					 self.send_mails(	raw_message.as_string(),
+					 					from_addr,
+					 					decrypt=False)
 
 		except:
 			self._count_deferredmails+=1

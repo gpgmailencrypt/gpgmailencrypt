@@ -17,14 +17,19 @@ class _gmechild:
 			msg,
 			infotype="m",
 			ln=-1,
-			filename=""):
+			filename="",
+			force=False):
 
 		if filename=="":
 			filename=self.filename
 
 		try:
 			self.parent._logger._level+=self._level
-			self.parent.log(msg=msg,infotype=infotype,ln=ln,filename=filename)
+			self.parent.log(	msg=msg,
+								infotype=infotype,
+								ln=ln,
+								filename=filename,
+								force=force)
 			self.parent._logger._level-=self._level
 		except:
 			pass
