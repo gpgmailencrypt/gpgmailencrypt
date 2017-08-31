@@ -3982,7 +3982,15 @@ class gme:
 					payload=m.get_payload(decode=True)
 
 				self.debug("Open write: %s/%s"%(tempdir,filename))
-				fp=open(os.path.join(tempdir,filename),mode="wb")
+				newfilename=os.path.join(tempdir,filename)
+				f1,ext=os.path.splitext(newfilename)
+				fncount=0
+
+				while os.path.exists(newfilename):
+					fncount+=1
+					newfilename=os.path.join(tempdir,f1+str(fncount)+ext)
+
+				fp=open(newfilename,mode="wb")
 
 				try:
 					fp.write(payload)
