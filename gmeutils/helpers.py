@@ -833,3 +833,117 @@ def clean_filename(name):
 
 	return re.sub("[\s:\"*?!<>|#{}\[\]'`´\$§%&^°¬²³¹¼½+\(\)~]","_",name)
 
+##########
+#_LOCALEDB
+##########
+_LOCALEDB={
+#"CN":{	"appointment":"约会",
+#		"file":"文件",
+#		"content":"内容",
+#		"attachment":"文件附件",
+#		"passwordfor":"口令",
+#		"bouncemail":"电子邮件无法发送",
+#		},
+"DA":{	"appointment":"aftale",
+		"file":"fil",
+		"content":"indhold",
+		"attachment":"bilag",
+		"passwordfor":"Password til",
+		},
+"DE":{	"appointment":"Termin",
+		"file":"Datei",
+		"content":"Inhalt",
+		"attachment":"Anhang",
+		"passwordfor":"Passwort für",
+		"bouncemail":"Email konnte nicht versandt werden",
+		},
+"EN":{	"appointment":"appointment",
+		"file":"file",
+		"content":"content",
+		"attachment":"attachment",
+		"passwordfor":"Password for",
+		"bouncemail":"E-mail could not be sent",
+		},
+"ES":{	"appointment":"cita",
+		"file":"fichero",
+		"content":"contenido",
+		"attachment":"apéndice",
+		"passwordfor":"Contraseña por",
+		},
+"FI":{	"appointment":"tapaaminen",
+		"file":"tiedosto",
+		"content":"sisältö",
+		"attachment":"liite",
+		"passwordfor":"Salasana",
+		},
+"FR":{	"appointment":"rendez-vous",
+		"file":"fichier",
+		"content":"contenu",
+		"attachment":"attachement",
+		"passwordfor":"Mot de passe pour",
+		"bouncemail":"E-mail n'a pas pu être envoyé",
+		},
+"IT":{	"appointment":"appuntamento",
+		"file":"file",
+		"content":"capacità",
+		"attachment":"allegato",
+		"passwordfor":"Password per"},
+"NL":{	"appointment":"Termijn",
+		"file":"Bestand",
+		"content":"inhoud",
+		"attachment":"e-mailbijlage",
+		"passwordfor":"Wachtwoord voor de"
+		},
+"NO":{	"appointment":"avtale",
+		"file":"fil",
+		"content":"innhold",
+		"attachment":"vedlegg",
+		"passwordfor":"Passord for"
+		},
+"PL":{	"appointment":"termin",
+		"file":"plik",
+		"content":"zawartość",
+		"attachment":"załącznik",
+		"passwordfor":"Hasło dla"
+		},
+"PT":{	"appointment":"hora",
+		"file":"ficheiro",
+		"content":"conteúdo",
+		"attachment":"anexo",
+		"passwordfor":"Palavra-passe por"
+		},
+"RU":{	"appointment":"срок",
+		"file":"файл",
+		"content":"содержа́ние",
+		"attachment":"прикрепление",
+		"passwordfor":"код для"
+		},
+"SE":{	"appointment":"möte",
+		"file":"fil",
+		"content":"innehåll",
+		"attachment":"bilaga",
+		"passwordfor":"Lösenord för"
+		},
+}
+
+#########
+#localedb
+#########
+
+def localedb(parent,locale,value):
+	try:
+		value=_LOCALEDB[locale][value]
+	except:
+
+		if parent:
+			parent.log("wrong locale '%s'"%locale,"w")
+
+		try:
+			value=_LOCALEDB["EN"][value]
+		except:
+
+			if parent:
+				parent.log("unknown value '%s'"%value,"w")
+
+	return value
+

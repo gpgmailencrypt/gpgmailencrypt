@@ -93,95 +93,6 @@ class gme:
 	pdf_none=1
 	pdf_script=2
 	pdf_sender=3
-	_LOCALEDB={
-	#"CN":{	"appointment":"约会",
-	#		"file":"文件",
-	#		"content":"内容",
-	#		"attachment":"文件附件",
-	#		"passwordfor":"口令",
-	#		"bouncemail":"电子邮件无法发送",
-	#		},
-	"DA":{	"appointment":"aftale",
-			"file":"fil",
-			"content":"indhold",
-			"attachment":"bilag",
-			"passwordfor":"Password til",
-			},
-	"DE":{	"appointment":"Termin",
-			"file":"Datei",
-			"content":"Inhalt",
-			"attachment":"Anhang",
-			"passwordfor":"Passwort für",
-			"bouncemail":"Email konnte nicht versandt werden",
-			},
-	"EN":{	"appointment":"appointment",
-			"file":"file",
-			"content":"content",
-			"attachment":"attachment",
-			"passwordfor":"Password for",
-			"bouncemail":"E-mail could not be sent",
-			},
-	"ES":{	"appointment":"cita",
-			"file":"fichero",
-			"content":"contenido",
-			"attachment":"apéndice",
-			"passwordfor":"Contraseña por",
-			},
-	"FI":{	"appointment":"tapaaminen",
-			"file":"tiedosto",
-			"content":"sisältö",
-			"attachment":"liite",
-			"passwordfor":"Salasana",
-			},
-	"FR":{	"appointment":"rendez-vous",
-			"file":"fichier",
-			"content":"contenu",
-			"attachment":"attachement",
-			"passwordfor":"Mot de passe pour",
-			"bouncemail":"E-mail n'a pas pu être envoyé",
-			},
-	"IT":{	"appointment":"appuntamento",
-			"file":"file",
-			"content":"capacità",
-			"attachment":"allegato",
-			"passwordfor":"Password per"},
-	"NL":{	"appointment":"Termijn",
-			"file":"Bestand",
-			"content":"inhoud",
-			"attachment":"e-mailbijlage",
-			"passwordfor":"Wachtwoord voor de"
-			},
-	"NO":{	"appointment":"avtale",
-			"file":"fil",
-			"content":"innhold",
-			"attachment":"vedlegg",
-			"passwordfor":"Passord for"
-			},
-	"PL":{	"appointment":"termin",
-			"file":"plik",
-			"content":"zawartość",
-			"attachment":"załącznik",
-			"passwordfor":"Hasło dla"
-			},
-	"PT":{	"appointment":"hora",
-			"file":"ficheiro",
-			"content":"conteúdo",
-			"attachment":"anexo",
-			"passwordfor":"Palavra-passe por"
-			},
-	"RU":{	"appointment":"срок",
-			"file":"файл",
-			"content":"содержа́ние",
-			"attachment":"прикрепление",
-			"passwordfor":"код для"
-			},
-	"SE":{	"appointment":"möte",
-			"file":"fil",
-			"content":"innehåll",
-			"attachment":"bilaga",
-			"passwordfor":"Lösenord för"
-			},
-	}
 	_encryptheader="X-GPGMailencrypt"
 	_pdfencryptheader="X-PDFEncrypted"
 
@@ -3036,12 +2947,7 @@ class gme:
 				if counter>0:
 					count="%i"%counter
 
-				try:
-					f=self._LOCALEDB[self._LOCALE]["file"]
-				except:
-					self.log("wrong locale '%s'"%self._LOCALE,"w")
-					f=self._LOCALEDB["EN"]["file"]
-
+				f=localedb(self,self._LOCALE,"file")
 				filename=('%s%s.'%(f,count))+guess_fileextension(contenttype)
 
 			f,e=os.path.splitext(filename)
@@ -3130,13 +3036,7 @@ class gme:
 		message=email.message_from_string(mail)
 		counter=0
 		attach_list=list()
-		appointment="appointment"
-
-		try:
-			appointment=self._LOCALEDB[self._LOCALE]["appointment"]
-		except:
-			pass
-
+		appointment=localedb(self,self._LOCALE,"appointment")
 		cal_fname="%s.ics.pgp"%appointment
 
 		if isinstance(message,list):
@@ -3792,13 +3692,7 @@ class gme:
 		plainmsg=MIMEText(htmlbody)
 		msg.attach(plainmsg)
 		msg.attach(htmlmsg)
-
-		try:
-			pwheader=self._LOCALEDB[self._LOCALE]["passwordfor"]
-		except:
-			self.log("wrong locale '%s'"%self._LOCALE,"w")
-			pwheader=self._LOCALEDB["EN"]["passwordfor"]
-
+		pwheader=localedb(self,self._LOCALE,"passwordfor")
 		msg['Subject'] = ('%s: %s' %(pwheader,
 							self._decode_header(newmsg["To"])))
 		msg['To'] = from_addr
@@ -3921,13 +3815,7 @@ class gme:
 			newmsg.attach(msg)
 			msg = MIMEBase("application","pdf")
 			msg.set_payload(pdffile)
-
-			try:
-				f=self._LOCALEDB[self._LOCALE]["content"]
-			except:
-				self.log("wrong locale '%s'"%self._LOCALE,"w")
-				f=self._LOCALEDB["EN"]["content"]
-
+			f=localedb(self,self._LOCALE,"content")
 			msg.add_header( 'Content-Disposition',
 							'attachment',
 							filename="%s.pdf"%f)
@@ -4004,13 +3892,7 @@ class gme:
 		if attachments>0:
 
 			if self._PDFSECUREZIPCONTAINER==True and self._USE7ZARCHIVE==False:
-
-				try:
-					content=self._LOCALEDB[self._LOCALE]["content"]
-				except:
-					self.log("wrong locale '%s'"%self._LOCALE,"w")
-					content=self._LOCALEDB["EN"]["content"]
-
+				content=localedb(self,self._LOCALE,"content")
 				content="%s.zip"%content
 			else:
 				content=None
@@ -4027,13 +3909,7 @@ class gme:
 					extension="zip"
 
 				msg.set_payload(zipfile)
-
-				try:
-					f=self._LOCALEDB[self._LOCALE]["attachment"]
-				except:
-					self.log("wrong locale '%s'"%self._LOCALE,"w")
-					f=self._LOCALEDB["EN"]["attachment"]
-
+				f=localedb(self,self._LOCALE,"attachment")
 				filenamecD,filenamecT=encode_filename("%s.%s"%(f,extension))
 				msg.add_header( 'Content-Disposition',
 								'attachment; filename*="%s"' % filenamecD)
@@ -4218,13 +4094,7 @@ class gme:
 				plainmsg=MIMEText(htmlbody)
 				msg.attach(plainmsg)
 				msg.attach(htmlmsg)
-
-				try:
-					pwheader=self._LOCALEDB[self._LOCALE]["bouncemail"]
-				except:
-					self.log("wrong locale '%s'"%self._LOCALE,"w")
-					pwheader=self._LOCALEDB["EN"]["bouncemail"]
-
+				pwheader=localedb(self,self._LOCALE,"bouncemail")
 				msg['Subject'] = pwheader
 				msg['To'] = from_addr
 				msg['From'] = self._SYSTEMMAILFROM
@@ -4404,12 +4274,7 @@ class gme:
 				if counter>0:
 					count="%i"%counter
 
-				try:
-					f=self._LOCALEDB[self._LOCALE]["file"]
-				except:
-					self.log("wrong locale '%s'"%self._LOCALE,"w")
-					f=self._LOCALEDB["EN"]["file"]
-
+				f=localedb(self,self._LOCALE,"file")
 				filename=('%s%s.'%(f,count))+guess_fileextension(contenttype)
 
 			f,e=os.path.splitext(filename)
