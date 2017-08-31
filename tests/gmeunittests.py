@@ -52,6 +52,19 @@ Content-Transfer-Encoding: 7bit
 test
 
 """
+email_wrongencoding="""Message-ID: <55D748F3.4020400@from.com>
+Date: Fri, 21 Aug 2015 17:51:15 +0200
+From: test@from.com
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:31.0) Gecko/20100101 Thunderbird/31.8.0
+MIME-Version: 1.0
+To: testaddress@gpgmailencry.pt
+Subject: testmail
+Content-Type: text/plain; charset=ascii
+Content-Transfer-Encoding: 7bit
+
+täöüst
+
+"""
 email_unencryptedencryptsubject="""Message-ID: <55D748F3.4020400@from.com>
 Date: Fri, 21 Aug 2015 17:51:15 +0200
 From: test@from.com
@@ -743,10 +756,8 @@ class gmetests(unittest.TestCase):
 		res=self.gme.zip_attachments(mail)
 		self.assertTrue("test.pdf.zip" in res)
 
-
 	def test_getcharset(self):
 		self.assertEqual(self.gme._find_charset(email_unencrypted),"utf-8")
-
 
 	def test_check_encodefilename(self):
 		origname="файл.jpg"
@@ -901,7 +912,6 @@ class gmetests(unittest.TestCase):
 			self.assertNotEqual(mail["X-GPGMailencrypt"],"decrypted")
 		except:
 			raise
-
 
 	@unittest.skipIf(is_networkfilesystem("./gpg"),
 									"gpg directory on network file system")
@@ -1095,7 +1105,6 @@ class textstoragebackendtests(unittest.TestCase):
 		controllist.append("testaddress3@gpgmailencry.pt")
 		self.assertEqual(pk.sort(),controllist.sort())
 
-
 #######################
 #sqlstoragebackendtests
 #######################
@@ -1166,7 +1175,6 @@ class sqlstoragebackendtests(textstoragebackendtests):
 		self.assertEqual(self.gme.pdf_additionalencryptionkey(user),
 						self.pdfpassword)
 
-
 	def test_create_all_tables(self):
 		self.gme.set_configfile("./gmetest.sqlitecreatetables.conf")
 		r,t=self.gme._backend.create_all_tables()
@@ -1193,7 +1201,6 @@ class gpgtests(unittest.TestCase):
 		controllist.append("testaddress@gpgmailencry.pt")
 		controllist.append("second.user@gpgmailencry.pt")
 		controllist.append("a@test.de")
-
 		self.assertEqual(pk.sort(),controllist.sort())
 
 	@unittest.skipIf(is_networkfilesystem("./gpg"),
@@ -1205,7 +1212,6 @@ class gpgtests(unittest.TestCase):
 		controllist=list()
 		controllist.append("testaddress@gpgmailencry.pt")
 		controllist.append("second.user@gpgmailencry.pt")
-
 		self.assertEqual(pk.sort(),controllist.sort())
 
 	def test_hasgpgkey(self):
@@ -1251,6 +1257,22 @@ class gpgtests(unittest.TestCase):
 											"xtestaddress@gpgmailencry.pt")
 		self.assertIsNone(result)
 
+	def test_encryptgpginline_wrongencoding(self):
+		result=self.gme.encrypt_gpg_mail(  email_wrongencoding,
+											False,
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt")
+		self.assertIsNotNone(result)
+
+	def test_encryptgpgmime_wrongencoding(self):
+		result=self.gme.encrypt_gpg_mail(  email_wrongencoding,
+											True,
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt")
+		self.assertIsNotNone(result)
+
 	def test_encryptgpgmimemail(self):
 		result=self.gme.encrypt_gpg_mail(  email_unencrypted,
 											True,
@@ -1266,7 +1288,6 @@ class gpgtests(unittest.TestCase):
 											"xtestaddress@gpgmailencry.pt",
 											"xtestaddress@gpgmailencry.pt")
 		self.assertIsNone(result)
-
 
 	@unittest.skipIf(is_networkfilesystem("./gpg"),
 									"gpg directory on network file system")
@@ -1365,6 +1386,14 @@ class smimetests(unittest.TestCase):
 											"xtestaddress@gpgmailencry.pt")
 		self.assertIsNone(result)
 
+
+	def test_encryptsmime_wrongencoding(self):
+		result=self.gme.encrypt_smime_mail(  email_wrongencoding,
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt")
+		self.assertIsNotNone(result)
+
 	def test_smime_getcertfingerprint(self):
 		cert=""
 
@@ -1436,7 +1465,6 @@ class pdftests(unittest.TestCase):
 		self.assertRegex(res[2],"3:\S*")
 		self.assertIn("4:/tmp/mail-",res[3])
 		self.assertEqual(res[4],"5:")
-
 
 	def test_decryptpdf(self):
 		pdf=self.gme.pdf_factory()
@@ -1569,7 +1597,6 @@ class archivetests(unittest.TestCase):
 
 	def test_7zuncompress(self):
 		self.assertTrue(try_uncompress("7z","source.txt",password="secret"))
-
 
 	@unittest.skipIf(not has_app("xz"),
 		"archive programm xz not installed")
@@ -1789,7 +1816,6 @@ class spamscannertests(unittest.TestCase):
 		print("spamlevel",spamlevel,"score",score,self.spam_leveldict["SPAMASSASSIN"])
 		self.assertEqual(spamlevel,gmeutils.spamscanners.S_SPAM)
 
-
 	@unittest.skipIf(not has_app("spamc"),
 		"spamassassin not installed")
 	#@unittest.skip
@@ -1816,7 +1842,6 @@ class spamscannertests(unittest.TestCase):
 		spamlevel,score=sc.is_spam(spamgtube)
 		print("spamlevel",spamlevel,"score",score)
 		self.assertTrue(spamlevel==gmeutils.spamscanners.S_SPAM)
-
 
 	#@unittest.skipIf(not has_app("bogofilter"),
 	#	"bogofilter not installed")
