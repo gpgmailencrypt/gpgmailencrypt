@@ -1188,10 +1188,10 @@ class gme:
 	def log(self,
 			msg,
 			infotype="m",
-			ln=-1,
+			lineno=-1,
 			filename="",
 			force=False):
-		self._logger.log(msg,infotype,ln,filename,force=force)
+		self._logger.log(msg,infotype,lineno,filename,force=force)
 		
 	##############
 	#log_traceback
@@ -1216,6 +1216,18 @@ class gme:
 		"prints debugging information"
 
 		self._logger.debug(msg,lineno,filename)
+
+	######
+	#error
+	######
+
+	def error(	self,
+				msg,
+				lineno=0,
+				filename=""):
+		"""logs as error message. When logging is disabled,
+		this will log to stderr"""
+		self.log(msg,infotype="e",lineno=lineno,filename=filename,force=True)
 
 	############
 	#set_logging
@@ -1400,7 +1412,6 @@ class gme:
 			self.log_traceback()
 
 		return None
-
 
 	########################
 	#_remove_mail_from_queue
