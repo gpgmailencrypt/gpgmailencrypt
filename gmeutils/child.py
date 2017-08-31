@@ -1,6 +1,8 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 
+import sys
+
 ##########
 #_gmechild
 ##########
@@ -24,7 +26,7 @@ class _gmechild:
 	def log(self,
 			msg,
 			infotype="m",
-			ln=-1,
+			lineno=-1,
 			filename="",
 			force=False):
 
@@ -40,7 +42,7 @@ class _gmechild:
 								force=force)
 			self.parent._logger._level-=self._level
 		except:
-			pass
+			sys.stderr.write("%s\n"%(msg))
 
 	##############
 	#log_traceback
