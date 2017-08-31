@@ -1,9 +1,10 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
-VERSION="3.3.1"
+VERSION="3.3.2dev"
 DATE="31.08.2017"
 COPYRIGHTYEAR="2017"
 unicodeerror="replace"
+#332
 #331 securitylevel=script and pdfpasswordmode=script, starting windows support 
 #330 mail decryption added
 #320 use additional keys for encryption

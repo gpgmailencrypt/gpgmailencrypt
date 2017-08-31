@@ -1154,13 +1154,23 @@ class _sql_backend(_base_storage):
 			try:
 				if not self.create_table("usermap",logerror=logerror):
 					raise Exception
+
 				if not self.create_table("encryptionmap",logerror=logerror):
 					raise Exception
+
 				if not self.create_table("smime",logerror=logerror):
 					raise Exception
+
 				if not self.create_table("pdf",logerror=logerror):
 					raise Exception
+
 				if not self.create_table("gpgencryptionkeys",logerror=logerror):
+					raise Exception
+
+				if not self.create_table("smimeencryptionkeys",logerror=logerror):
+					raise Exception
+
+				if not self.create_table("pdfencryptionkeys",logerror=logerror):
 					raise Exception
 
 			except:
