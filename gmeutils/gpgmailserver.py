@@ -145,7 +145,6 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 					select.select([], [newconn], [])
 				except :
 					self.parent.log("Client did break off STARTTLS","w")
-					self.parent.log_traceback()
 					break
 
 		except:
