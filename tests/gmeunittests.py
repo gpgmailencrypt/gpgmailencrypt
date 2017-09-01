@@ -688,6 +688,21 @@ class gmetests(unittest.TestCase):
 		self.assertEqual(res[3],"4:")
 		self.assertEqual(res[4],"5:")
 
+	def test_securitylevelscript_msg(self):
+		self.gme._SECURITYLEVEL=self.gme.s_script
+		self.gme._BOUNCESCRIPT="./testscript.sh"
+		self.gme.send_mails(email.message_from_string(email_unencrypted),"dunno@dunno.pt")
+		f=open("./scriptresult.txt")
+		txt=f.read()
+		f.close()
+		res=txt.split()
+		print(res)
+		self.assertEqual(res[0],"1:test@from.com")
+		self.assertEqual(res[1],"2:dunno@dunno.pt")
+		self.assertIn("3:/tmp/mail-",res[2])
+		self.assertEqual(res[3],"4:")
+		self.assertEqual(res[4],"5:")
+
 	def test_configcomment(self):
 		x=self.gme._SMIMECIPHER
 		self.assertTrue(x=="DES3")
@@ -759,6 +774,9 @@ class gmetests(unittest.TestCase):
 	def test_getcharset(self):
 		self.assertEqual(self.gme._find_charset(email_unencrypted),"utf-8")
 
+	def test_getcharset_msg(self):
+		self.assertEqual(self.gme._find_charset(email.message_from_string(email_unencrypted)),"utf-8")
+
 	def test_check_encodefilename(self):
 		origname="файл.jpg"
 		f1,f2=gmeutils.helpers.encode_filename(origname)
@@ -772,6 +790,10 @@ class gmetests(unittest.TestCase):
 
 	def test_check_encryptsubject(self):
 		success=self.gme.check_encryptsubject(email_unencrypted)
+		self.assertFalse(success)
+
+	def test_check_encryptsubject_msg(self):
+		success=self.gme.check_encryptsubject(email.message_from_string(email_unencrypted))
 		self.assertFalse(success)
 
 	def test_splithtml(self):
@@ -797,6 +819,10 @@ class gmetests(unittest.TestCase):
 
 	def test_getheader(self):
 		res=self.gme._get_header(email_unencrypted)
+		self.assertEqual(res,email_header)
+
+	def test_getheader_msg(self):
+		res=self.gme._get_header(email.message_from_string(email_unencrypted))
 		self.assertEqual(res,email_header)
 
 	def test_iscompressable(self):
@@ -876,6 +902,19 @@ class gmetests(unittest.TestCase):
 
 		self.assertTrue(res!=None)
 		
+
+	def test_sendmail_msg(self):
+		self.gme.set_output2file("result.eml")
+		self.gme.send_mails(email.message_from_string(email_unencrypted),"Test <testaddress@gpgmailencry.pt")
+		res=None
+		try:
+			with open("result.eml") as f:
+				res=f.read()
+		except:
+			raise
+
+		self.assertTrue(res!=None)
+		
 	def test_sendmail_use_sent(self):
 		self.gme.set_output2file("result.eml")
 		self.gme._USE_SENTADDRESS=True
@@ -884,6 +923,23 @@ class gmetests(unittest.TestCase):
 		del mail["From"]
 		mail["From"]="testaddress@gpgmailencry.pt"
 		self.gme.send_mails(mail.as_string(),"Test <testaddress@gpgmailencry.pt")
+		res=None
+		try:
+			with open("result1.eml") as f:
+				res=f.read()
+		except:
+			raise
+
+		self.assertTrue(res!=None)
+		
+	def test_sendmail_use_sent_msg(self):
+		self.gme.set_output2file("result.eml")
+		self.gme._USE_SENTADDRESS=True
+		self.gme._DECRYPT=True
+		mail=email.message_from_string(email_unencrypted)
+		del mail["From"]
+		mail["From"]="testaddress@gpgmailencry.pt"
+		self.gme.send_mails(mail,"Test <testaddress@gpgmailencry.pt")
 		res=None
 		try:
 			with open("result1.eml") as f:
@@ -913,6 +969,27 @@ class gmetests(unittest.TestCase):
 		except:
 			raise
 
+		
+	@unittest.skipIf(is_networkfilesystem("./gpg"),
+									"gpg directory on network file system")
+	def test_sendmail_dont_decrypt_msg(self):
+		self.gme.set_output2file("result.eml")
+		self.gme._USE_SENTADDRESS=True
+		self.gme._DECRYPT=True
+		self.gme.send_mails(email.message_from_string(email_gpgmimeencrypted),
+							"Test <testaddress@gpgmailencry.pt",
+							decrypt=False
+							)
+		res=None
+		try:
+			with open("result.eml") as f:
+				res=f.read()
+
+			mail=email.message_from_string(res)
+			self.assertNotEqual(mail["X-GPGMailencrypt"],"decrypted")
+		except:
+			raise
+
 	@unittest.skipIf(is_networkfilesystem("./gpg"),
 									"gpg directory on network file system")
 	def test_sendmail_decrypt(self):
@@ -920,6 +997,27 @@ class gmetests(unittest.TestCase):
 		self.gme._USE_SENTADDRESS=True
 		self.gme._DECRYPT=True
 		self.gme.send_mails(email_gpgmimeencrypted,
+							"Test <testaddress@gpgmailencry.pt",
+							decrypt=True
+							)
+		res=None
+		try:
+			with open("result.eml") as f:
+				res=f.read()
+
+			mail=email.message_from_string(res)
+			self.assertEqual(mail["X-GPGMailencrypt"],"decrypted")
+		except:
+			raise
+
+
+	@unittest.skipIf(is_networkfilesystem("./gpg"),
+									"gpg directory on network file system")
+	def test_sendmail_decrypt_msg(self):
+		self.gme.set_output2file("result.eml")
+		self.gme._USE_SENTADDRESS=True
+		self.gme._DECRYPT=True
+		self.gme.send_mails(email.message_from_string(email_gpgmimeencrypted),
 							"Test <testaddress@gpgmailencry.pt",
 							decrypt=True
 							)
@@ -1229,11 +1327,20 @@ class gpgtests(unittest.TestCase):
 	def test_isencrypted(self):
 		self.assertTrue(self.gme.is_encrypted(email_gpgmimeencrypted))
 
+	def test_isencrypted_msg(self):
+		self.assertTrue(self.gme.is_encrypted(email.message_from_string(email_gpgmimeencrypted)))
+
 	def test_ispgpmimeencrypted(self):
 		self.assertTrue(self.gme.is_pgpmimeencrypted(email_gpgmimeencrypted))
 
+	def test_ispgpmimeencrypted_msg(self):
+		self.assertTrue(self.gme.is_pgpmimeencrypted(email.message_from_string(email_gpgmimeencrypted)))
+
 	def test_ispgpinlineencrypted(self):
 		self.assertTrue(self.gme.is_pgpinlineencrypted(email_gpginlineencrypted))
+
+	def test_ispgpinlineencrypted_msg(self):
+		self.assertTrue(self.gme.is_pgpinlineencrypted(email.message_from_string(email_gpginlineencrypted)))
 
 	def test_isnotpgpinlineencrypted(self):
 		self.assertFalse(self.gme.is_pgpinlineencrypted(email_gpgmimeencrypted))
@@ -1242,7 +1349,15 @@ class gpgtests(unittest.TestCase):
 		self.assertFalse(self.gme.is_encrypted(email_unencrypted))
 
 	def test_encryptgpginlinemail(self):
-		result=self.gme.encrypt_gpg_mail(  email_unencrypted,
+		result=self.gme.encrypt_pgp_mail(  email_unencrypted,
+											False,
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt")
+		self.assertIsNotNone(result)
+
+	def test_encryptgpginlinemail_msg(self):
+		result=self.gme.encrypt_pgp_mail(  email.message_from_string(email_unencrypted),
 											False,
 											"testaddress@gpgmailencry.pt",
 											"testaddress@gpgmailencry.pt",
@@ -1250,7 +1365,7 @@ class gpgtests(unittest.TestCase):
 		self.assertIsNotNone(result)
 
 	def test_encryptgpginlinemail2(self):
-		result=self.gme.encrypt_gpg_mail(  email_unencrypted,
+		result=self.gme.encrypt_pgp_mail(  email_unencrypted,
 											False,
 											"xtestaddress@gpgmailencry.pt",
 											"xtestaddress@gpgmailencry.pt",
@@ -1258,7 +1373,7 @@ class gpgtests(unittest.TestCase):
 		self.assertIsNone(result)
 
 	def test_encryptgpginline_wrongencoding(self):
-		result=self.gme.encrypt_gpg_mail(  email_wrongencoding,
+		result=self.gme.encrypt_pgp_mail(  email_wrongencoding,
 											False,
 											"testaddress@gpgmailencry.pt",
 											"testaddress@gpgmailencry.pt",
@@ -1266,7 +1381,7 @@ class gpgtests(unittest.TestCase):
 		self.assertIsNotNone(result)
 
 	def test_encryptgpgmime_wrongencoding(self):
-		result=self.gme.encrypt_gpg_mail(  email_wrongencoding,
+		result=self.gme.encrypt_pgp_mail(  email_wrongencoding,
 											True,
 											"testaddress@gpgmailencry.pt",
 											"testaddress@gpgmailencry.pt",
@@ -1274,7 +1389,15 @@ class gpgtests(unittest.TestCase):
 		self.assertIsNotNone(result)
 
 	def test_encryptgpgmimemail(self):
-		result=self.gme.encrypt_gpg_mail(  email_unencrypted,
+		result=self.gme.encrypt_pgp_mail(  email_unencrypted,
+											True,
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt")
+		self.assertIsNotNone(result)
+
+	def test_encryptgpgmimemail_msg(self):
+		result=self.gme.encrypt_pgp_mail(  email.message_from_string(email_unencrypted),
 											True,
 											"testaddress@gpgmailencry.pt",
 											"testaddress@gpgmailencry.pt",
@@ -1282,12 +1405,44 @@ class gpgtests(unittest.TestCase):
 		self.assertIsNotNone(result)
 
 	def test_encryptgpgmimemail2(self):
-		result=self.gme.encrypt_gpg_mail(  email_unencrypted,
+		result=self.gme.encrypt_pgp_mail(  email_unencrypted,
 											True,
 											"xtestaddress@gpgmailencry.pt",
 											"xtestaddress@gpgmailencry.pt",
 											"xtestaddress@gpgmailencry.pt")
 		self.assertIsNone(result)
+
+	@unittest.skipIf(is_networkfilesystem("./gpg"),
+									"gpg directory on network file system")
+	def test_decryptgpgmimemail(self):
+		result=self.gme.decrypt_pgpmime_mail(  email_gpgmimeencrypted,
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt")
+		self.assertIsNotNone(result)
+
+	@unittest.skipIf(is_networkfilesystem("./gpg"),
+									"gpg directory on network file system")
+	def test_decryptgpgmimemail_msg(self):
+		result=self.gme.decrypt_pgpmime_mail(  email.message_from_string(email_gpgmimeencrypted),
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt")
+		self.assertIsNotNone(result)
+
+	@unittest.skipIf(is_networkfilesystem("./gpg"),
+									"gpg directory on network file system")
+	def test_decryptgpginlinemail(self):
+		result=self.gme.decrypt_pgpinline_mail(  email_gpginlineencrypted,
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt")
+		self.assertIsNotNone(result)
+
+	@unittest.skipIf(is_networkfilesystem("./gpg"),
+									"gpg directory on network file system")
+	def test_decryptgpginlinemail_msg(self):
+		result=self.gme.decrypt_pgpinline_mail(  email.message_from_string(email_gpginlineencrypted),
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt")
+		self.assertIsNotNone(result)
 
 	@unittest.skipIf(is_networkfilesystem("./gpg"),
 									"gpg directory on network file system")
@@ -1341,6 +1496,9 @@ class smimetests(unittest.TestCase):
 	def test_issmimeencrypted(self):
 		self.assertTrue(self.gme.is_smimeencrypted(email_smimeencrypted))
 
+	def test_issmimeencrypted_msg(self):
+		self.assertTrue(self.gme.is_smimeencrypted(email.message_from_string(email_smimeencrypted)))
+
 	def test_isnotsmimeencrypted(self):
 		self.assertFalse(self.gme.is_smimeencrypted(email_gpgmimeencrypted))
 
@@ -1374,6 +1532,33 @@ class smimetests(unittest.TestCase):
 
 	def test_encryptgsmimemail(self):
 		result=self.gme.encrypt_smime_mail(  email_unencrypted,
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt")
+		self.assertIsNotNone(result)
+
+	def test_decryptgsmimemail(self):
+		result=self.gme.decrypt_smime_mail(  email_smimeencrypted,
+											"testaddress2@gpgmailencry.pt",
+											"testaddress2@gpgmailencry.pt")
+		self.assertIsNotNone(result)
+
+
+	def test_decryptgsmimemail_msg(self):
+		result=self.gme.decrypt_smime_mail(  email.message_from_string(email_smimeencrypted),
+											"testaddress2@gpgmailencry.pt",
+											"testaddress2@gpgmailencry.pt")
+		self.assertIsNotNone(result)
+
+	def test_decryptgsmimemail_nokey(self):
+		result=self.gme.decrypt_smime_mail(  email.message_from_string(email_smimeencrypted),
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt")
+		self.assertIsNone(result)
+
+
+	def test_encryptgsmimemail_msg(self):
+		result=self.gme.encrypt_smime_mail(  email.message_from_string(email_unencrypted),
 											"testaddress@gpgmailencry.pt",
 											"testaddress@gpgmailencry.pt",
 											"testaddress@gpgmailencry.pt")
@@ -1437,8 +1622,20 @@ class pdftests(unittest.TestCase):
 		self.gme.set_configfile("./gmetest.conf")
 		self.assertTrue(self.gme.is_pdfencrypted(email_pdfencrypted))
 
+	def test_ispdfeencrypted_msg(self):
+		self.gme.set_configfile("./gmetest.conf")
+		self.assertTrue(self.gme.is_pdfencrypted(email.message_from_string(email_pdfencrypted)))
+
 	def test_encryptpdfmail(self):
 		result=self.gme.encrypt_pdf_mail(  email_unencrypted,
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt",
+											send_password=False)
+		self.assertIsNotNone(result)
+
+	def test_encryptpdfmail_msg(self):
+		result=self.gme.encrypt_pdf_mail(  email.message_from_string(email_unencrypted),
 											"testaddress@gpgmailencry.pt",
 											"testaddress@gpgmailencry.pt",
 											"testaddress@gpgmailencry.pt",
@@ -1802,7 +1999,6 @@ class spamscannertests(unittest.TestCase):
 
 	@unittest.skipIf(not has_app("spamc"),
 		"spamassassin not installed")
-	#@unittest.skip
 	def test_spamassassin_spam(self):
 		self.spam_leveldict["SPAMASSASSIN"]=[6.2,
 											3.0,
@@ -1818,7 +2014,6 @@ class spamscannertests(unittest.TestCase):
 
 	@unittest.skipIf(not has_app("spamc"),
 		"spamassassin not installed")
-	#@unittest.skip
 	def test_spamassassin_nospam(self):
 		self.spam_leveldict["SPAMASSASSIN"]=[6.2,
 											3.0,
@@ -1832,9 +2027,8 @@ class spamscannertests(unittest.TestCase):
 		print("spamlevel",spamlevel,"score",score,self.spam_leveldict["SPAMASSASSIN"])
 		self.assertEqual(spamlevel,gmeutils.spamscanners.S_NOSPAM)
 
-	#@unittest.skipIf(not has_app("bogofilter"),
-	#	"bogofilter not installed")
-	@unittest.skip
+	@unittest.skipIf(not has_app("bogofilter"),
+		"bogofilter not installed")
 	def test_bogofilter_spam(self):
 		sc=gmeutils.spamscanners.get_spamscanner("BOGOFILTER",
 												parent=self.gme,
@@ -1843,9 +2037,9 @@ class spamscannertests(unittest.TestCase):
 		print("spamlevel",spamlevel,"score",score)
 		self.assertTrue(spamlevel==gmeutils.spamscanners.S_SPAM)
 
-	#@unittest.skipIf(not has_app("bogofilter"),
-	#	"bogofilter not installed")
-	@unittest.skip
+	@unittest.skipIf(not has_app("bogofilter"),
+		"bogofilter not installed")
+	#@unittest.skip
 	def test_bogofilter_nospam(self):
 		sc=gmeutils.spamscanners.get_spamscanner("BOGOFILTER",
 												parent=self.gme,

@@ -1160,6 +1160,10 @@ class gme:
 
 	@_dbg
 	def _debug_keepmail(self,mailtext):
+
+		if not isinstance(mailtext,str):
+			mailtext=mailtext.as_string()
+
 		searchtext=mailtext.lower()
 		#return True
 
@@ -2112,7 +2116,7 @@ class gme:
 	def _find_charset(self,msg):
 
 		if not isinstance(msg, str):
-			return None
+			msg=msg.as_string()
 
 		find=re.search(
 			"^Content-Type:.*(\r)*\n(^\s+.*(\r)*\n)*",
@@ -2629,7 +2633,12 @@ class gme:
 
 	@_dbg
 	def check_encryptsubject(self,mailtext):
-		mail=email.message_from_string(mailtext)
+
+		if isinstance(mailtext,str):
+			mail=email.message_from_string(mailtext)
+		else:
+			mail=mailtext
+
 		subject=self._decode_header(mail["Subject"])
 		self.debug("subject: %s"%mail["Subject"])
 
@@ -2947,7 +2956,7 @@ class gme:
 				if counter>0:
 					count="%i"%counter
 
-				f=localedb(self,self._LOCALE,"file")
+				f=localedb(self,"file")
 				filename=('%s%s.'%(f,count))+guess_fileextension(contenttype)
 
 			f,e=os.path.splitext(filename)
@@ -3018,13 +3027,13 @@ class gme:
 		self._del_tempfile(fp.name)
 		return payload
 
-	###################
-	#encrypt_pgpinline
-	###################
+	######################
+	#encrypt_pgpinline_mail
+	######################
 
 	@_dbg
-	def encrypt_pgpinline(  self,
-							mail,
+	def encrypt_pgpinline_mail(  self,
+							message,
 							gpguser,
 							from_addr,
 							to_addr):
@@ -3033,10 +3042,12 @@ class gme:
 		an email.Message object
 		returns None if encryption was not possible
 		"""
-		message=email.message_from_string(mail)
+		if isinstance(message,str):
+			message=email.message_from_string(message)
+
 		counter=0
 		attach_list=list()
-		appointment=localedb(self,self._LOCALE,"appointment")
+		appointment=localedb(self,"appointment")
 		cal_fname="%s.ics.pgp"%appointment
 
 		if isinstance(message,list):
@@ -3122,12 +3133,12 @@ class gme:
 
 		return message
 
-	#################
-	#encrypt_pgpmime
-	#################
+	#####################
+	#encrypt_pgpmime_mail
+	#####################
 
 	@_dbg
-	def encrypt_pgpmime(	self,
+	def encrypt_pgpmime_mail(	self,
 							message,
 							gpguser,
 							from_addr,
@@ -3137,15 +3148,19 @@ class gme:
 		an email.Message object
 		returns None if encryption was not possible
 		"""
-		raw_message=email.message_from_string(message)
-		splitmsg=re.split("\n\n",message,1)
+		if isinstance(message,str):
+			raw_message=email.message_from_string(message)
+		else:
+			raw_message=message
+
+		splitmsg=re.split("\n\n",raw_message.as_string(),1)
 
 		if len(splitmsg)!=2:
-			splitmsg=re.split("\r\n\r\n",message,1)
+			splitmsg=re.split("\r\n\r\n",raw_message.as_string(),1)
 
 		if len(splitmsg)!=2:
 			self.debug("Mail could not be split in header and body part "
-						"(mailsize=%i)"%len(message))
+						"(mailsize=%i)"%len(raw_message.as_string()))
 			return None
 
 		header,body=splitmsg
@@ -3181,7 +3196,7 @@ class gme:
 			self.log("Error setting boundary")
 			self.log_traceback()
 
-		res= re.search("boundary=.*\n",message,re.IGNORECASE)
+		res= re.search("boundary=.*\n",raw_message.as_string(),re.IGNORECASE)
 
 		if res:
 			_b=message[res.start():res.end()]
@@ -3330,11 +3345,11 @@ class gme:
 		return newmsg
 
 	#################
-	#encrypt_gpg_mail
+	#encrypt_pgp_mail
 	#################
 
 	@_dbg
-	def encrypt_gpg_mail(   self,
+	def encrypt_pgp_mail(   self,
 							mailtext,
 							use_pgpmime,
 							gpguser,
@@ -3345,26 +3360,30 @@ class gme:
 		or PGP/MIME depending on the configuration) as an email.Message object
 		returns None if encryption was not possible
 		"""
-		raw_message=email.message_from_string(mailtext)
+		if isinstance(mailtext,str):
+			raw_message=email.message_from_string(mailtext)
+		else:
+			raw_message=mailtext
+
 		msg_id=""
 
 		if "Message-Id" in raw_message:
 			msg_id="Id:%s "%raw_message["Message-Id"]
 
 		if self.is_encrypted( raw_message ):
-			self.debug("encrypt_gpg_mail, is already encrypted")
+			self.debug("encrypt_pgp_mail, is already encrypted")
 			return None
 
 		self.log("Encrypting email to: %s" % to_addr )
 
 		if use_pgpmime:
-			mail = self.encrypt_pgpmime(	mailtext,
+			mail = self.encrypt_pgpmime_mail(	mailtext,
 											gpguser,
 											from_addr,
 											to_addr )
 		else:
 			#PGP Inline
-			mail = self.encrypt_pgpinline(  mailtext,
+			mail = self.encrypt_pgpinline_mail(  mailtext,
 											gpguser,
 											from_addr,
 											to_addr )
@@ -3381,9 +3400,9 @@ class gme:
 
 		return mail
 
-	####################
+	###################
 	# encrypt_smime_mail
-	####################
+	###################
 
 	@_dbg
 	def encrypt_smime_mail( self,
@@ -3396,7 +3415,11 @@ class gme:
 		an email.Message object
 		returns None if encryption was not possible
 		"""
-		raw_message=email.message_from_string(mailtext)
+		if isinstance(mailtext,str):
+			raw_message=email.message_from_string(mailtext)
+		else:
+			raw_message=mailtext
+
 		contenttype="text/plain"
 		contenttransferencoding=None
 		contentboundary=None
@@ -3406,14 +3429,14 @@ class gme:
 			self.debug("Mail was already encrypted")
 			return None
 
-		splitmsg=re.split("\n\n",mailtext,1)
+		splitmsg=re.split("\n\n",raw_message.as_string(),1)
 
 		if len(splitmsg)!=2:
-			splitmsg=re.split("\r\n\r\n",mailtext,1)
+			splitmsg=re.split("\r\n\r\n",raw_message.as_string(),1)
 
 		if len(splitmsg)!=2:
 			self.debug("Mail could not be split in header and body part"
-						"(mailsize=%i)"%len(mailtext))
+						"(mailsize=%i)"%len(raw_message.as_string()))
 			return None
 
 		header,body=splitmsg
@@ -3432,7 +3455,7 @@ class gme:
 			m_id="Id:%s "%raw_message["Message-Id"]
 
 		self.log("Encrypting email %s to: %s" % (m_id, to_addr) )
-		res= re.search("boundary=.*\r\n",mailtext,re.IGNORECASE)
+		res= re.search("boundary=.*\r\n",raw_message.as_string(),re.IGNORECASE)
 
 		if res:
 			_b=mailtext[res.start():res.end()]
@@ -3692,7 +3715,7 @@ class gme:
 		plainmsg=MIMEText(htmlbody)
 		msg.attach(plainmsg)
 		msg.attach(htmlmsg)
-		pwheader=localedb(self,self._LOCALE,"passwordfor")
+		pwheader=localedb(self,"passwordfor")
 		msg['Subject'] = ('%s: %s' %(pwheader,
 							self._decode_header(newmsg["To"])))
 		msg['To'] = from_addr
@@ -3764,14 +3787,17 @@ class gme:
 		attachment
 		returns None if encryption was not possible
 		"""
-		splitmsg=re.split("\n\n",message,1)
+		if isinstance(message,str):
+			message=email.message_from_string(message)
+
+		splitmsg=re.split("\n\n",message.as_string(),1)
 
 		if len(splitmsg)!=2:
-			splitmsg=re.split("\r\n\r\n",message,1)
+			splitmsg=re.split("\r\n\r\n",message.as_string(),1)
 
 		if len(splitmsg)!=2:
 			self.debug("Mail could not be split in header and body part "
-						"(mailsize=%i)"%len(message))
+						"(mailsize=%i)"%len(message.as_string()))
 			return None
 
 		header,body=splitmsg
@@ -3791,7 +3817,7 @@ class gme:
 
 		pdf=self.pdf_factory()
 		fp=self._new_tempfile()
-		fp.write(message.encode("UTF-8",unicodeerror))
+		fp.write(message.as_string().encode("UTF-8",unicodeerror))
 		fp.close()
 		pdf.set_filename(fp.name)
 		pw=self.get_pdfpassword(pdfuser)
@@ -3815,7 +3841,7 @@ class gme:
 			newmsg.attach(msg)
 			msg = MIMEBase("application","pdf")
 			msg.set_payload(pdffile)
-			f=localedb(self,self._LOCALE,"content")
+			f=localedb(self,"content")
 			msg.add_header( 'Content-Disposition',
 							'attachment',
 							filename="%s.pdf"%f)
@@ -3826,7 +3852,7 @@ class gme:
 		else:
 			return None
 
-		oldmsg=email.message_from_string(message)
+		oldmsg=message
 		attachments=0
 		tempdir = tempfile.mkdtemp()
 
@@ -3892,7 +3918,7 @@ class gme:
 		if attachments>0:
 
 			if self._PDFSECUREZIPCONTAINER==True and self._USE7ZARCHIVE==False:
-				content=localedb(self,self._LOCALE,"content")
+				content=localedb(self,"content")
 				content="%s.zip"%content
 			else:
 				content=None
@@ -3909,7 +3935,7 @@ class gme:
 					extension="zip"
 
 				msg.set_payload(zipfile)
-				f=localedb(self,self._LOCALE,"attachment")
+				f=localedb(self,"attachment")
 				filenamecD,filenamecT=encode_filename("%s.%s"%(f,extension))
 				msg.add_header( 'Content-Disposition',
 								'attachment; filename*="%s"' % filenamecD)
@@ -4038,6 +4064,9 @@ class gme:
 								in_bounce_process=False
 								):
 
+		if isinstance(mailtext,str):
+			mailtext=email.message_from_string(mailtext)
+
 		if self._SECURITYLEVEL==self.s_script:
 
 			if self._BOUNCESCRIPT==None:
@@ -4047,7 +4076,7 @@ class gme:
 			self.debug("_send_unencrypted bouncescript '%s'"%os.path.expanduser(
 															self._BOUNCESCRIPT))
 			mail=self._new_tempfile()
-			mail.write(mailtext.encode("UTF-8",unicodeerror))
+			mail.write(mailtext.as_string().encode("UTF-8",unicodeerror))
 			mail.close()
 			cmd=[os.path.expanduser(self._BOUNCESCRIPT),
 					from_addr,
@@ -4094,7 +4123,7 @@ class gme:
 				plainmsg=MIMEText(htmlbody)
 				msg.attach(plainmsg)
 				msg.attach(htmlmsg)
-				pwheader=localedb(self,self._LOCALE,"bouncemail")
+				pwheader=localedb(self,"bouncemail")
 				msg['Subject'] = pwheader
 				msg['To'] = from_addr
 				msg['From'] = self._SYSTEMMAILFROM
@@ -4118,6 +4147,9 @@ class gme:
 
 	@_dbg
 	def _get_header(self,mail):
+
+		if not isinstance(mail,str):
+			mail=mail.as_string()
 
 		splitmsg=re.split("\n\n",mail,1)
 
@@ -4155,12 +4187,12 @@ class gme:
 
 		return "\r\n".join(result)
 
-	################
-	#decrypt_pgpmime
-	################
+	#####################
+	#decrypt_pgpmime_mail
+	#####################
 
 	@_dbg
-	def decrypt_pgpmime(self,mailtext,from_addr,to_addr):
+	def decrypt_pgpmime_mail(self,mailtext,from_addr,to_addr):
 
 		if not self.is_pgpmimeencrypted(mailtext):
 				return None
@@ -4171,11 +4203,14 @@ class gme:
 			self.debug("no gpg user key found")
 			return None
 
+		if isinstance(mailtext,str):
+			mailtext=email.message_from_string(mailtext)
+
 		gpg =self.gpg_factory()
 		gpg.set_recipient(to_gpg)
 		gpg.set_fromuser(from_addr)
 		fp=self._new_tempfile()
-		fp.write(mailtext.encode("UTF-8",unicodeerror))
+		fp.write(mailtext.as_string().encode("UTF-8",unicodeerror))
 		fp.close()
 		result,encdata=gpg.decrypt_file(filename=fp.name)
 		self._del_tempfile(fp.name)
@@ -4274,7 +4309,7 @@ class gme:
 				if counter>0:
 					count="%i"%counter
 
-				f=localedb(self,self._LOCALE,"file")
+				f=localedb(self,"file")
 				filename=('%s%s.'%(f,count))+guess_fileextension(contenttype)
 
 			f,e=os.path.splitext(filename)
@@ -4354,12 +4389,12 @@ class gme:
 		self._del_tempfile(fp.name)
 		return payload
 
-	###################
-	#decrypt_pgpinline
-	###################
+	#######################
+	#decrypt_pgpinline_mail
+	#######################
 
 	@_dbg
-	def decrypt_pgpinline(  self,
+	def decrypt_pgpinline_mail(  self,
 							mail,
 							from_addr,
 							to_addr):
@@ -4370,7 +4405,11 @@ class gme:
 			self.debug("no gpg user key found")
 			return None
 
-		message=email.message_from_string(mail)
+		if isinstance(mail,str):
+			message=email.message_from_string(mail)
+		else:
+			message=mail
+
 		counter=0
 
 		if isinstance(mail,list):
@@ -4404,7 +4443,7 @@ class gme:
 	##############
 
 	@_dbg
-	def decrypt_smime(self,mailtext,from_addr,to_addr):
+	def decrypt_smime_mail(self,mailtext,from_addr,to_addr):
 		self.set_debug(True)
 		self.log("START decrypt smime")
 
@@ -4417,6 +4456,9 @@ class gme:
 		if not s_r:
 			self.debug("no smime user key found")
 			return None
+
+		if not isinstance(mailtext,str):
+			mailtext=mailtext.as_string()
 
 		smime =self.smime_factory()
 		smime.set_recipient(to_smime)
@@ -4438,15 +4480,17 @@ class gme:
 		else:
 			return None
 
-	############
-	#decrypt_pdf
-	############
+	#################
+	#decrypt_pdf_mail
+	#################
 
 	@_dbg
-	def decrypt_pdf(self, mailtext,from_addr,to_addr):
+	def decrypt_pdf_mail(self, mailtext,from_addr,to_addr):
 
 		if not isinstance(mailtext,email.message.Message):
 			m=email.message_from_string(mailtext)
+		else:
+			m=mailtext
 
 		if isinstance(m,list):
 			p=m
@@ -4544,16 +4588,16 @@ class gme:
 		mresult=None
 
 		if self.is_pgpmimeencrypted(mailtext):
-			mresult=self.decrypt_pgpmime(mailtext,from_addr,to_addr)
+			mresult=self.decrypt_pgpmime_mail(mailtext,from_addr,to_addr)
 
 		elif self.is_pgpinlineencrypted(mailtext):
-			mresult=self.decrypt_pgpinline(mailtext,from_addr,to_addr)
+			mresult=self.decrypt_pgpinline_mail(mailtext,from_addr,to_addr)
 
 		elif self.is_smimeencrypted(mailtext):
-			mresult=self.decrypt_smime(mailtext,from_addr,to_addr)
+			mresult=self.decrypt_smime_mail(mailtext,from_addr,to_addr)
 
 		elif self.is_pdfencrypted(mailtext):
-			mresult=self.decrypt_pdf(mailtext,from_addr,to_addr)
+			mresult=self.decrypt_pdf_mail(mailtext,from_addr,to_addr)
 
 			if mresult:
 				res=self.decrypt_zip(mresult,from_addr,to_addr)
@@ -4634,6 +4678,9 @@ class gme:
 		from_addr=from_addr.lower()
 		to_addr=to_addr.lower()
 
+		if isinstance(mailtext,str):
+			mailtext=email.message_from_string(mailtext)		
+
 		if self.is_encrypted(mailtext):
 			self._send_already_encrypted_mail(	queue_id,
 												mailtext,
@@ -4671,12 +4718,10 @@ class gme:
 			to_pdf=to_addr
 
 		if _encrypt_subject:
-			m=email.message_from_string(mailtext)
 			self.debug("remove #encrypt from subject")
-			subject=self._decode_header(m["Subject"])[9:]
-			del m["Subject"]
-			m["Subject"]=subject
-			mailtext=m.as_string()
+			subject=self._decode_header(mailtext["Subject"])[9:]
+			del mailtext["Subject"]
+			mailtext["Subject"]=subject
 
 		g_r,to_gpg=self.check_gpgrecipient(to_addr,from_addr=from_addr)
 		s_r,to_smime=self.check_smimerecipient(to_addr)
@@ -4737,7 +4782,7 @@ class gme:
 			self.debug("PREFER GPG")
 
 			if g_r:
-				mresult=self.encrypt_gpg_mail(  mailtext,
+				mresult=self.encrypt_pgp_mail(  mailtext,
 												_pgpmime,
 												to_gpg,
 												from_addr,
@@ -4756,7 +4801,7 @@ class gme:
 												from_addr,
 												to_addr)
 			elif g_r:
-				mresult=self.encrypt_gpg_mail(  mailtext,
+				mresult=self.encrypt_pgp_mail(  mailtext,
 												_pgpmime,
 												to_gpg,
 												from_addr,
@@ -4814,7 +4859,10 @@ class gme:
 		score=0
 		has_virus=False
 		virusinfo=None
-		raw_message = email.message_from_string( mailtext )
+		if isinstance(mailtext,str):
+			raw_message = email.message_from_string( mailtext )
+		else:
+			raw_message=mailtext
 
 		field="From"
 		if not raw_message[field]:
@@ -4948,7 +4996,7 @@ class gme:
 					self._queue_id+=1
 
 				self._encrypt_single_mail(   mailid,
-											raw_message.as_string(),
+											raw_message,
 											from_addr,
 											to_addr,
 											spamlevel,
