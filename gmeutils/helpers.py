@@ -948,9 +948,11 @@ def localedb(parent,value):
 			error=2
 		
 		if error==1:
-			parent.error("wrong locale '%s'"%parent._LOCALE,filename=__name__,lineno=1)
+			parent.error("wrong locale '%s'"%parent._LOCALE,
+											filename=__name__,lineno=1)
 		else:
-			parent.error("unknown value '%s'"%value,filename=__name__,lineno=1)
+			parent.error("unknown value '%s'"%value,
+											filename=__name__,lineno=1)
 
 	return value
 
