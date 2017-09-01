@@ -57,7 +57,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 		except socket.error as e:
 
 			if parent:
-				parent.log("_gpgmailencryptserver: error",e)
+				parent.log("_gpgmailencryptserver: error",e,filename=__file__)
 			raise
 
 		smtpd.__version__="gpgmailencrypt smtp server %s"%VERSION
@@ -107,7 +107,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 			self.use_smtps=False
 			self.force_tls=False
 			self.parent.log("SSL connection not possible. Cert- and/or key "
-							"file couldn't be opened","e")
+							"file couldn't be opened","e",filename=__file__)
 
 	######
 	#start
@@ -148,7 +148,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 
 		except:
 			self.parent.log("_gpgmailencryptserver: Exception: Could not"
-							" start SSL connection")
+							" start SSL connection",filename=__file__)
 			self.parent.log_traceback()
 
 		return newconn
@@ -198,7 +198,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 		try:
 			self.parent.send_mails(data,recipient)
 		except:
-			self.parent.log("_gpgmailencryptserver: Bug:Exception!")
+			self.parent.log("_gpgmailencryptserver: Bug:Exception!",filename=__file__)
 			self.parent.log_traceback()
 
 		return
@@ -370,7 +370,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 						self.push("454 Temporary authentication failure.")
 						self.parent.log(
 							"User '%s' failed to AUTH LOGIN login"%self.user
-							,"w")
+							,"w",filename=__file__)
 
 					self.in_loginauth=0
 					self._SMTPChannel__line=[]
@@ -393,7 +393,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			if not command in (SIMPLECOMMANDS+
 				_gpgmailencryptserver.ADMINCOMMANDS):
 				self.parent.log("STARTTLS before authentication required."
-								" Command was '%s'"%command)
+								" Command was '%s'"%command,filename=__file__)
 				self.push("530 STARTTLS before authentication required.")
 				self._SMTPChannel__line=[]
 				return
@@ -572,13 +572,13 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				self.user=user
 
 				if self.is_admin:
-					self.parent.log("admin user '%s' logged in"%user)
+					self.parent.log("admin user '%s' logged in"%user,filename=__file__)
 				else:
-					self.parent.log("User '%s' successfully logged in"%user)
+					self.parent.log("User '%s' successfully logged in"%user,filename=__file__)
 
 			else:
 				self.push("454 Temporary authentication failure.")
-				self.parent.log("User '%s' failed to login"%user,"w")
+				self.parent.log("User '%s' failed to login"%user,"w",filename=__file__)
 
 		else:
 			self.push("454 Temporary authentication failure.")
@@ -592,7 +592,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 
 		if self.use_tls==False:
 				self.push("454 TLS not available due to temporary reason")
-				self.parent.log("STARTTLS called, but is not active","w")
+				self.parent.log("STARTTLS called, but is not active","w",filename=__file__)
 				return
 
 		if arg:
@@ -672,7 +672,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				v_id=float(res[1])
 				res=self.parent.quarantine_remove(v_id)
 			except:
-				self.parent.log("could not convert id to float","w")
+				self.parent.log("could not convert id to float","w",filename=__file__)
 
 			if res:
 				self.push("250 OK")
@@ -685,7 +685,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				v_id=float(res[1])
 				res=self.parent.quarantine_release(v_id)
 			except:
-				self.parent.log("could not convert id to float","w")
+				self.parent.log("could not convert id to float","w",filename=__file__)
 
 			if res:
 				self.push("250 OK")
@@ -698,7 +698,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				v_id=float(res[1])
 				res=self.parent.quarantine_forward(v_id,res[2])
 			except:
-				self.parent.log("could not convert id to float","w")
+				self.parent.log("could not convert id to float","w",filename=__file__)
 
 			if res:
 				self.push("250 OK")
@@ -719,7 +719,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			return
 
 		self.parent.reset_statistics()
-		self.parent.log("smtp_RESETSTATISTICS")
+		self.parent.log("smtp_RESETSTATISTICS",filename=__file__)
 		self.push("250 OK")
 
 	###################
@@ -733,7 +733,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			return
 
 		self.parent.reset_messages()
-		self.parent.log("smtp_RESETMESSAGES")
+		self.parent.log("smtp_RESETMESSAGES",filename=__file__)
 		self.push("250 OK")
 
 	################
@@ -797,7 +797,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 	###########
 
 	def smtp_FLUSH(self,arg):
-		self.parent.log("FLUSH")
+		self.parent.log("FLUSH",filename=__file__)
 		self.parent.check_deferred_list()
 		self.parent.check_mailqueue()
 		self.push("250 OK")
@@ -812,7 +812,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			self.push("501 Syntax error: no arguments allowed")
 			return
 
-		self.parent.log("smtp_RELOAD configuration")
+		self.parent.log("smtp_RELOAD configuration",filename=__file__)
 		self.parent.init()
 		self.parent._parse_commandline()
 		self.push("250 OK")
