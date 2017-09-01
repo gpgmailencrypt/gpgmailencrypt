@@ -233,10 +233,10 @@ class mylogger(_gmechild):
 			prefix="Info"
 
 			if infotype=='w':
-				self._systemwarnings+=1
+				self.parent._systemwarnings+=1
 				prefix="Warning"
 			elif infotype=='e':
-				self._systemerrors=+1
+				self.parent._systemerrors=+1
 				prefix="Error"
 			elif infotype=='d':
 				prefix="Debug"
