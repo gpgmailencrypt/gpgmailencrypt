@@ -117,6 +117,8 @@ def print_exampleconfig():
 	print ("port = 25".ljust(space)+"#smtp port")
 	print ("authenticate = False".ljust(space)+
 	"#user must authenticate")
+	print ("verifycertificate = False".ljust(space)+
+	"#if True the server certificate will be verified, needs 'cacerts' set")
 	print ("usesmtps=False".ljust(space)+
 	"#if True, the connection is ssl encrypted from the beginning")
 	print ("".ljust(space)+
@@ -137,6 +139,8 @@ def print_exampleconfig():
 	print ("port2 = 25".ljust(space)+"#like port, for server2")
 	print ("authenticate2 = False".ljust(space)+
 	"#like authenticate, for server2")
+	print ("verifycertificate2 = False".ljust(space)+
+	"#like verifycertificate, for server2")
 	print ("usesmtps2=False".ljust(space)+
 	"#like usesmtps, for server2")
 	print ("smtpcredential2 =/etc/gpgmailencrypt2.cfg".ljust(space)+
