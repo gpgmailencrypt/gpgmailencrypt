@@ -149,7 +149,6 @@ def start_adminconsole(host,port):
 
 				except:
 					print("Error sending admin command, perhaps server is down")
-					raise
 					#print( sys.exc_info())
 					i="QUIT"
 
@@ -200,7 +199,9 @@ def start_adminconsole(host,port):
 			print("createtable".ljust(space)
 			+"creates a specific SQL table")
 			print("".ljust(space)+"allowed values:")
-			print("".ljust(space)+"all/usermap/encryptionmap/smime/pdf")
+			print("".ljust(space)+"     all/usermap/encryptionmap/smime/pdf/")
+			print("".ljust(space)+"     gpgencryptionkeys/smimeencryptionkeys/"
+			"pdfencryptionkeys")
 
 #class taken from http://stackoverflow.com/questions/20625642/\
 #				 autocomplete-with-readline-in-python3
