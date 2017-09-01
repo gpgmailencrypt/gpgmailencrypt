@@ -37,7 +37,7 @@ class _gmechild:
 			self.parent._logger._level+=self._level
 			self.parent.log(	msg=msg,
 								infotype=infotype,
-								ln=ln,
+								lineno=lineno,
 								filename=filename,
 								force=force)
 			self.parent._logger._level-=self._level
