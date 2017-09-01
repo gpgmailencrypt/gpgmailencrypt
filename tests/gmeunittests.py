@@ -771,6 +771,13 @@ class gmetests(unittest.TestCase):
 		res=self.gme.zip_attachments(mail)
 		self.assertTrue("test.pdf.zip" in res)
 
+	def test_zipattachment_msg(self):
+		f=open("./attachment.eml","r")
+		mail=f.read()
+		f.close()
+		res=self.gme.zip_attachments(email.message_from_string(mail))
+		self.assertTrue("test.pdf.zip" in res)
+
 	def test_getcharset(self):
 		self.assertEqual(self.gme._find_charset(email_unencrypted),"utf-8")
 
@@ -1031,6 +1038,62 @@ class gmetests(unittest.TestCase):
 		except:
 			raise
 
+	
+	def test_send_unencrypted_mail(self):
+		self.gme.set_output2file("result.eml")
+		self.assertTrue(self.gme._send_unencrypted_mail(-1,
+											email_unencrypted,
+											"successfull",
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt"))
+		
+	def test_send_unencrypted_mailfail(self):
+		self.gme._OUTPUT=self.gme.o_mail
+		self.gme._SMTP_HOST="127.0.0.2"
+		self.gme._SMTP_PORT=999
+		self.gme.set_debug(True)
+		self.gme.set_logging("stderr")
+		self.assertFalse(self.gme._send_unencrypted_mail(-1,
+											email_unencrypted,
+											"successfull",
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt"))
+	
+	def test_send_unencrypted_mailfail_msg(self):
+		self.gme._OUTPUT=self.gme.o_mail
+		self.gme._SMTP_HOST="127.0.0.2"
+		self.gme._SMTP_PORT=999
+		self.assertFalse(self.gme._send_unencrypted_mail(-1,
+											email.message_from_string(email_unencrypted),
+											"successfull",
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt"))
+	
+	def test_send_unencrypted_mail_msg(self):
+		self.gme.set_output2file("result.eml")
+		self.assertTrue(self.gme._send_unencrypted_mail(-1,
+											email.message_from_string(email_unencrypted),
+											"successfull",
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt"))
+
+	def test_send_unencrypted_mailbounce(self):
+		self.gme.set_output2file("result.eml")
+		self.assertTrue(self.gme._send_unencrypted_mail(-1,
+											email_unencrypted,
+											"successfull",
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt",
+											in_bounce_process=True))
+		
+	def test_send_unencrypted_mailbounce_msg(self):
+		self.gme.set_output2file("result.eml")
+		self.assertTrue(self.gme._send_unencrypted_mail(-1,
+											email.message_from_string(email_unencrypted),
+											"successfull",
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt",
+											in_bounce_process=True))
 		
 ########################
 #textstoragebackendtests
@@ -1480,6 +1543,7 @@ class gpgtests(unittest.TestCase):
 		user=["testaddress@gpgmailencry.pt","another@key.pt"]
 		self.gme.set_configfile("./gmetest2.conf")
 		self.assertEqual(self.gme.gpg_additionalencryptionkeys(""),user)
+		
 		
 ###########
 #SMIMETESTS

@@ -226,22 +226,23 @@ class gme:
 		if self._encoding==None:
 			self._encoding="UTF-8"
 
-		self._deferlist=os.path.expanduser("~/deferlist.txt")
-		self._deferdir=os.path.expanduser("~/gpgmaildirtmp")
-		self._viruslist=os.path.expanduser("~/viruslist.txt")
-		self._quarantinedir=os.path.expanduser("~/gmequarantine")
 		self._spam_cmd=shutil.which("spamc")
 		self._spam_leveldict={}
 		self._usepdf=False
 		self._dkim=None
 
-		if not os.path.exists(self._deferdir):
-			os.makedirs(self._deferdir)
-
-		if not os.path.exists(self._quarantinedir):
-			os.makedirs(self._quarantinedir)
-
 		#GLOBAL CONFIG VARIABLES
+		self._DEFERLIST=os.path.expanduser("~/deferlist.txt")
+		self._DEFERDIR=os.path.expanduser("~/gpgmaildirtmp")
+		self._VIRUSLIST=os.path.expanduser("~/viruslist.txt")
+		self._QUARANTINEDIR=os.path.expanduser("~/gmequarantine")
+
+		if not os.path.exists(self._DEFERDIR):
+			os.makedirs(self._DEFERDIR)
+
+		if not os.path.exists(self._QUARANTINEDIR):
+			os.makedirs(self._QUARANTINEDIR)
+
 		self._STATISTICS_PER_DAY=1
 		self._SYSTEMMAILFROM="gpgmailencrypt@localhost"
 		self._ALWAYSENCRYPT=False
@@ -385,7 +386,35 @@ class gme:
 
 			except:
 				pass
-	
+			try:
+				self._DEFERLIST=os.path.expanduser(_cfg.get('default','deferlist'))
+			except:
+				pass
+
+			try:
+				self._DEFERDIR=os.path.expanduser(_cfg.get('default','deferdir'))
+
+				if not os.path.exists(self._DEFERDIR):
+					os.makedirs(self._DEFERDIR)
+
+			except:
+				pass
+
+			try:
+				self._VIRUSLIST=os.path.expanduser(_cfg.get('default','viruslist'))
+			except:
+				pass
+
+			try:
+				self._QUARANTINEDIR=os.path.expanduser(_cfg.get('default','quarantinedir'))
+
+				if not os.path.exists(self._QUARANTINEDIR):
+					os.makedirs(self._QUARANTINEDIR)
+
+			except:
+				pass
+
+
 			try:
 				self._OUTFILE=os.path.expanduser(_cfg.get('default','outfile'))
 			except:
@@ -546,7 +575,7 @@ class gme:
 				pass
 
 			try:
-				self._SMTP_USESMTPS=_cfg.getint('mailserver','usetsmtps')
+				self._SMTP_USESMTPS=_cfg.getint('mailserver','usesmtps')
 			except:
 				pass
 
@@ -1299,9 +1328,9 @@ class gme:
 			tmpdir=None
 
 			if add_deferred or spooldir:
-				tmpdir=self._deferdir
+				tmpdir=self._DEFERDIR
 			elif quarantinedir:
-				tmpdir=self._quarantinedir
+				tmpdir=self._QUARANTINEDIR
 
 			f=tempfile.NamedTemporaryFile(  mode='wb',
 											delete=False,
@@ -1412,7 +1441,12 @@ class gme:
 
 	@_dbg
 	def zip_attachments(self,mailtext):
-		message = email.message_from_string( mailtext )
+
+		if isinstance(mailtext,str):
+			message = email.message_from_string( mailtext )
+		else:
+			message=mailtext
+
 		tempdir = tempfile.mkdtemp()
 
 		if self._USE7ZARCHIVE:
@@ -1637,27 +1671,21 @@ class gme:
 	@_dbg
 	def _send_rawmsg(   self,
 						m_id,
-						mailtext,
+						message,
 						msg,
 						from_addr,
 						to_addr):
-		try:
-			message = email.message_from_string( mailtext )
 
-			if self._ADDHEADER and not self._encryptheader in message and msg:
-				message.add_header(self._encryptheader,msg)
+		if isinstance(message,str):
+			message = email.message_from_string( message )
 
-			self._send_msg(	m_id,
-							message,
-							from_addr,
-							to_addr)
-		except:
-			self.log("_send_rawmsg: exception _send_textmsg")
-			self.log_traceback()
-			self._send_textmsg(	m_id,
-								mailtext,
-								from_addr,
-								to_addr)
+		if self._ADDHEADER and not self._encryptheader in message and msg:
+			message.add_header(self._encryptheader,msg)
+
+		return self._send_msg(	m_id,
+						message,
+						from_addr,
+						to_addr)
 
 	##########
 	#_send_msg
@@ -1672,7 +1700,7 @@ class gme:
 		self.debug("_send_msg output %i"%self._OUTPUT)
 
 		if isinstance(message,str):
-			self._send_textmsg(	m_id,
+			return self._send_textmsg(	m_id,
 								message,
 								from_addr,
 								to_addr)
@@ -1681,7 +1709,7 @@ class gme:
 			if self._ADDHEADER and not self._encryptheader in message:
 				message.add_header(self._encryptheader,self._encryptgpgcomment)
 
-			self._send_textmsg(	m_id,
+			return self._send_textmsg(	m_id,
 								message.as_string(),
 								from_addr,
 								to_addr)
@@ -1700,6 +1728,9 @@ class gme:
 		self.debug("_send_textmsg output %i"%self._OUTPUT)
 		domain=maildomain(from_addr)
 		usessl=False
+
+		if not isinstance(message,str):
+			message=message.as_string()
 
 		if self._USEDKIM and (domain in self._HOMEDOMAINS):
 				message=self._dkim.sign_mail(message)
@@ -1747,6 +1778,7 @@ class gme:
 
 				try:
 
+					print(_HOST,_PORT)
 					if smtp.has_extn("starttls"):
 						self.debug("_send_textmsg starttls")
 						smtp.starttls(context=sslcontext)
@@ -1845,7 +1877,7 @@ class gme:
 		self._virus_queue=[]
 
 		try:
-			f=open(self._viruslist,encoding="UTF-8",errors=unicodeerror)
+			f=open(self._VIRUSLIST,encoding="UTF-8",errors=unicodeerror)
 
 			for l in f:
 				mail=l.split("|")
@@ -1862,7 +1894,7 @@ class gme:
 			f.close()
 			self._count_viruses=len(self._virus_queue)
 		except:
-			self.log("Couldn't load viruslist list '%s'"%self._viruslist)
+			self.log("Couldn't load viruslist list '%s'"%self._VIRUSLIST)
 
 	###################
 	#load_deferred_list
@@ -1874,7 +1906,7 @@ class gme:
 		self._deferred_emails=[]
 
 		try:
-			f=open(self._deferlist,encoding="UTF-8",errors=unicodeerror)
+			f=open(self._DEFERLIST,encoding="UTF-8",errors=unicodeerror)
 
 			for l in f:
 				mail=l.split("|")
@@ -1891,7 +1923,7 @@ class gme:
 			f.close()
 			self._count_deferredmails=len(self._deferred_emails)
 		except:
-			self.log("Couldn't load defer list '%s'"%self._deferlist)
+			self.log("Couldn't load defer list '%s'"%self._DEFERLIST)
 
 	####################
 	#store_deferred_list
@@ -1902,8 +1934,8 @@ class gme:
 		"stores the list with deferred emails, that have to be sent later"
 
 		try:
-			self.debug("store_deferred_list '%s'"%self._deferlist)
-			f=open(	self._deferlist,mode="w",
+			self.debug("store_deferred_list '%s'"%self._DEFERLIST)
+			f=open(	self._DEFERLIST,mode="w",
 					encoding="UTF-8",errors=unicodeerror)
 
 			for mail in self._deferred_emails:
@@ -1919,7 +1951,7 @@ class gme:
 
 			f.close()
 		except:
-			self.log("Couldn't store defer list '%s'"%self._deferlist)
+			self.log("Couldn't store defer list '%s'"%self._DEFERLIST)
 			self.log_traceback()
 		self.store_virus_list()
 
@@ -1932,8 +1964,8 @@ class gme:
 		"stores the list with emails, that contain viruses"
 
 		try:
-			self.debug("store_virus_list '%s'"%self._viruslist)
-			f=open(self._viruslist,mode="w",
+			self.debug("store_virus_list '%s'"%self._VIRUSLIST)
+			f=open(self._VIRUSLIST,mode="w",
 					encoding="UTF-8",errors=unicodeerror)
 
 			for mail in self._virus_queue:
@@ -1943,7 +1975,7 @@ class gme:
 
 			f.close()
 		except:
-			self.log("Couldn't store virus list '%s'"%self._viruslist)
+			self.log("Couldn't store virus list '%s'"%self._VIRUSLIST)
 			self.log_traceback()
 
 	######################
@@ -4071,7 +4103,7 @@ class gme:
 
 			if self._BOUNCESCRIPT==None:
 				self.log("Bounce script is not defined","e")
-				return
+				return False
 
 			self.debug("_send_unencrypted bouncescript '%s'"%os.path.expanduser(
 															self._BOUNCESCRIPT))
@@ -4097,12 +4129,17 @@ class gme:
 								"e")
 				self.log(error1.decode("utf8",unicodeerror),"e")
 
-			return
+			return False
 			
 		elif (self._check_bounce_mail(from_addr,to_addr)
 			and not in_bounce_process):
 				self.debug("_send_unencrypted bouncemail")
-				newmsg=email.message_from_string( mailtext)
+
+				if isinstance(mailtext,str):
+					newmsg=email.message_from_string( mailtext)
+				else:
+					newmsg=mailtext
+
 				msgtxt=self._load_mailmaster("04-bouncemail",
 					"Mail was not encrypted and thus not delivered<br>"
 					"<table><tr><td>Subject:</td><td>%SUBJECT%</td></tr>"
@@ -4112,7 +4149,7 @@ class gme:
 				msgtxt=replace_variables(msgtxt,
 						{"FROM":html.escape(from_addr),
 						 "TO":html.escape(self._decode_header(newmsg["To"])),
-						 "DATE":newmsg["Date"],
+						 "DATE":str(datetime.datetime.now()),
 						 "SUBJECT":html.escape(self._decode_header(
 															newmsg["Subject"]
 						 ))})
@@ -4128,15 +4165,18 @@ class gme:
 				msg['To'] = from_addr
 				msg['From'] = self._SYSTEMMAILFROM
 				self.log("bounce mail from %s to %s"%(from_addr,to_addr))
-				self.send_mails(	msg.as_string(),
-									from_addr,
-									in_bounce_process=True)
+				result=self._encrypt_single_mail(-1,msg,from_addr,to_addr,in_bounce_process=True)
+
 				self._remove_mail_from_queue(queue_id)
-				return
+				print("result bounce",result)
+				if result:
+					return True
+				else:
+					return False
 
 		self.debug("send_unencrypted may: %s"%message)
-		self._send_rawmsg(  queue_id,
-							mailtext,
+		return self._send_rawmsg(  queue_id,
+							mailtext.as_string(),
 							message,
 							from_addr,
 							to_addr)
@@ -4668,7 +4708,7 @@ class gme:
 								has_virus=False,
 								virusinfo=None,
 								in_bounce_process=False,
-								decrypt=True):
+								decrypt=False):
 		_pgpmime=False
 		_prefer_gpg=True
 		_prefer_pdf=False
