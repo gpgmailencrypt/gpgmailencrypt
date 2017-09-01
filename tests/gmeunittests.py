@@ -1435,6 +1435,28 @@ class gpgtests(unittest.TestCase):
 											"xtestaddress@gpgmailencry.pt")
 		self.assertIsNone(result)
 
+	def test_encryptgpginlinemail_with_attachment(self):
+		f=open("./attachment.eml","r")
+		mail=f.read()
+		f.close()
+		result=self.gme.encrypt_pgp_mail(  mail,
+											False,
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt")
+		self.assertIsNotNone(result)
+
+	def test_encryptgpginlinemail_with_attachment_msg(self):
+		f=open("./attachment.eml","r")
+		mail=f.read()
+		f.close()
+		result=self.gme.encrypt_pgp_mail(  email.message_from_string(mail),
+											False,
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt")
+		self.assertIsNotNone(result)
+
 	def test_encryptgpginline_wrongencoding(self):
 		result=self.gme.encrypt_pgp_mail(  email_wrongencoding,
 											False,
