@@ -930,20 +930,27 @@ _LOCALEDB={
 #localedb
 #########
 
-def localedb(parent,locale,value):
-	try:
-		value=_LOCALEDB[locale][value]
-	except:
+def localedb(parent,value):
 
-		if parent:
-			parent.log("wrong locale '%s'"%locale,"w")
+	if not parent:
+		return value
+
+	error=0
+
+	try:
+		value=_LOCALEDB[parent._LOCALE][value]
+	except:
+		error=1
 
 		try:
 			value=_LOCALEDB["EN"][value]
 		except:
-
-			if parent:
-				parent.log("unknown value '%s'"%value,"w")
+			error=2
+		
+		if error==1:
+			parent.error("wrong locale '%s'"%parent._LOCALE,filename=__name__,lineno=1)
+		else:
+			parent.error("unknown value '%s'"%value,filename=__name__,lineno=1)
 
 	return value
 
