@@ -149,7 +149,6 @@ def start_adminconsole(host,port):
 
 				except:
 					print("Error sending admin command, perhaps server is down")
-					raise
 					#print( sys.exc_info())
 					i="QUIT"
 
