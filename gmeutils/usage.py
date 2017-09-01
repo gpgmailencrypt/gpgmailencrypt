@@ -143,6 +143,14 @@ def print_exampleconfig():
 	"#like smtpcredential, for server2")
 	print ("cacerts2=/etc/ssl/ca-certificates.crt".ljust(space)+
 	"#like cacerts, for server2")
+	print ("deferlist=~/deferlist.txt".ljust(space)+
+	"#internal list about current deferred e-mails")
+	print ("deferdir=~/gpgmaildirtmp".ljust(space)+
+	"#internal directory where current deferred e-mails are stored")
+	print ("viruslist=~/viruslist.txt".ljust(space)+
+	"#internal list about e-mails in quarantine")
+	print ("quarantinedir=~/gmequarantine".ljust(space)+
+	"#internal directory where e-mails in quarantine are stored")
 
 	print ("")
 	print ("[daemon]")
