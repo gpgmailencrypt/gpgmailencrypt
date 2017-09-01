@@ -4,6 +4,7 @@ import asynchat
 import asyncore
 import binascii
 import datetime
+import inspect
 import os
 import select
 import smtpd
@@ -57,7 +58,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 		except socket.error as e:
 
 			if parent:
-				parent.log("_gpgmailencryptserver: error",e)
+				parent.log("error",e,filename=__file__,lineno=inspect.currentframe().f_lineno)
 			raise
 
 		smtpd.__version__="gpgmailencrypt smtp server %s"%VERSION
@@ -66,6 +67,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 
 		if self.parent:
 			self.parent._used_smtpdport=self.socket.getsockname()[1]
+
 			if self.parent._used_smtpdport!=self.parent._SMTPD_PORT:
 				print("used_smtpdport=%i"%self.parent._used_smtpdport)
 
@@ -107,7 +109,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 			self.use_smtps=False
 			self.force_tls=False
 			self.parent.log("SSL connection not possible. Cert- and/or key "
-							"file couldn't be opened","e")
+							"file couldn't be opened","e",filename=__file__,lineno=inspect.currentframe().f_lineno)
 
 	######
 	#start
@@ -143,12 +145,11 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 					select.select([], [newconn], [])
 				except :
 					self.parent.log("Client did break off STARTTLS","w")
-					self.parent.log_traceback()
 					break
 
 		except:
-			self.parent.log("_gpgmailencryptserver: Exception: Could not"
-							" start SSL connection")
+			self.parent.log("Exception: Could not"
+							" start SSL connection",filename=__file__,lineno=inspect.currentframe().f_lineno)
 			self.parent.log_traceback()
 
 		return newconn
@@ -170,8 +171,8 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 					if conn==None:
 						return
 
-			self.parent.debug("_gpgmailencryptserver: Incoming connection "
-								"from %s" % repr(addr))
+			self.parent.debug("Incoming connection "
+								"from %s" % repr(addr),filename=__file__,lineno=inspect.currentframe().f_lineno)
 			channel = _hksmtpchannel(self,
 						conn,
 						addr,
@@ -192,13 +193,13 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 							mailfrom,
 							recipient,
 							data):
-		self.parent.debug("_gpgmailencryptserver: _gpgmailencryptserver "
-						"from '%s' to '%s'"%(mailfrom,recipient))
+		self.parent.debug("_gpgmailencryptserver "
+						"from '%s' to '%s'"%(mailfrom,recipient),filename=__file__,lineno=inspect.currentframe().f_lineno)
 
 		try:
 			self.parent.send_mails(data,recipient)
 		except:
-			self.parent.log("_gpgmailencryptserver: Bug:Exception!")
+			self.parent.log("Bug:Exception!",filename=__file__,lineno=inspect.currentframe().f_lineno)
 			self.parent.log_traceback()
 
 		return
@@ -212,21 +213,21 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 					user,
 					password):
 		"checks user authentication against a password file"
-		self.parent.debug("authenticate")
+		self.parent.debug("authenticate",filename=__file__,lineno=inspect.currentframe().f_lineno)
 		pw=self.parent.adm_get_pwhash(user)
 
 		if pw==_deprecated_get_hash(password):
 
-			self.parent.debug("mailencryptserver: User '%s' with deprecated password hash algorithm authenticated"%user)
+			self.parent.debug("mailencryptserver: User '%s' with deprecated password hash algorithm authenticated"%user,filename=__file__,lineno=inspect.currentframe().f_lineno)
 			self.parent.adm_set_user(user,password)
 			pw=self.parent.adm_get_pwhash(user)
 
 		if pw_verify(password,pw,parent=self.parent):
 			self.parent.debug("mailencryptserver: User '%s' password verifed"
-								%user)
+								%user,filename=__file__,lineno=inspect.currentframe().f_lineno)
 			return True
 
-		self.parent.debug("mailencryptserver: User '%s' password wrong"%user)
+		self.parent.debug("mailencryptserver: User '%s' password wrong"%user,filename=__file__,lineno=inspect.currentframe().f_lineno)
 		return False
 
 
@@ -370,7 +371,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 						self.push("454 Temporary authentication failure.")
 						self.parent.log(
 							"User '%s' failed to AUTH LOGIN login"%self.user
-							,"w")
+							,"w",filename=__file__,lineno=inspect.currentframe().f_lineno)
 
 					self.in_loginauth=0
 					self._SMTPChannel__line=[]
@@ -393,7 +394,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			if not command in (SIMPLECOMMANDS+
 				_gpgmailencryptserver.ADMINCOMMANDS):
 				self.parent.log("STARTTLS before authentication required."
-								" Command was '%s'"%command)
+								" Command was '%s'"%command,filename=__file__,lineno=inspect.currentframe().f_lineno)
 				self.push("530 STARTTLS before authentication required.")
 				self._SMTPChannel__line=[]
 				return
@@ -416,7 +417,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 	#############
 
 	def reset_values(self):
-		self.parent.debug("_gpgmailencryptserver: reset_values")
+		self.parent.debug("reset_values",filename=__file__,lineno=inspect.currentframe().f_lineno)
 		self.is_authenticated=False
 		self.is_admin=False
 		self.user=""
@@ -428,7 +429,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 	#############
 
 	def handle_error(self):
-		self.parent.debug("handle_error")
+		self.parent.debug("handle_error",filename=__file__,lineno=inspect.currentframe().f_lineno)
 		self.handle_close()
 
 	#SMTP Commands
@@ -438,7 +439,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 	##########
 
 	def smtp_HELO(self,arg):
-		self.parent.debug("_gpgmailencryptserver: HELO")
+		self.parent.debug("HELO",filename=__file__,lineno=inspect.currentframe().f_lineno)
 
 		if not arg:
 				   self.push('501 Syntax: HELO hostname')
@@ -455,7 +456,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 	##########
 
 	def smtp_EHLO(self, arg):
-		self.parent.debug("_gpgmailencryptserver: EHLO")
+		self.parent.debug("EHLO",filename=__file__,lineno=inspect.currentframe().f_lineno)
 
 		if not arg:
 			self.push('501 Syntax: EHLO hostname')
@@ -496,7 +497,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 	##########
 
 	def smtp_RSET(self, arg):
-		self.parent.debug("_gpgmailencryptserver: RSET")
+		self.parent.debug("RSET")
 		self.reset_values()
 		smtpd.SMTPChannel.smtp_RSET(self,arg)
 
@@ -505,7 +506,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 	##########
 
 	def smtp_AUTH(self,arg):
-		self.parent.debug("_gpgmailencryptserver: AUTH")
+		self.parent.debug("AUTH",filename=__file__,lineno=inspect.currentframe().f_lineno)
 
 		if not self.use_authentication and not self.adminmode:
 			self.push("503 Error: authentication not enabled")
@@ -543,7 +544,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 		command,encoded=res
 
 		if "PLAIN" in command.upper():
-			self.parent.debug("_gpgmailencryptserver: PLAIN decoding")
+			self.parent.debug("PLAIN decoding",filename=__file__,lineno=inspect.currentframe().f_lineno)
 
 			try:
 				d=binascii.a2b_base64(encoded).decode(
@@ -551,8 +552,8 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 								unicodeerror).split('\x00')
 			except:
 				self.parent.debug(
-							"_gpgmailencryptserver: error decode base64 '%s'"%
-							sys.exc_info()[1])
+							"error decode base64 '%s'"%
+							sys.exc_info()[1],filename=__file__,lineno=inspect.currentframe().f_lineno)
 				d=[]
 
 			if len(d)<2:
@@ -572,13 +573,13 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				self.user=user
 
 				if self.is_admin:
-					self.parent.log("admin user '%s' logged in"%user)
+					self.parent.log("admin user '%s' logged in"%user,filename=__file__,lineno=inspect.currentframe().f_lineno)
 				else:
-					self.parent.log("User '%s' successfully logged in"%user)
+					self.parent.log("User '%s' successfully logged in"%user,filename=__file__,lineno=inspect.currentframe().f_lineno)
 
 			else:
 				self.push("454 Temporary authentication failure.")
-				self.parent.log("User '%s' failed to login"%user,"w")
+				self.parent.log("User '%s' failed to login"%user,"w",filename=__file__,lineno=inspect.currentframe().f_lineno)
 
 		else:
 			self.push("454 Temporary authentication failure.")
@@ -588,11 +589,11 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 	##############
 
 	def smtp_STARTTLS(self,arg):
-		self.parent.debug("_gpgmailencryptserver: STARTTLS")
+		self.parent.debug("STARTTLS",filename=__file__,lineno=inspect.currentframe().f_lineno)
 
 		if self.use_tls==False:
 				self.push("454 TLS not available due to temporary reason")
-				self.parent.log("STARTTLS called, but is not active","w")
+				self.parent.log("STARTTLS called, but is not active","w",filename=__file__,lineno=inspect.currentframe().f_lineno)
 				return
 
 		if arg:
@@ -672,7 +673,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				v_id=float(res[1])
 				res=self.parent.quarantine_remove(v_id)
 			except:
-				self.parent.log("could not convert id to float","w")
+				self.parent.log("could not convert id to float","w",filename=__file__,lineno=inspect.currentframe().f_lineno)
 
 			if res:
 				self.push("250 OK")
@@ -685,7 +686,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				v_id=float(res[1])
 				res=self.parent.quarantine_release(v_id)
 			except:
-				self.parent.log("could not convert id to float","w")
+				self.parent.log("could not convert id to float","w",filename=__file__,lineno=inspect.currentframe().f_lineno)
 
 			if res:
 				self.push("250 OK")
@@ -698,7 +699,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				v_id=float(res[1])
 				res=self.parent.quarantine_forward(v_id,res[2])
 			except:
-				self.parent.log("could not convert id to float","w")
+				self.parent.log("could not convert id to float","w",filename=__file__,lineno=inspect.currentframe().f_lineno)
 
 			if res:
 				self.push("250 OK")
@@ -719,7 +720,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			return
 
 		self.parent.reset_statistics()
-		self.parent.log("smtp_RESETSTATISTICS")
+		self.parent.log("smtp_RESETSTATISTICS",filename=__file__,lineno=inspect.currentframe().f_lineno)
 		self.push("250 OK")
 
 	###################
@@ -733,7 +734,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			return
 
 		self.parent.reset_messages()
-		self.parent.log("smtp_RESETMESSAGES")
+		self.parent.log("smtp_RESETMESSAGES",filename=__file__,lineno=inspect.currentframe().f_lineno)
 		self.push("250 OK")
 
 	################
@@ -797,7 +798,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 	###########
 
 	def smtp_FLUSH(self,arg):
-		self.parent.log("FLUSH")
+		self.parent.log("FLUSH",filename=__file__,lineno=inspect.currentframe().f_lineno)
 		self.parent.check_deferred_list()
 		self.parent.check_mailqueue()
 		self.push("250 OK")
@@ -812,7 +813,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 			self.push("501 Syntax error: no arguments allowed")
 			return
 
-		self.parent.log("smtp_RELOAD configuration")
+		self.parent.log("smtp_RELOAD configuration",filename=__file__,lineno=inspect.currentframe().f_lineno)
 		self.parent.init()
 		self.parent._parse_commandline()
 		self.push("250 OK")
