@@ -256,6 +256,7 @@ class gme:
 		self._SMTP_USESMTPS=False
 		self._SMTP_CERTFINGERPRINTS=[]
 		self._SMTP_CACERTS=None
+		self._SMTP_VERIFYCERT=False
 		self._SMTP_HOST2='localhost'
 		self._SMTP_PORT2=25
 		self._SMTP_AUTHENTICATE2=False
@@ -263,6 +264,8 @@ class gme:
 		self._SMTP_PASSWORD2=""
 		self._SMTP_CREDENTIAL2=""
 		self._SMTP_CACERTS2=None
+		self._SMTP_USESMTPS2=False
+		self._SMTP_VERIFYCERT2=False
 		self._DOMAINS=""
 		self._HOMEDOMAINS=["localhost"]
 		self._INFILE=""
@@ -580,6 +583,12 @@ class gme:
 				pass
 
 			try:
+				self._SMTP_VERIFYCERT=_cfg.getboolean('mailserver',
+														'verifycertificate')
+			except:
+				pass
+
+			try:
 				self._SMTP_AUTHENTICATE=_cfg.getboolean('mailserver',
 														'authenticate')
 			except:
@@ -615,6 +624,17 @@ class gme:
 
 			try:
 				self._SMTP_CREDENTIAL2=_cfg.get('mailserver','smtpcredential2')
+			except:
+				pass
+
+			try:
+				self._SMTP_USESMTPS2=_cfg.getint('mailserver','usesmtps2')
+			except:
+				pass
+
+			try:
+				self._SMTP_VERIFYCERT2=_cfg.getboolean('mailserver',
+														'verifycertificate2')
 			except:
 				pass
 
@@ -1746,10 +1766,12 @@ class gme:
 			if self._SECURITYLEVEL==self.s_redirect:
 				_HOST=self._SMTP_HOST2
 				_PORT=self._SMTP_PORT2
+				_USESMTPS=self._SMTP_USESMTPS2
 				_AUTHENTICATE=self._SMTP_AUTHENTICATE2
 				_USER=self._SMTP_USER2
 				_PASSWORD=self._SMTP_PASSWORD2
 				_CACERTS=self._SMTP_CACERTS2
+				_VERIFYCERT=self._SMTP_VERIFYCERT2
 			else:
 				_HOST=self._SMTP_HOST
 				_PORT=self._SMTP_PORT
@@ -1758,9 +1780,15 @@ class gme:
 				_USER=self._SMTP_USER
 				_PASSWORD=self._SMTP_PASSWORD
 				_CACERTS=self._SMTP_CACERTS
+				_VERIFYCERT=self._SMTP_VERIFYCERT
 
-			if _CACERTS==None:
-				sslcontext=None
+			if not _VERIFYCERT:
+				sslcontext=ssl.create_default_context(cafile=_CACERTS)
+				sslcontext.check_hostname = False
+				sslcontext.verify_mode=ssl.CERT_NONE
+
+			elif _CACERTS==None:
+					sslcontext=None
 			else:
 				sslcontext=ssl.create_default_context(cafile=_CACERTS)
 
@@ -1787,6 +1815,14 @@ class gme:
 				except:
 					self.debug("smtp.starttls on server failed")
 					self.log_traceback()
+
+					if store_deferred:
+						self._store_temporaryfile(  message,
+													add_deferred=True,
+													fromaddr=from_addr,
+													toaddr=to_addr)
+						self._remove_mail_from_queue(m_id)
+
 					return False
 
 				if usessl:
