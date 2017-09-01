@@ -315,9 +315,15 @@ class _SMIME(_gmechild):
 			self.debug("decryption failed. No smime user '%s' found"%
 						self._recipient,"w")
 			return ["NO_PRIVATE_KEY"]
+
 		try:
 			privatekey=_recipient[2]
 		except:
+			self.debug("decryption failed. No private key for '%s' found"%
+						self._recipient,"w")
+			return ["NO_PRIVATE_KEY"]
+
+		if privatekey==None:
 			self.debug("decryption failed. No private key for '%s' found"%
 						self._recipient,"w")
 			return ["NO_PRIVATE_KEY"]
@@ -328,7 +334,6 @@ class _SMIME(_gmechild):
 				"-in",self._filename,
 				"-out", sourcefile,
 				"-inkey" , _recipient[2] ]
-		print("cmd",cmd)
 		return cmd
 
 	############
