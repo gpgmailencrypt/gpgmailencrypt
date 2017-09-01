@@ -1778,7 +1778,6 @@ class gme:
 
 				try:
 
-					print(_HOST,_PORT)
 					if smtp.has_extn("starttls"):
 						self.debug("_send_textmsg starttls")
 						smtp.starttls(context=sslcontext)
