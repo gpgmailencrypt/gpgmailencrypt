@@ -778,6 +778,50 @@ class gmetests(unittest.TestCase):
 		res=self.gme.zip_attachments(email.message_from_string(mail))
 		self.assertTrue("test.pdf.zip" in res)
 
+	def test_zip_attachments_one_container(self):
+		f=open("./attachment.eml","r")
+		mail=f.read()
+		f.close()
+		result=self.gme.zip_attachments_one_container(
+											mail,
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt")
+		self.assertIsNotNone(result)
+
+	def test_zip_attachments_one_container_msg(self):
+		f=open("./attachment.eml","r")
+		mail=f.read()
+		f.close()
+		result=self.gme.zip_attachments_one_container(
+											email.message_from_string(mail),
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt")
+		self.assertIsNotNone(result)
+
+	def test_zip_attachments_one_container_noattachment(self):
+		f=open("./attachment.eml","r")
+		mail=f.read()
+		f.close()
+		result=self.gme.zip_attachments_one_container(
+											email_unencrypted,
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt")
+		self.assertEqual(result.as_string(),email_unencrypted)
+
+	def test_zip_attachments_one_container_noattachment_msg(self):
+		f=open("./attachment.eml","r")
+		mail=f.read()
+		f.close()
+		result=self.gme.zip_attachments_one_container(
+											email.message_from_string(email_unencrypted),
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt")
+		self.assertEqual(result.as_string(),email_unencrypted)
+
 	def test_getcharset(self):
 		self.assertEqual(self.gme._find_charset(email_unencrypted),"utf-8")
 
@@ -1418,6 +1462,15 @@ class gpgtests(unittest.TestCase):
 											"testaddress@gpgmailencry.pt",
 											"testaddress@gpgmailencry.pt")
 		self.assertIsNotNone(result)
+
+	def test_encryptgpginlinemail_msg(self):
+		result=self.gme.encrypt_pgp_mail(  email.message_from_string(email_unencrypted),
+											False,
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt")
+		self.assertIsNotNone(result)
+
 
 	def test_encryptgpginlinemail_msg(self):
 		result=self.gme.encrypt_pgp_mail(  email.message_from_string(email_unencrypted),

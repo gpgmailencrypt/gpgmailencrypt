@@ -287,6 +287,7 @@ class gme:
 		self._SMTPD_SSL_CERTFILE=v["SMTPD_SSL_CERTFILE"]
 		self._GPGKEYEXTRACTDIR=os.path.join(self._GPGKEYHOME,"extract")
 		self._GPGAUTOMATICEXTRACTKEYS=False
+		self._GPGINLINE_ZIPCONTAINER=False
 		self._SMIMEKEYEXTRACTDIR=os.path.join(self._SMIMEKEYHOME,"extract")
 		self._SMIMECIPHER="DES3"
 		self._SMIMEAUTOMATICEXTRACTKEYS=False
@@ -546,6 +547,11 @@ class gme:
 
 			try:
 				self._ALLOWGPGCOMMENT=_cfg.getboolean('gpg','allowgpgcomment')
+			except:
+				pass
+
+			try:
+				self._GPGINLINE_ZIPCONTAINER=_cfg.getboolean('gpg','inlinezipcontainer')
 			except:
 				pass
 
@@ -1568,6 +1574,159 @@ class gme:
 			pass
 
 		return message.as_string()
+
+
+	###############################
+	# zip_attachments_one_container
+	###############################
+
+	@_dbg
+	def zip_attachments_one_container(   self,
+							message,
+							gpguser,
+							from_addr,
+							to_addr):
+		
+		if isinstance(message,str):
+			message=email.message_from_string(message)
+
+		splitmsg=re.split("\n\n",message.as_string(),1)
+
+		if len(splitmsg)!=2:
+			splitmsg=re.split("\r\n\r\n",message.as_string(),1)
+
+		if len(splitmsg)!=2:
+			self.debug("Mail could not be split in header and body part "
+						"(mailsize=%i)"%len(message.as_string()))
+			return None
+
+		header,body=splitmsg
+		header+="\n\n"
+
+		newmsg=MIMEMultipart()
+		m=email.message_from_string(header)
+
+		for k in m.keys():
+			newmsg[k]=m[k]
+
+
+		attachments=0
+		tempdir = tempfile.mkdtemp()
+
+		if self._USE7ZARCHIVE:
+			Zip=self.a7z_factory()
+		else:
+			Zip=self.zip_factory()
+
+		try:
+			Zip.set_zipcipher(self._backend.encryptionmap(pdfuser)[1])
+		except:
+
+			try:
+				domain=maildomain(pdfuser)
+
+				if len(domain)>0:
+					Zip.set_zipcipher(self._backend.encryptionmap("*@%s"
+																%domain)[1])
+			except:
+				pass
+
+		filecounter=0
+		
+		for m in message.walk():
+
+			if (m.get_param('attachment',None,'Content-Disposition') is not None
+			or (m.get_param('inline',
+							 None,
+							'Content-Disposition' ) is not None 
+				and m.get_content_maintype() not in ("text") )):
+
+				contenttype=m.get_content_type()
+				filename = m.get_filename()
+
+				if filename==None:
+					count=""
+
+					if filecounter>0:
+						count="%i"%filecounter
+
+					f=localedb(self,self._LOCALE,"file")
+					filename=('%s%s.'%(f,count))+guess_fileextension(contenttype)
+					filecounter+=1
+
+				self.debug("Content-Type=%s"%contenttype)
+
+				if  isinstance( m.get_payload() , list ):
+
+					for part in m.get_payload():
+
+						if isinstance(part,email.message.Message):
+							payload=part.as_bytes()
+							break
+						else:
+							continue
+				else:
+					payload=m.get_payload(decode=True)
+
+				self.debug("Open write: %s/%s"%(tempdir,filename))
+				newfilename=os.path.join(tempdir,filename)
+				f1,ext=os.path.splitext(newfilename)
+				fncount=0
+
+				while os.path.exists(newfilename):
+					fncount+=1
+					newfilename=os.path.join(tempdir,f1+str(fncount)+ext)
+
+				fp=open(newfilename,mode="wb")
+
+				try:
+					fp.write(payload)
+				except:
+					self.log("File '%s' could not be written"%filename)
+					self.log_traceback()
+
+				fp.close()
+				attachments+=1
+			elif m.get_content_maintype()!="multipart":
+				#add all none-attachment payloads
+				newmsg.attach(m)
+
+		if attachments<1:
+			print("no attachment")
+			return message
+
+		result,zipfile=Zip.create_zipfile(tempdir)
+
+		if result==True:
+
+			if self._USE7ZARCHIVE:
+				extension="7z"
+			else:
+				extension="zip"
+
+			msg= MIMEBase("application", extension)
+			msg.set_payload(zipfile)
+			f=localedb(self,"attachment")
+			filenamecD,filenamecT=encode_filename("%s.%s"%(f,extension))
+			msg.add_header( 'Content-Disposition',
+							'attachment; filename*="%s"' % filenamecD)
+			msg.set_param( 'name', filenamecT )
+			email.encoders.encode_base64(msg)
+			newmsg.attach(msg)
+
+		self._del_tempfile(fp.name)
+
+		try:
+			shutil.rmtree(tempdir)
+			pass
+		except:
+			self.log("Couldn't delete tempdir '%s'"%tempdir)
+			self.log_traceback()
+
+		if not self._pdfencryptheader in newmsg:
+			newmsg.add_header(self._pdfencryptheader,self._encryptgpgcomment)
+		print("newmsg return",newmsg)
+		return newmsg
 
 	################
 	#is_compressable
@@ -3109,6 +3268,15 @@ class gme:
 		an email.Message object
 		returns None if encryption was not possible
 		"""
+
+		if self._GPGINLINE_ZIPCONTAINER==True:
+			message=self.zip_attachments_one_container(	message,
+														gpguser,
+														from_addr,
+														to_addr)
+			if message==None:
+				return None
+
 		if isinstance(message,str):
 			message=email.message_from_string(message)
 
