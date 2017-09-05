@@ -92,9 +92,16 @@ class _PDF(_gmechild):
 		if _result !=0:
 		  self.log("Error executing command (Error code )","e")
 		  self.log(self._createpdfcommand_fromfile(f.name),"e")
-		  return result,None
+		  return False,None
 		else:
 			result=True
+
+		if password==None:
+			res=open(f.name,mode="br")
+			self.debug("return PDF unencrypted")
+			encdata=res.read()
+			res.close()
+			return result,encdata
 
 		_res,encryptedfile=self._encrypt_pdffile(f.name,password,from_addr)
 
