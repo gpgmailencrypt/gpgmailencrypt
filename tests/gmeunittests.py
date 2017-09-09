@@ -769,14 +769,14 @@ class gmetests(unittest.TestCase):
 		mail=f.read()
 		f.close()
 		res=self.gme.zip_attachments(mail)
-		self.assertTrue("test.pdf.zip" in res)
+		self.assertTrue("test.pdf.zip" in res.as_string())
 
 	def test_zipattachment_msg(self):
 		f=open("./attachment.eml","r")
 		mail=f.read()
 		f.close()
 		res=self.gme.zip_attachments(email.message_from_string(mail))
-		self.assertTrue("test.pdf.zip" in res)
+		self.assertTrue("test.pdf.zip" in res.as_string())
 
 	def test_zip_attachments_one_container(self):
 		f=open("./attachment.eml","r")
