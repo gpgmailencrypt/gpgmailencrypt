@@ -22,7 +22,6 @@ Usage:
 Create a configuration file with "gpgmailencrypt.py -x > ~/gpgmailencrypt.conf"
 and copy this file into the directory /etc
 """
-import atexit
 import base64
 import configparser
 import datetime
@@ -38,7 +37,6 @@ import gmeutils.spamscanners 	as spamscanners
 import gmeutils.archivemanagers as archivemanagers
 import gmeutils.storagebackend 	as backend
 import gmeutils.mylogger 		as mylogger
-from   gmeutils.child         	import _gmechild
 from   gmeutils._dbg 		  	import _dbg
 from   gmeutils.gpgclass 		import _GPG,_GPGEncryptedAttachment
 from   gmeutils.gpgmailserver 	import _gpgmailencryptserver
@@ -51,7 +49,6 @@ from   gmeutils.viruscheck    	import _virus_check
 from   gmeutils.version			import *
 from   gmeutils.dkim			import mydkim
 import html
-import inspect
 from   io					  	import TextIOWrapper
 import locale
 import os
@@ -288,6 +285,7 @@ class gme:
 		self._GPGKEYEXTRACTDIR=os.path.join(self._GPGKEYHOME,"extract")
 		self._GPGAUTOMATICEXTRACTKEYS=False
 		self._GPGINLINE_ZIPCONTAINER=False
+		self._GPGINLINE_CONTENTPDF=False
 		self._SMIMEKEYEXTRACTDIR=os.path.join(self._SMIMEKEYHOME,"extract")
 		self._SMIMECIPHER="DES3"
 		self._SMIMEAUTOMATICEXTRACTKEYS=False
@@ -556,6 +554,11 @@ class gme:
 				pass
 
 			try:
+				self._GPGINLINE_CONTENTPDF=_cfg.getboolean('gpg','inlinecontentpdf')
+			except:
+				pass
+
+			try:
 				self._GPGAUTOMATICEXTRACTKEYS=_cfg.getboolean('gpg',
 															'extractkey')
 			except:
@@ -757,7 +760,7 @@ class gme:
 			try:
 				script=_cfg.get('pdf','passwordscript')
 
-				if len(script.trim())>0:
+				if len(script.strip())>0:
 					self._PDFPASSWORDSCRIPT=script
 
 			except:
@@ -1573,8 +1576,80 @@ class gme:
 		except:
 			pass
 
-		return message.as_string()
+		return message
 
+	###################
+	#_create_contentpdf
+	###################
+
+	@_dbg
+	def _create_contentpdf(self,message,tempdir=None,filename=None):
+		pdf=self.pdf_factory()
+
+		if not pdf.is_available():
+			self.debug("pdf not available")
+			return None
+
+		if isinstance(message,email.message.Message):
+			message=message.as_string()
+
+		fp=self._new_tempfile()
+		fp.write(message.encode("UTF-8",unicodeerror))
+		fp.close()
+		pdf.set_filename(fp.name)
+		result,pdffile=pdf.create_pdffile(None,None)
+		self._del_tempfile(fp.name)
+
+		if result==True:
+
+			if tempdir:
+				newfilename=os.path.join(tempdir,localedb(self,"content")+".pdf")
+				f1,ext=os.path.splitext(newfilename)
+				fncount=0
+
+				while os.path.exists(newfilename):
+					fncount+=1
+					newfilename=os.path.join(tempdir,f1+str(fncount)+ext)
+			else:
+				f2=self._new_tempfile()
+				if filename:
+					newfilename=filename
+				else:
+					newfilename=f2.name
+
+			fp=open(newfilename,"wb")
+			fp.write(pdffile)
+			fp.close()
+			self.debug("set filename to '%s'"%newfilename)
+			pgpFilenamecD,pgpFilenamecT=encode_filename("%s.pdf"%os.path.basename(newfilename))
+			msg = MIMEBase("application","pdf")
+			msg.set_payload(pdffile)
+
+			try:
+				del msg["Content-Disposition"]
+			except:
+				self.debug("content disposition deleted")
+				self.logtraceback()
+
+			try:
+				msg.del_param("name")
+			except:
+				self.debug("param name deleted")
+				self.logtraceback()
+
+			msg.add_header( 'Content-Disposition',
+							'attachment; filename*="%s"'%pgpFilenamecD)
+			msg.set_param( 'name', pgpFilenamecT )
+			email.encoders.encode_base64(msg)
+			self.debug("sucessfully return payload")
+
+			if not tempdir:
+				self._del_tempfile(f2.name)
+
+			return msg
+		else:
+			self.debug("result==False")
+			return None
 
 	###############################
 	# zip_attachments_one_container
@@ -1585,7 +1660,8 @@ class gme:
 							message,
 							gpguser,
 							from_addr,
-							to_addr):
+							to_addr,
+							include_contentpdf=False):
 		
 		if isinstance(message,str):
 			message=email.message_from_string(message)
@@ -1609,7 +1685,6 @@ class gme:
 		for k in m.keys():
 			newmsg[k]=m[k]
 
-
 		attachments=0
 		tempdir = tempfile.mkdtemp()
 
@@ -1632,7 +1707,13 @@ class gme:
 				pass
 
 		filecounter=0
-		
+
+		if include_contentpdf:
+			msg=self._create_contentpdf(message,tempdir)
+
+			if msg!=None:
+				attachments+=1
+
 		for m in message.walk():
 
 			if (m.get_param('attachment',None,'Content-Disposition') is not None
@@ -1713,8 +1794,6 @@ class gme:
 			msg.set_param( 'name', filenamecT )
 			email.encoders.encode_base64(msg)
 			newmsg.attach(msg)
-
-		self._del_tempfile(fp.name)
 
 		try:
 			shutil.rmtree(tempdir)
@@ -2317,7 +2396,6 @@ class gme:
 	@_dbg
 	def _del_tempfile(self,f):
 		"deletes the tempfile, f is the name of the file"
-		n=""
 
 		if not isinstance(f,str):
 			return
@@ -3253,31 +3331,37 @@ class gme:
 		self._del_tempfile(fp.name)
 		return payload
 
-	######################
+	#######################
 	#encrypt_pgpinline_mail
-	######################
+	#######################
 
 	@_dbg
 	def encrypt_pgpinline_mail(  self,
 							message,
 							gpguser,
 							from_addr,
-							to_addr):
+							to_addr,
+							use_container=False,
+							include_contentpdf=False):
 		"""
 		returns the string 'message' as an PGP/INLINE encrypted mail as
 		an email.Message object
 		returns None if encryption was not possible
 		"""
 
-		if self._GPGINLINE_ZIPCONTAINER==True:
-			message=self.zip_attachments_one_container(	message,
-														gpguser,
-														from_addr,
-														to_addr)
+		if use_container==True:
+			message=self.zip_attachments_one_container(
+										message,
+										gpguser,
+										from_addr,
+										to_addr,
+										include_contentpdf=include_contentpdf)
 			if message==None:
+				self.debug("message==None")
 				return None
 
 		if isinstance(message,str):
+			self.debug("message is string, converting ...")
 			message=email.message_from_string(message)
 
 		counter=0
@@ -3286,8 +3370,10 @@ class gme:
 		cal_fname="%s.ics.pgp"%appointment
 
 		if isinstance(message,list):
+			self.debug("message is instance list")
 			msg=message
 		else:
+			self.debug("message is not instance list => walk")
 			msg=message.walk()
 			self.debug("encrypt_pgpinline vor get_content_type")
 			contenttype=message.get_content_type()
@@ -3297,11 +3383,17 @@ class gme:
 			if isinstance( message.get_payload(),str ):
 				self.debug("encrypt_pgpinline: type( get_payload() ) == str")
 				charset=message.get_param("charset",header="Content-Type")
+				pdfmsg=None
+
+				if use_container==False and include_contentpdf==True:
+					pdfmsg=self._create_contentpdf(message,filename=localedb(self,"content"))
+					self.debug("include contentpdf outside container")
 
 				if (charset==None
 				or charset.upper()=="ASCII"):
 					message.set_param("charset",charset)
 
+				strpl=message.get_payload(decode=True)
 				pl=self._encrypt_payload( message ,gpguser,from_addr=from_addr)
 
 				if contenttype=="text/calendar":
@@ -3316,8 +3408,32 @@ class gme:
 					pl.set_type("multipart/mixed")
 					pl.attach(CAL)
 
+				if pdfmsg!=None:
+					origsubtype=pl.get_content_subtype()
+					pl.set_payload(None)
+					pl.set_type("multipart/mixed")
+					TXT=MIMEText(strpl,
+								_subtype=origsubtype,
+								_charset="UTF-8")
+					pl.attach(TXT)
+					pl.attach(pdfmsg)
+					return self.encrypt_pgpinline_mail( pl,
+							gpguser,
+							from_addr,
+							to_addr,
+							use_container=False,
+							include_contentpdf=False)
+
 				self.debug("encrypt_pgpinline: type(get_payload())== str END")
 				return pl
+
+			if use_container==False and include_contentpdf==True:
+				pdfmsg=self._create_contentpdf(message,filename=localedb(self,"content"))
+				self.debug("include contentpdf outside container")
+
+				if pdfmsg!=None:
+					message.attach(pdfmsg)
+					msg=message.walk()
 
 		for payload in msg:
 			content=payload.get_content_maintype()
@@ -3585,7 +3701,7 @@ class gme:
 
 	@_dbg
 	def encrypt_pgp_mail(   self,
-							mailtext,
+							message,
 							use_pgpmime,
 							gpguser,
 							from_addr,
@@ -3595,33 +3711,28 @@ class gme:
 		or PGP/MIME depending on the configuration) as an email.Message object
 		returns None if encryption was not possible
 		"""
-		if isinstance(mailtext,str):
-			raw_message=email.message_from_string(mailtext)
-		else:
-			raw_message=mailtext
+		if isinstance(message,str):
+			message=email.message_from_string(message)
 
-		msg_id=""
-
-		if "Message-Id" in raw_message:
-			msg_id="Id:%s "%raw_message["Message-Id"]
-
-		if self.is_encrypted( raw_message ):
+		if self.is_encrypted( message ):
 			self.debug("encrypt_pgp_mail, is already encrypted")
 			return None
 
 		self.log("Encrypting email to: %s" % to_addr )
 
 		if use_pgpmime:
-			mail = self.encrypt_pgpmime_mail(	mailtext,
+			mail = self.encrypt_pgpmime_mail(message,
 											gpguser,
 											from_addr,
 											to_addr )
 		else:
 			#PGP Inline
-			mail = self.encrypt_pgpinline_mail(  mailtext,
-											gpguser,
-											from_addr,
-											to_addr )
+			mail = self.encrypt_pgpinline_mail(message,
+									gpguser,
+									from_addr,
+									to_addr,
+									use_container=self._GPGINLINE_ZIPCONTAINER,
+									include_contentpdf=self._GPGINLINE_CONTENTPDF)
 
 		if mail==None:
 			return None
@@ -3829,7 +3940,7 @@ class gme:
 		else:
 			self.debug("encrypt_smime_mail: error encrypting mail, "
 						"send unencrypted")
-			m=None
+
 			newmsg=None
 
 		self._del_tempfile(fp.name)
@@ -4511,7 +4622,6 @@ class gme:
 		fp=self._new_tempfile()
 		self.debug("_decrypt_payload _new_tempfile %s"%fp.name)
 		filename = payload.get_filename()
-		tencoding="base64"
 
 		if contenttype=="text/html":
 			raw_payload=raw_payload.replace("<br>","").replace("<BR>","")
@@ -4528,7 +4638,6 @@ class gme:
 			try:
 				raw_payload.encode("ascii")
 			except:
-				tencoding="base64"
 				self.log_traceback()
 
 			raw_payload=raw_payload.encode(charset,unicodeerror)
@@ -4670,7 +4779,7 @@ class gme:
 				continue
 			else:
 				self.debug("in schleife for _decrypt payload %s" %type(payload))
-				res=self._decrypt_payload( 	payload,
+				self._decrypt_payload( 	payload,
 											to_gpg,
 											counter=counter )
 
@@ -5132,11 +5241,6 @@ class gme:
 			if self._debug_keepmail(mailtext): #DEBUG
 				self._store_temporaryfile(mailtext)
 
-			if self._PREFERRED_ENCRYPTION=="PGPMIME":
-				_pgpmime=True
-			else:
-				_pgpmime=False
-
 			if self._SMIMEAUTOMATICEXTRACTKEYS:
 				self.debug("_SMIMEAUTOMATICEXTRACTKEYS")
 				s=self.smime_factory()
@@ -5397,7 +5501,7 @@ class gme:
 
 		try:
 			server.start()
-		except SystemExit as m:
+		except SystemExit:
 			alarm.stop()
 			exit(0)
 		except (KeyboardInterrupt,EOFError):
