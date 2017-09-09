@@ -305,7 +305,7 @@ class _virus_check(_gmechild):
 
 		try:
 
-			if not self.parent._DEBUG:
+			if not self.parent._logger._DEBUG:
 				shutil.rmtree(directory)
 			else:
 				self.debug("keep directory %s for debugging reasons"%directory)
