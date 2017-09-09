@@ -2,7 +2,6 @@
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 from gmeutils.child 			import _gmechild
 from gmeutils.version			import *
-from gmeutils._dbg 				import _dbg
 from gmeutils.mytimer       	import _mytimer
 from gmeutils.gpgmailserver 	import _gpgmailencryptserver
 import getpass
@@ -133,8 +132,6 @@ def start_adminconsole(host,port):
 						args=" ".join(res[1:])
 					except:
 						pass
-
-					cmd=""
 
 					if i in _gpgmailencryptserver.ADMINALLCOMMANDS:
 
