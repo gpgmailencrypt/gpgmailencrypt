@@ -4,7 +4,6 @@
 import os
 import shutil
 import subprocess
-import sys
 import tempfile
 from .child 			import _gmechild
 from .version 			import *
@@ -256,7 +255,7 @@ class _ARJ(_baseunpacker):
 							stdin=None,
 							stdout=subprocess.PIPE,
 							stderr=subprocess.PIPE )
-		res=p.wait()
+		p.wait()
 
 		for line in p.stdout.readlines():
 
@@ -313,7 +312,6 @@ class _BZ2(_baseunpacker):
 							sourcefile,
 							directory,
 							password=None):
-		format=""
 		path,origname=os.path.split(sourcefile)
 		fname, extension = os.path.splitext(origname)
 		extension=extension.lower()
@@ -500,7 +498,6 @@ class _GZIP(_baseunpacker):
 							sourcefile,
 							directory,
 							password=None):
-		format=""
 		path,origname=os.path.split(sourcefile)
 		fname, extension = os.path.splitext(origname)
 		extension=extension.lower()
@@ -718,7 +715,7 @@ class _RAR(_baseunpacker):
 							stdin=None,
 							stdout=subprocess.PIPE,
 							stderr=subprocess.PIPE )
-		res=p.wait()
+		p.wait()
 
 		for line in p.stderr.readlines():
 
@@ -736,8 +733,6 @@ class _RAR(_baseunpacker):
 							sourcefile,
 							directory,
 							password=None):
-		format=""
-		extension=os.path.splitext(sourcefile)[1].lower()
 		cmd=[   self.cmd,
 				"x","\"%s\""%sourcefile,
 				directory,
@@ -775,8 +770,6 @@ class _RIPOLE(_baseunpacker):
 							sourcefile,
 							directory,
 							password=None):
-		format=""
-		extension=os.path.splitext(sourcefile)[1].lower()
 		cmd=[   self.cmd,
 				"-i","\"%s\""%sourcefile,
 				"-d",directory,
@@ -1069,7 +1062,6 @@ class _XZ(_baseunpacker):
 							sourcefile,
 							directory,
 							password=None):
-		format=""
 		path,origname=os.path.split(sourcefile)
 		fname, extension = os.path.splitext(origname)
 		extension=extension.lower()
@@ -1333,7 +1325,7 @@ class _ZIP(_baseunpacker):
 							stdin=None,
 							stdout=subprocess.PIPE,
 							stderr=subprocess.PIPE )
-		res=p.wait()
+		p.wait()
 
 		for line in p.stdout.readlines():
 
