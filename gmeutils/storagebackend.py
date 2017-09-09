@@ -370,7 +370,7 @@ class _TEXT_BACKEND(_base_storage):
 
 	@_dbg
 	def smimeuser(self, user):
-		self.debug("textbackend smimeuser check ",user)
+		self.debug("textbackend smimeuser check %s"%user)
 		user=email.utils.parseaddr(user)[1]
 
 		try:
