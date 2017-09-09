@@ -1352,13 +1352,6 @@ class _sql_backend(_base_storage):
 			print("public",r)
 			user=r[0]
 			publickey=r[1]
-			cipher=self.parent._SMIMECIPHER
-
-			if r[2]:
-				tmpcipher=r[2].upper().strip()
-
-			if len(tmpcipher)>0 and tmpcipher!="DEFAULT":
-				cipher=tmpcipher
 
 			if publickey!=None:
 				rows.append(user.lower())
@@ -1385,13 +1378,6 @@ class _sql_backend(_base_storage):
 
 			user=r[0]
 			privatekey=r[1]
-			cipher=self.parent._SMIMECIPHER
-
-			if len(r)>2 and r[2]:
-				tmpcipher=r[2].upper().strip()
-
-				if len(tmpcipher)>0 and tmpcipher!="DEFAULT":
-					cipher=tmpcipher
 
 			if privatekey!=None:
 				rows.append(user.lower())
