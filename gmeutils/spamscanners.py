@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
-import os
-import re
 import shutil
 import subprocess
 from	.child 				import _gmechild
@@ -145,7 +143,7 @@ class _BOGOFILTER(_basespamchecker):
 #get_spamscannerlist
 ####################
 
-def get_spamscannerlist(void):
+def get_spamscannerlist():
 	return ["BOGOFILTER","SPAMASSASSIN"]
 
 ################
