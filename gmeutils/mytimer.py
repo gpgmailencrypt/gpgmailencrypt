@@ -2,7 +2,6 @@
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 from .child 	import _gmechild
 import threading
-import time
 
 #########
 #_mytimer

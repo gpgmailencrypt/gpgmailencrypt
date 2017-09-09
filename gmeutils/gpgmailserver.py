@@ -11,10 +11,8 @@ import smtpd
 import socket
 import ssl
 import sys
-from	.child 			import _gmechild
 from	.version		import *
-from .storagebackend import _sql_backend
-from .password        import pw_hash,pw_verify,_deprecated_get_hash
+from .password        import pw_verify,_deprecated_get_hash
 
 ######################
 #_gpgmailencryptserver
@@ -173,7 +171,7 @@ class _gpgmailencryptserver(smtpd.SMTPServer):
 
 			self.parent.debug("Incoming connection "
 								"from %s" % repr(addr),filename=__file__,lineno=inspect.currentframe().f_lineno)
-			channel = _hksmtpchannel(self,
+			_hksmtpchannel(self,
 						conn,
 						addr,
 						parent=self.parent,

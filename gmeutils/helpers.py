@@ -9,7 +9,6 @@ import hashlib
 import html
 import html.parser
 from   io				import BytesIO
-from   io				import StringIO
 import os
 import mimetypes
 import random
@@ -21,7 +20,6 @@ import urllib
 import uu
 
 from 	.child 			import _gmechild
-from	._dbg 			import _dbg
 from	.version		import *
 
 ##############################################

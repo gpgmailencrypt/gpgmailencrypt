@@ -245,7 +245,6 @@ class _GPG(_gmechild):
 				if (res[0]=="pub"
 				or res[0]=="uid"):
 					email=res[9]
-					mail_id=res[4]
 
 					try:
 					   found=re.search(
@@ -299,8 +298,6 @@ class _GPG(_gmechild):
 
 				if res[0]=="pub" or res[0]=="uid":
 					email=res[9]
-					mail_id=res[4]
-
 					try:
 						found=re.search(
 						"[-a-zA-Z0-9_%\+\.]+@[-_0-9a-zA-Z\.]+"

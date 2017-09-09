@@ -1,9 +1,7 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
-import email
 import os
 import PyPDF2
-import re
 import shutil
 import subprocess
 from	.child 			import _gmechild 

@@ -5,7 +5,7 @@ import email
 import os.path
 from .child 			import _gmechild
 from .version 			import *
-from ._dbg	 			import _dbg
+
 from .thirdparty		import dkim
 
 #######
