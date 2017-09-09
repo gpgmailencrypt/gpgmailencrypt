@@ -2,7 +2,6 @@
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 from   	functools			import wraps
 import 	inspect
-import 	os
 from	.					import child
 
 #####
@@ -14,6 +13,10 @@ def _dbg(func):
 	@wraps(func)
 	def wrapper(*args, **kwargs):
 		parent=None
+
+		lineno=0
+		endlineno=0
+		filename=inspect.getfile(func)
 
 		if args:
 
@@ -30,9 +33,6 @@ def _dbg(func):
 			print(">> END %s"%func.__name__,lineno)
 			return result
 
-		lineno=0
-		endlineno=0
-		filename=inspect.getfile(func)
 
 		try:
 			source=inspect.getsourcelines(func)
