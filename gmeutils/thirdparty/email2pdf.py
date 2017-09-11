@@ -403,7 +403,7 @@ def handle_html_message_body(input_email, part):
             return "broken"
 
     payload = re.sub(r'cid:([\w_@.-]+)', functools.partial(cid_replace, cid_parts_used),
-                     str(payload, charset))
+                     str(payload, charset,"replace"))
     return (payload, cid_parts_used)
 
 
@@ -486,7 +486,8 @@ def can_url_fetch(src):
         request.connection.close()
         request.raise_for_status()
         return True
-    except RequestException:
+    #except RequestException:
+    except:
         return False
 
 
