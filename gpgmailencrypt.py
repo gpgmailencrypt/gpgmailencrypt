@@ -1662,23 +1662,36 @@ class gme:
 							from_addr,
 							to_addr,
 							include_contentpdf=False):
-		
+
 		if isinstance(message,str):
 			message=email.message_from_string(message)
 
+		if not message.is_multipart():
+			self.debug("no message with attachments")
+			return message
+
+		_f=open("ziponecontainerorig.eml","w")
+		_f.write(message.as_string())
+		_f.close()
 		header,body=self._split_msg(message)
 
 		if header==None:
 			return None
 
 		newmsg=MIMEMultipart()
-		m=email.message_from_string(header)
 
-		for k in m.keys():
-			newmsg[k]=m[k]
+		for k in message.keys():
+
+			for p in message.get_all(k):
+
+				if k != "Content-Type" and k!="MIME-Version":
+					newmsg.add_header(k,p)
 
 		attachments=0
 		tempdir = tempfile.mkdtemp()
+
+		contenttype=message.get_content_type()
+		self.debug("Message CONTENTTYPE %s"%contenttype)
 
 		if self._USE7ZARCHIVE:
 			Zip=self.a7z_factory()
@@ -1706,7 +1719,9 @@ class gme:
 			if msg!=None:
 				attachments+=1
 
-		for m in message.walk():
+		for m in message.get_payload():
+
+			contenttype=m.get_content_type()
 
 			if (m.get_param('attachment',None,'Content-Disposition') is not None
 			or (m.get_param('inline',
@@ -1714,7 +1729,6 @@ class gme:
 							'Content-Disposition' ) is not None 
 				and m.get_content_maintype() not in ("text") )):
 
-				contenttype=m.get_content_type()
 				filename = m.get_filename()
 
 				if filename==None:
@@ -1728,19 +1742,7 @@ class gme:
 					filecounter+=1
 
 				self.debug("Content-Type=%s"%contenttype)
-
-				if  isinstance( m.get_payload() , list ):
-
-					for part in m.get_payload():
-
-						if isinstance(part,email.message.Message):
-							payload=part.as_bytes()
-							break
-						else:
-							continue
-				else:
-					payload=m.get_payload(decode=True)
-
+				payload=m.get_payload(decode=True)
 				self.debug("Open write: %s/%s"%(tempdir,filename))
 				newfilename=os.path.join(tempdir,filename)
 				f1,ext=os.path.splitext(newfilename)
@@ -1760,9 +1762,10 @@ class gme:
 
 				fp.close()
 				attachments+=1
-			elif m.get_content_maintype()!="multipart":
+			elif (m.get_content_maintype()!="multipart" or m.get_content_type()=="multipart/alternative" ):
 				#add all none-attachment payloads
 				newmsg.attach(m)
+				self.debug("payload Type %s"%type(m.get_payload()))
 
 		if attachments<1:
 			self.debug("no attachment")
@@ -3374,13 +3377,14 @@ class gme:
 
 			for p in message.get_all(k):
 
-				if k != "Content-Type":
+				if k != "Content-Type" and k!="MIME-Version":
 					newmsg.add_header(k,p)
 
 		self.debug("payload is instance str %s"%isinstance(message.get_payload(),str))
 		msgpl=message.get_payload()
 
 		if isinstance(msgpl,list):
+
 			for pl in msgpl:
 				newmsg.attach(pl)
 		else:
@@ -4865,7 +4869,6 @@ class gme:
 
 	@_dbg
 	def decrypt_smime_mail(self,mailtext,from_addr,to_addr):
-		self.set_debug(True)
 		self.log("START decrypt smime")
 
 		if not self.is_smimeencrypted(mailtext):
