@@ -1666,18 +1666,10 @@ class gme:
 		if isinstance(message,str):
 			message=email.message_from_string(message)
 
-		splitmsg=re.split("\n\n",message.as_string(),1)
+		header,body=self._split_msg(message)
 
-		if len(splitmsg)!=2:
-			splitmsg=re.split("\r\n\r\n",message.as_string(),1)
-
-		if len(splitmsg)!=2:
-			self.debug("Mail could not be split in header and body part "
-						"(mailsize=%i)"%len(message.as_string()))
+		if header==None:
 			return None
-
-		header,body=splitmsg
-		header+="\n\n"
 
 		newmsg=MIMEMultipart()
 		m=email.message_from_string(header)
@@ -1731,7 +1723,7 @@ class gme:
 					if filecounter>0:
 						count="%i"%filecounter
 
-					f=localedb(self,self._LOCALE,"file")
+					f=localedb(self,"file")
 					filename=('%s%s.'%(f,count))+guess_fileextension(contenttype)
 					filecounter+=1
 
@@ -1773,7 +1765,7 @@ class gme:
 				newmsg.attach(m)
 
 		if attachments<1:
-			print("no attachment")
+			self.debug("no attachment")
 			return message
 
 		result,zipfile=Zip.create_zipfile(tempdir)
@@ -1797,14 +1789,13 @@ class gme:
 
 		try:
 			shutil.rmtree(tempdir)
-			pass
 		except:
 			self.log("Couldn't delete tempdir '%s'"%tempdir)
 			self.log_traceback()
 
 		if not self._pdfencryptheader in newmsg:
 			newmsg.add_header(self._pdfencryptheader,self._encryptgpgcomment)
-		print("newmsg return",newmsg)
+
 		return newmsg
 
 	################
@@ -3331,6 +3322,72 @@ class gme:
 		self._del_tempfile(fp.name)
 		return payload
 
+	###########
+	#_split_msg
+	###########
+
+	@_dbg
+	def _split_msg(self,message):
+		"""returns header and body separated, None in both cases if an error
+		occured"""
+
+		if isinstance(message,str):
+			raw_message=email.message_from_string(message)
+		else:
+			raw_message=message
+
+		splitmsg=re.split("\n\n",raw_message.as_string(),1)
+
+		if len(splitmsg)!=2:
+			splitmsg=re.split("\r\n\r\n",raw_message.as_string(),1)
+
+		if len(splitmsg)!=2:
+			self.debug("Mail could not be split in header and body part "
+						"(mailsize=%i)"%len(raw_message.as_string()))
+			return None,None
+
+		header,body=splitmsg
+		header+="\r\n\r\n"
+		return header,body
+
+	##############################
+	#_make_multipart_mixed_message
+	##############################
+
+	@_dbg
+	def _make_multipart_mixed_message(self, message):
+
+		if isinstance(message,str):
+			self.debug("message is string, converting ...")
+			message=email.message_from_string(message)
+
+		contenttype=message.get_content_type()
+		self.debug("CONTENTTYPE %s"%contenttype)
+
+		if contenttype=="multipart/mixed":
+			self.debug("message is already multipart/mixed")
+			return message
+
+		newmsg=MIMEMultipart()
+
+		for k in message.keys():
+
+			for p in message.get_all(k):
+
+				if k != "Content-Type":
+					newmsg.add_header(k,p)
+
+		self.debug("payload is instance str %s"%isinstance(message.get_payload(),str))
+		msgpl=message.get_payload()
+
+		if isinstance(msgpl,list):
+			for pl in msgpl:
+				newmsg.attach(pl)
+		else:
+			newmsg.attach(message.get_payload())
+
+		return newmsg
+
 	#######################
 	#encrypt_pgpinline_mail
 	#######################
@@ -3375,9 +3432,7 @@ class gme:
 		else:
 			self.debug("message is not instance list => walk")
 			msg=message.walk()
-			self.debug("encrypt_pgpinline vor get_content_type")
 			contenttype=message.get_content_type()
-			self.debug("encrypt_pgpinline nach get_content_type")
 			self.debug("CONTENTTYPE %s"%contenttype)
 
 			if isinstance( message.get_payload(),str ):
@@ -3386,7 +3441,8 @@ class gme:
 				pdfmsg=None
 
 				if use_container==False and include_contentpdf==True:
-					pdfmsg=self._create_contentpdf(message,filename=localedb(self,"content"))
+					pdfmsg=self._create_contentpdf(message,
+											filename=localedb(self,"content"))
 					self.debug("include contentpdf outside container")
 
 				if (charset==None
@@ -3428,12 +3484,23 @@ class gme:
 				return pl
 
 			if use_container==False and include_contentpdf==True:
-				pdfmsg=self._create_contentpdf(message,filename=localedb(self,"content"))
+				pdfmsg=self._create_contentpdf(message,
+											filename=localedb(self,"content"))
 				self.debug("include contentpdf outside container")
 
 				if pdfmsg!=None:
+
+					if message.get_content_type()=="multipart/alternative":
+						message=self._make_multipart_mixed_message(message)
+
 					message.attach(pdfmsg)
-					msg=message.walk()
+
+					if isinstance(message,list):
+						self.debug("message is instance list")
+						msg=message
+					else:
+						self.debug("message != list =>walk")
+						msg=message.walk()
 
 		for payload in msg:
 			content=payload.get_content_maintype()
@@ -3475,9 +3542,10 @@ class gme:
 				if (content in ("application","image","audio","video" )):
 					counter+=1
 
-				self.debug("for schleife next")
+				self.debug("for loop next")
 
-			self.debug("for schleife Ende")
+			self.debug("for loop end")
+
 
 		for a in attach_list:
 			message.attach(a)
@@ -3550,7 +3618,7 @@ class gme:
 		res= re.search("boundary=.*\n",raw_message.as_string(),re.IGNORECASE)
 
 		if res:
-			_b=message[res.start():res.end()]
+			_b=message.as_string()[res.start():res.end()]
 			res2=re.search("\".*\"", _b)
 
 			if res2:
@@ -3628,6 +3696,7 @@ class gme:
 			bdy=""
 			fname=""
 			params=[]
+
 			if contentboundary!=None:
 				bdy='boundary="%s"'%contentboundary
 				params.append(bdy)
