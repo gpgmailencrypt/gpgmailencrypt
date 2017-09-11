@@ -488,7 +488,7 @@ class _GPG(_gmechild):
 			res=open(f.name,mode="br")
 			self.debug("GPG.decrypt_file binary open")
 		else:
-			res=open(f.name)
+			res=open(f.name,errors=unicodeerror)
 			self.debug("GPG.decrypt_file text open")
 
 		encdata=res.read()
