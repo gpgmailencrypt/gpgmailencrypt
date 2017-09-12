@@ -298,7 +298,7 @@ def get_output_file_name(args, output_directory):
     if args.output_file:
         output_file_name = args.output_file
 
-        if os.path.isfile(output_file_name):
+        if os.path.isfile(output_file_name)and not args.overwrite:
             raise FatalException("Output file " + output_file_name + " already exists.")
 
     else:
