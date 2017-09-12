@@ -115,8 +115,14 @@ def main(argv, syslog_handler, syserr_handler):
     (payload, parts_already_used) = handle_message_body(args, input_email)
     logger.debug("Payload after handle_message_body: " + str(payload))
 
+    if args.no_remote_links:
+        
+        remote_links=False
+    else:
+        remote_links=True
+    	
     if args.body:
-        payload = remove_invalid_urls(payload)
+        payload = remove_invalid_urls(payload,use_externallinks=remote_links)
 
         if args.headers:
             header_info = get_formatted_header_info(input_email)
@@ -191,6 +197,9 @@ def handle_args(argv):
 
     parser.add_argument("--overwrite",action="store_true",
                         help="Overwrites the output file, if it already exists")
+
+    parser.add_argument("--no-remote-links",action="store_true",
+                        help="if set, content of remote websites will be displayed")
 
     body_attachment_options = parser.add_mutually_exclusive_group()
 
@@ -409,8 +418,12 @@ def handle_html_message_body(input_email, part):
 
 def output_body_pdf(input_email, payload, output_file_name):
     logger = logging.getLogger("email2pdf")
-    wkh2p_process = Popen([WKHTMLTOPDF_EXTERNAL_COMMAND, '-q', '--load-error-handling', 'ignore',
-                           '--load-media-error-handling', 'ignore', '--encoding', 'utf-8', '-',
+
+    wkh2p_process = Popen([WKHTMLTOPDF_EXTERNAL_COMMAND, 
+    						'-q', 
+    						'--load-error-handling', 'ignore',
+                           '--load-media-error-handling', 'ignore', 
+                           '--encoding', 'utf-8', '-',
                            output_file_name], stdin=PIPE, stdout=PIPE, stderr=PIPE)
     output, error = wkh2p_process.communicate(input=payload)
     assert output == b''
@@ -444,10 +457,9 @@ def output_body_pdf(input_email, payload, output_file_name):
     add_update_pdf_metadata(output_file_name, add_metadata_obj)
 
 
-def remove_invalid_urls(payload):
+def remove_invalid_urls(payload,use_externallinks=True):
     logger = logging.getLogger("email2pdf")
     soup = BeautifulSoup(payload, "html5lib")
-
     for img in soup.find_all('img'):
 
         if img.has_attr('src'):
@@ -467,8 +479,8 @@ def remove_invalid_urls(payload):
                 if not found_blacklist:
                     logger.debug("Getting img URL " + src)
 
-                    if not can_url_fetch(src):
-                        logger.warning("Could not retrieve img URL " + src + ", replacing with blank.")
+                    if not can_url_fetch(src,use_externallinks):
+                        logger.debug("Could not retrieve img URL " + src + ", replacing with blank.")
                         del img['src']
                 else:
                     logger.debug("Removing URL that was found in blacklist " + src)
@@ -479,7 +491,9 @@ def remove_invalid_urls(payload):
     return str(soup)
 
 
-def can_url_fetch(src):
+def can_url_fetch(src,use_externallinks):
+    if not use_externallinks:
+        return False
     try:
         request = requests.get(src, headers={'Connection': 'close'}, timeout=10)
         # See https://github.com/kennethreitz/requests/issues/1882#issuecomment-44596534

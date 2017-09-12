@@ -247,6 +247,8 @@ def print_exampleconfig():
 	"#file that includes users and passwords for permanent pdf passwords")
 	print ("encryptionkey=".ljust(space)+
 	"#the second password, with which all pdf files will be encrypted")
+	print ("includeimages=yes".ljust(space)+
+	"#if False  images from remote weblinks will not be embedded")
 
 	print ("")
 	print ("[encryptionmap]")

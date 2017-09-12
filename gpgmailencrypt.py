@@ -304,6 +304,7 @@ class gme:
 		self._PDFSECUREZIPCONTAINER=False
 		self._PDFPASSWORDLENGTH=10
 		self._PDFPASSWORDLIFETIME=48*60*60
+		self._PDFINCLUDEIMAGES=True
 		self._7ZIPCMD=""
 		self._USE7ZARCHIVE=False
 		self._ZIPCIPHER="ZipCrypto"
@@ -741,6 +742,11 @@ class gme:
 
 			try:
 				self._PDFPASSWORDLIFETIME=_cfg.getint('pdf','passwordlifetime')
+			except:
+				pass
+
+			try:
+				self._PDFINCLUDEIMAGES=_cfg.getboolean('pdf','includeimages')
 			except:
 				pass
 
@@ -1666,13 +1672,10 @@ class gme:
 		if isinstance(message,str):
 			message=email.message_from_string(message)
 
-		if not message.is_multipart():
-			self.debug("no message with attachments")
-			return message
+		#if not message.is_multipart():
+		#	self.debug("no message with attachments")
+		#	return message
 
-		_f=open("ziponecontainerorig.eml","w")
-		_f.write(message.as_string())
-		_f.close()
 		header,body=self._split_msg(message)
 
 		if header==None:
@@ -1721,6 +1724,10 @@ class gme:
 
 		for m in message.get_payload():
 
+			if isinstance(m,str):
+				self.debug("payload is str")
+				continue
+
 			contenttype=m.get_content_type()
 
 			if (m.get_param('attachment',None,'Content-Disposition') is not None
@@ -1762,7 +1769,8 @@ class gme:
 
 				fp.close()
 				attachments+=1
-			elif (m.get_content_maintype()!="multipart" or m.get_content_type()=="multipart/alternative" ):
+			elif (m.get_content_maintype()!="multipart" 
+				or m.get_content_type()=="multipart/alternative" ):
 				#add all none-attachment payloads
 				newmsg.attach(m)
 				self.debug("payload Type %s"%type(m.get_payload()))

@@ -128,6 +128,10 @@ class _PDF(_gmechild):
 				"--overwrite",
 				"--no-attachments",
 				"--mostly-hide-warning"]
+
+		if not self.parent._PDFINCLUDEIMAGES:
+			cmd.insert(5,"--no-remote-links")
+
 		return cmd
  
 	#################
