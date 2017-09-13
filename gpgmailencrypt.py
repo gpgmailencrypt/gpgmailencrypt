@@ -1672,10 +1672,6 @@ class gme:
 		if isinstance(message,str):
 			message=email.message_from_string(message)
 
-		#if not message.is_multipart():
-		#	self.debug("no message with attachments")
-		#	return message
-
 		header,body=self._split_msg(message)
 
 		if header==None:
@@ -1722,73 +1718,75 @@ class gme:
 			if msg!=None:
 				attachments+=1
 
-		for m in message.get_payload():
+		if isinstance(message.get_payload(),str):
+			self.debug("message payload is str")
+			subtype="plain"
 
-			if isinstance(m,str):
-				self.debug("payload is str")
-				subtype="plain"
+			if message.get_content_maintype()=="text":
+				subtype=message.get_content_subtype()
 
-				if message.get_content_maintype()=="text":
-					subtype=message.get_content_subtype()
+			newt=MIMEText(message.get_payload(),_
+						subtype=subtype,_charset=message.get_charset())
 
-				newt=MIMEText(m,_subtype=subtype,_charset=message.get_charset())
+			try:
+				del newt["Content-Transfer-Encoding"]
+			except:
+				pass
 
-				try:
-					del newt["Content-Transfer-Encoding"]
-				except:
-					pass
+			newt["Content-Transfer-Encoding"]=message["Content-Transfer-Encoding"]
+			newmsg.attach(newt)
 
+		else:		
 
-				newt["Content-Transfer-Encoding"]=message["Content-Transfer-Encoding"]
-				newmsg.attach(newt)
-				continue
+			for m in message.get_payload():
 
-			contenttype=m.get_content_type()
+				
+				contenttype=m.get_content_type()
 
-			if (m.get_param('attachment',None,'Content-Disposition') is not None
-			or (m.get_param('inline',
-							 None,
-							'Content-Disposition' ) is not None 
-				and m.get_content_maintype() not in ("text") )):
+				if (m.get_param('attachment',None,'Content-Disposition') is not None
+				or (m.get_param('inline',
+								 None,
+								'Content-Disposition' ) is not None 
+					and m.get_content_maintype() not in ("text") )):
 
-				filename = m.get_filename()
+					filename = m.get_filename()
 
-				if filename==None:
-					count=""
+					if filename==None:
+						count=""
 
-					if filecounter>0:
-						count="%i"%filecounter
+						if filecounter>0:
+							count="%i"%filecounter
 
-					f=localedb(self,"file")
-					filename=('%s%s.'%(f,count))+guess_fileextension(contenttype)
-					filecounter+=1
+						f=localedb(self,"file")
+						filename=('%s%s.'%(f,count))+guess_fileextension(contenttype)
+						filecounter+=1
 
-				self.debug("Content-Type=%s"%contenttype)
-				payload=m.get_payload(decode=True)
-				self.debug("Open write: %s/%s"%(tempdir,filename))
-				newfilename=os.path.join(tempdir,filename)
-				f1,ext=os.path.splitext(newfilename)
-				fncount=0
+					self.debug("Content-Type=%s"%contenttype)
+					payload=m.get_payload(decode=True)
+					self.debug("Open write: %s/%s"%(tempdir,filename))
+					newfilename=os.path.join(tempdir,filename)
+					f1,ext=os.path.splitext(newfilename)
+					fncount=0
 
-				while os.path.exists(newfilename):
-					fncount+=1
-					newfilename=os.path.join(tempdir,f1+str(fncount)+ext)
+					while os.path.exists(newfilename):
+						fncount+=1
+						newfilename=os.path.join(tempdir,f1+str(fncount)+ext)
 
-				fp=open(newfilename,mode="wb")
+					fp=open(newfilename,mode="wb")
 
-				try:
-					fp.write(payload)
-				except:
-					self.log("File '%s' could not be written"%filename)
-					self.log_traceback()
+					try:
+						fp.write(payload)
+					except:
+						self.log("File '%s' could not be written"%filename)
+						self.log_traceback()
 
-				fp.close()
-				attachments+=1
-			elif (m.get_content_maintype()!="multipart" 
-				or m.get_content_type()=="multipart/alternative" ):
-				#add all none-attachment payloads
-				newmsg.attach(m)
-				self.debug("payload Type %s"%type(m.get_payload()))
+					fp.close()
+					attachments+=1
+				elif (m.get_content_maintype()!="multipart" 
+					or m.get_content_type()=="multipart/alternative" ):
+					#add all none-attachment payloads
+					newmsg.attach(m)
+					self.debug("payload Type %s"%type(m.get_payload()))
 
 		if attachments<1:
 			self.debug("no attachment")
