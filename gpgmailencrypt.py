@@ -1725,8 +1725,8 @@ class gme:
 			if message.get_content_maintype()=="text":
 				subtype=message.get_content_subtype()
 
-			newt=MIMEText(message.get_payload(),_
-						subtype=subtype,_charset=message.get_charset())
+			newt=MIMEText(message.get_payload(),
+				_subtype=subtype,_charset=message.get_charset())
 
 			try:
 				del newt["Content-Transfer-Encoding"]
