@@ -1726,6 +1726,7 @@ class gme:
 
 			if isinstance(m,str):
 				self.debug("payload is str")
+				newmsg.attach(m)
 				continue
 
 			contenttype=m.get_content_type()
