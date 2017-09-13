@@ -1726,7 +1726,21 @@ class gme:
 
 			if isinstance(m,str):
 				self.debug("payload is str")
-				newmsg.attach(m)
+				subtype="plain"
+
+				if message.get_content_maintype()=="text":
+					subtype=message.get_content_subtype()
+
+				newt=MIMEText(m,_subtype=subtype,_charset=message.get_charset())
+
+				try:
+					del newt["Content-Transfer-Encoding"]
+				except:
+					pass
+
+
+				newt["Content-Transfer-Encoding"]=message["Content-Transfer-Encoding"]
+				newmsg.attach(newt)
 				continue
 
 			contenttype=m.get_content_type()
