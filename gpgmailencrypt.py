@@ -1740,7 +1740,6 @@ class gme:
 
 			for m in message.get_payload():
 
-				
 				contenttype=m.get_content_type()
 
 				if (m.get_param('attachment',None,'Content-Disposition') is not None
