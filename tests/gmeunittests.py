@@ -801,9 +801,6 @@ class gmetests(unittest.TestCase):
 		self.assertIsNotNone(result)
 
 	def test_zip_attachments_one_container_noattachment(self):
-		f=open("./attachment.eml","r")
-		mail=f.read()
-		f.close()
 		result=self.gme.zip_attachments_one_container(
 											email_unencrypted,
 											"testaddress@gpgmailencry.pt",
@@ -812,15 +809,22 @@ class gmetests(unittest.TestCase):
 		self.assertEqual(result.as_string(),email_unencrypted)
 
 	def test_zip_attachments_one_container_noattachment_msg(self):
-		f=open("./attachment.eml","r")
-		mail=f.read()
-		f.close()
 		result=self.gme.zip_attachments_one_container(
 											email.message_from_string(email_unencrypted),
 											"testaddress@gpgmailencry.pt",
 											"testaddress@gpgmailencry.pt",
 											"testaddress@gpgmailencry.pt")
 		self.assertEqual(result.as_string(),email_unencrypted)
+
+	def test_zip_attachments_one_container_noattachment_withpdfcontent_msg(self):
+		result=self.gme.zip_attachments_one_container(
+											email.message_from_string(email_unencrypted),
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt",
+											"testaddress@gpgmailencry.pt",
+											include_contentpdf=True)
+		print(result)
+		self.assertTrue(".zip" in result.as_string())
 
 	def test_getcharset(self):
 		self.assertEqual(self.gme._find_charset(email_unencrypted),"utf-8")
