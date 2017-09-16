@@ -1697,19 +1697,6 @@ class gme:
 		else:
 			Zip=self.zip_factory()
 
-		try:
-			Zip.set_zipcipher(self._backend.encryptionmap(pdfuser)[1])
-		except:
-
-			try:
-				domain=maildomain(pdfuser)
-
-				if len(domain)>0:
-					Zip.set_zipcipher(self._backend.encryptionmap("*@%s"
-																%domain)[1])
-			except:
-				pass
-
 		filecounter=0
 
 		if include_contentpdf:
@@ -4572,10 +4559,12 @@ class gme:
 				msg['To'] = from_addr
 				msg['From'] = self._SYSTEMMAILFROM
 				self.log("bounce mail from %s to %s"%(from_addr,to_addr))
-				result=self._encrypt_single_mail(-1,msg,from_addr,to_addr,in_bounce_process=True)
-
+				result=self._encrypt_single_mail(-1,msg,
+												from_addr,
+												to_addr,
+												in_bounce_process=True)
 				self._remove_mail_from_queue(queue_id)
-				print("result bounce",result)
+
 				if result:
 					return True
 				else:
