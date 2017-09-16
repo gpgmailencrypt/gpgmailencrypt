@@ -99,6 +99,7 @@ class _PDF(_gmechild):
 			self.debug("return PDF unencrypted")
 			encdata=res.read()
 			res.close()
+			self.parent._del_tempfile(f.name)
 			return result,encdata
 
 		_res,encryptedfile=self._encrypt_pdffile(f.name,password,from_addr)
