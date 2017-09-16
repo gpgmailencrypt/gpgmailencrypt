@@ -1522,6 +1522,16 @@ class gpgtests(unittest.TestCase):
 											"testaddress@gpgmailencry.pt")
 		self.assertIsNotNone(result)
 
+	def test_encryptgpginline_withpdfcontent_msg(self):
+		result=self.gme.encrypt_pgpinline_mail(
+								email.message_from_string(email_unencrypted),
+								"testaddress@gpgmailencry.pt",
+								"testaddress@gpgmailencry.pt",
+								"testaddress@gpgmailencry.pt",
+								include_contentpdf=True)
+		print(result)
+		self.assertTrue(".pdf" in result.as_string())
+
 	def test_encryptgpgmime_wrongencoding(self):
 		result=self.gme.encrypt_pgp_mail(  email_wrongencoding,
 											True,
@@ -1818,6 +1828,7 @@ class pdftests(unittest.TestCase):
 		self.assertTrue(result)
 		res=filecmp.cmp(f.name,"./archives/unencrypted.pdf",shallow=False)
 		self.assertTrue(res)
+
 
 #############
 #ARCHIVETESTS
