@@ -1712,15 +1712,14 @@ class gme:
 			if message.get_content_maintype()=="text":
 				subtype=message.get_content_subtype()
 
-			newt=MIMEText(message.get_payload(),
-				_subtype=subtype,_charset=message.get_charset())
+			charset=message.get_charset()
 
-			try:
-				del newt["Content-Transfer-Encoding"]
-			except:
-				pass
+			if charset==None:
+				charset="UTF8"
 
-			newt["Content-Transfer-Encoding"]=message["Content-Transfer-Encoding"]
+			newt=MIMEText(message.get_payload(decode=True).decode(charset,
+															unicodeerror),
+						_subtype=subtype,_charset=charset)
 			newmsg.attach(newt)
 
 		else:		
