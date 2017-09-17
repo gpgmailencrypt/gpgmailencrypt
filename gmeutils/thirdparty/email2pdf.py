@@ -127,7 +127,11 @@ def main(argv, syslog_handler, syserr_handler):
         if args.headers:
             header_info = get_formatted_header_info(input_email)
             logger.info("Header info is: " + header_info)
-            payload = header_info + payload
+
+            if payload!=None:
+            	payload = header_info + payload
+            else:
+            	payload=header_info
 
         logger.debug("Final payload before output_body_pdf: " + payload)
         output_body_pdf(input_email,
@@ -334,13 +338,7 @@ def handle_message_body(args, input_email):
         part = find_part_by_content_type(input_email, "text/plain")
 
         if part is None:
-
-            if not args.body:
-                logger.debug("No body parts found, but using --no-body; proceeding.")
-                return (None, cid_parts_used)
-            else:
-                raise FatalException("No body parts found; aborting.")
-
+            return (None, cid_parts_used)
         else:
             payload = handle_plain_message_body(part)
     else:
@@ -459,7 +457,11 @@ def output_body_pdf(input_email, payload, output_file_name):
 
 def remove_invalid_urls(payload,use_externallinks=True):
     logger = logging.getLogger("email2pdf")
-    soup = BeautifulSoup(payload, "html5lib")
+    try:
+        soup = BeautifulSoup(payload, "html5lib")
+    except:
+        return payload
+
     for img in soup.find_all('img'):
 
         if img.has_attr('src'):
