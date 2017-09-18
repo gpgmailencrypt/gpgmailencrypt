@@ -3359,6 +3359,59 @@ class gme:
 		header+="\r\n\r\n"
 		return header,body
 
+	##########################################
+	#_change_stringpayload_to_multipartpayload
+	##########################################
+
+	@_dbg
+	def _change_stringpayload_to_multipartpayload(self,message):
+
+		if not isinstance(message.get_payload(),str):
+			return None
+
+		self.debug("message payload is str")
+		maintype=message.get_content_maintype()
+		subtype=message.get_content_subtype()
+		is_attachment=False
+		filename=message.get_filename()
+		
+		try:
+			cf=message["Content-Disposition"]
+
+			if "attachment" in cf.lower():
+				is_attachment=True
+		except:
+			pass
+
+		if maintype == 'text':
+			charset=message.get_charset()
+
+			if charset==None:
+				charset="UTF8"
+
+			self.debug("maintype==text")
+			msg = MIMEText(message.get_payload(decode=True).decode(charset,
+														unicodeerror),
+					_subtype=subtype,_charset=charset)
+		elif maintype == 'image':
+			self.debug("maintype==image")
+			msg = MIMEImage(message.get_payload(decode=True), _subtype=subtype)
+		elif maintype == 'audio':
+			self.debug("maintype==audio")
+			msg = MIMEAudio(message.get_payload(decode=True), _subtype=subtype)
+		else:
+			self.debug("maintype== other ('%s')"%maintype)
+			msg = MIMEBase(maintype, subtype)
+			msg.set_payload(message.get_payload(decode=True))
+
+		email.encoders.encode_base64(msg)
+
+		if is_attachment:
+			 msg.add_header('Content-Disposition', 'attachment', 
+			 				filename=filename)
+
+		return msg
+
 	##############################
 	#_make_multipart_mixed_message
 	##############################
@@ -3393,6 +3446,9 @@ class gme:
 
 			for pl in msgpl:
 				newmsg.attach(pl)
+		elif isinstance(msgpl,str):
+			pl=self._change_stringpayload_to_multipartpayload(message)
+			newmsg.attach(pl)
 		else:
 			newmsg.attach(message.get_payload())
 
@@ -3459,39 +3515,17 @@ class gme:
 				or charset.upper()=="ASCII"):
 					message.set_param("charset",charset)
 
-				strpl=message.get_payload(decode=True)
-				pl=self._encrypt_payload( message ,gpguser,from_addr=from_addr)
-
-				if contenttype=="text/calendar":
-					CAL=MIMEText(   pl.get_payload(decode=True),
-									_subtype="calendar",
-									_charset="UTF-8")
-					CAL.add_header( 'Content-Disposition',
-									'attachment',
-									filename=cal_fname)
-					CAL.set_param( 'name', cal_fname)
-					pl.set_payload(None)
-					pl.set_type("multipart/mixed")
-					pl.attach(CAL)
+				message=self._make_multipart_mixed_message(message)
 
 				if pdfmsg!=None:
-					origsubtype=pl.get_content_subtype()
-					pl.set_payload(None)
-					pl.set_type("multipart/mixed")
-					TXT=MIMEText(strpl,
-								_subtype=origsubtype,
-								_charset="UTF-8")
-					pl.attach(TXT)
-					pl.attach(pdfmsg)
-					return self.encrypt_pgpinline_mail( pl,
-							gpguser,
-							from_addr,
-							to_addr,
-							use_container=False,
-							include_contentpdf=False)
+					message.attach(pdfmsg)
 
-				self.debug("encrypt_pgpinline: type(get_payload())== str END")
-				return pl
+				return self.encrypt_pgpinline_mail( message,
+						gpguser,
+						from_addr,
+						to_addr,
+						use_container=False,
+						include_contentpdf=False)
 
 			if use_container==False and include_contentpdf==True:
 				pdfmsg=self._create_contentpdf(message,
