@@ -1699,79 +1699,63 @@ class gme:
 
 		filecounter=0
 
+		message=self._make_multipart_mixed_message(message)
+
 		if include_contentpdf:
 			msg=self._create_contentpdf(message,tempdir)
 
 			if msg!=None:
 				attachments+=1
+				
 
-		if isinstance(message.get_payload(),str):
-			self.debug("message payload is str")
-			subtype="plain"
+		for m in message.get_payload():
 
-			if message.get_content_maintype()=="text":
-				subtype=message.get_content_subtype()
+			contenttype=m.get_content_type()
 
-			charset=message.get_charset()
+			if (m.get_param('attachment',None,'Content-Disposition') is not None
+			or (m.get_param('inline',
+							 None,
+							'Content-Disposition' ) is not None 
+				and m.get_content_maintype() not in ("text") )):
 
-			if charset==None:
-				charset="UTF8"
+				filename = m.get_filename()
 
-			newt=MIMEText(message.get_payload(decode=True).decode(charset,
-															unicodeerror),
-						_subtype=subtype,_charset=charset)
-			newmsg.attach(newt)
+				if filename==None:
+					count=""
 
-		else:		
+					if filecounter>0:
+						count="%i"%filecounter
 
-			for m in message.get_payload():
+					f=localedb(self,"file")
+					filename=('%s%s.'%(f,count))+guess_fileextension(contenttype)
+					filecounter+=1
 
-				contenttype=m.get_content_type()
+				self.debug("Content-Type=%s"%contenttype)
+				payload=m.get_payload(decode=True)
+				self.debug("Open write: %s/%s"%(tempdir,filename))
+				newfilename=os.path.join(tempdir,filename)
+				f1,ext=os.path.splitext(newfilename)
+				fncount=0
 
-				if (m.get_param('attachment',None,'Content-Disposition') is not None
-				or (m.get_param('inline',
-								 None,
-								'Content-Disposition' ) is not None 
-					and m.get_content_maintype() not in ("text") )):
+				while os.path.exists(newfilename):
+					fncount+=1
+					newfilename=os.path.join(tempdir,f1+str(fncount)+ext)
 
-					filename = m.get_filename()
+				fp=open(newfilename,mode="wb")
 
-					if filename==None:
-						count=""
+				try:
+					fp.write(payload)
+				except:
+					self.log("File '%s' could not be written"%filename)
+					self.log_traceback()
 
-						if filecounter>0:
-							count="%i"%filecounter
-
-						f=localedb(self,"file")
-						filename=('%s%s.'%(f,count))+guess_fileextension(contenttype)
-						filecounter+=1
-
-					self.debug("Content-Type=%s"%contenttype)
-					payload=m.get_payload(decode=True)
-					self.debug("Open write: %s/%s"%(tempdir,filename))
-					newfilename=os.path.join(tempdir,filename)
-					f1,ext=os.path.splitext(newfilename)
-					fncount=0
-
-					while os.path.exists(newfilename):
-						fncount+=1
-						newfilename=os.path.join(tempdir,f1+str(fncount)+ext)
-
-					fp=open(newfilename,mode="wb")
-
-					try:
-						fp.write(payload)
-					except:
-						self.log("File '%s' could not be written"%filename)
-						self.log_traceback()
-
-					fp.close()
-					attachments+=1
-				elif (m.get_content_maintype()!="multipart" 
-					or m.get_content_type()=="multipart/alternative" ):
-					#add all none-attachment payloads
-					newmsg.attach(m)
-					self.debug("payload Type %s"%type(m.get_payload()))
+				fp.close()
+				attachments+=1
+			elif (m.get_content_maintype()!="multipart" 
+				or m.get_content_type()=="multipart/alternative" ):
+				#add all none-attachment payloads
+				newmsg.attach(m)
+				self.debug("payload Type %s"%type(m.get_payload()))
 
 		if attachments<1:
 			self.debug("no attachment")
