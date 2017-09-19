@@ -292,8 +292,8 @@ def get_input_email(input_data):
     for part in input_email.walk():
         defects.extend(part.defects)
 
-    if len(defects) > 0:
-        raise FatalException("Defects parsing email: " + pprint.pformat(defects))
+    #if len(defects) > 0:
+    #    raise FatalException("Defects parsing email: " + pprint.pformat(defects))
 
     return input_email
 
