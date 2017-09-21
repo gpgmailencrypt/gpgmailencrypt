@@ -1120,6 +1120,30 @@ class gme:
 
 		return recipient
 
+	#################
+	#try_repair_email
+	#################
+
+	@_dbg
+	def try_repair_email(self,message):
+
+		field="Content-Transfer-Encoding"
+
+		if not message[field]:
+			message[field]="8bit"
+
+		field="From"
+
+		if not message[field]:
+			message[field]=""
+
+		field="To"
+
+		if not message[field]:
+			message[field]=""
+		
+		return message
+	
 	######################
 	#_read_smtpcredentials
 	######################
@@ -1691,23 +1715,23 @@ class gme:
 
 		contenttype=message.get_content_type()
 		self.debug("Message CONTENTTYPE %s"%contenttype)
+		filecounter=0
 
 		if self._USE7ZARCHIVE:
 			Zip=self.a7z_factory()
 		else:
 			Zip=self.zip_factory()
 
-		filecounter=0
-
-		message=self._make_multipart_mixed_message(message)
-
 		if include_contentpdf:
 			msg=self._create_contentpdf(message,tempdir)
 
 			if msg!=None:
 				attachments+=1
+				message=self._make_multipart_mixed_message(message)
 				
-
+		if not message.is_multipart():
+			return message
+		
 		for m in message.get_payload():
 
 			contenttype=m.get_content_type()
@@ -3269,6 +3293,12 @@ class gme:
 
 				if isBinaryattachment:
 					payload.set_payload(str(base64.encodebytes(pl),"ascii"))
+
+					try:
+						del payload["Content-Transfer-Encoding"]
+					except:
+						pass
+
 					payload["Content-Transfer-Encoding"]="base64"
 				else:
 					payload.set_payload(pl)
@@ -4965,6 +4995,10 @@ class gme:
 					pdffile.close()
 					self._del_tempfile(fp.name)
 					payload.set_payload(str(base64.encodebytes(pl),"ascii"))
+
+					if "Content-Transfer-Encoding" in payload:
+						del payload["Content-Transfer-Encoding"]
+
 					payload["Content-Transfer-Encoding"]="base64"
 					result=True
 
@@ -5314,14 +5348,7 @@ class gme:
 		else:
 			raw_message=mailtext
 
-		field="From"
-		if not raw_message[field]:
-			raw_message[field]=""
-
-		field="To"
-		if not raw_message[field]:
-			raw_message[field]=""
-
+		raw_message=self.try_repair_email(raw_message)
 		from_addr = raw_message['From']
 
 		if self._SPAMCHECK and self._spam_checker==None:
@@ -5470,7 +5497,7 @@ class gme:
 	#######################################
 	#END definition of encryption functions
 	#######################################
-
+	
 	###########
 	#scriptmode
 	###########
@@ -5487,6 +5514,7 @@ class gme:
 				try:
 					f=open(self._INFILE,mode="rb")
 					m=email.message_from_binary_file(f)
+					m=self.try_repair_email(m)
 					raw=m.as_string()
 					f.close()
 				except:
