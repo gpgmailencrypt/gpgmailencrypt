@@ -3582,6 +3582,10 @@ class gme:
 											from_addr=from_addr,
 											counter=counter )
 
+				if not res:
+					self.debug("payload could not be encrypted")
+					return None
+
 				if (res and payload.get_content_type()=="text/calendar"
 				and payload.get_param(  'attachment',
 										None,
@@ -5343,8 +5347,9 @@ class gme:
 		score=0
 		has_virus=False
 		virusinfo=None
+
 		if isinstance(mailtext,str):
-			raw_message = email.message_from_string( mailtext )
+			raw_message = email.message_from_bytes( mailtext.encode("utf8") )
 		else:
 			raw_message=mailtext
 
