@@ -191,6 +191,9 @@ def print_exampleconfig():
 	print ("inlinezipcontainer = no".ljust(space)+
 	"#if True and encryption is pgpinline then all attachments will be put in"
 	" one zip (gpgencrypted) archive")
+	print ("inlinecontentpdf = no".ljust(space)+
+	"#if True and encryption is pgpinline then the e-mail will be added as"
+	" a pdf attachment")
 	print ("extractkey= no".ljust(space)+
 	"#automatically scan emails and extract pgp public keys to "
 	"'keyextractdir'")
