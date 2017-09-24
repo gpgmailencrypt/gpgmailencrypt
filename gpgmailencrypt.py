@@ -1127,10 +1127,11 @@ class gme:
 	@_dbg
 	def try_repair_email(self,message):
 
-		field="Content-Transfer-Encoding"
+		if not message.is_multipart():
+			field="Content-Transfer-Encoding"
 
-		if not message[field]:
-			message[field]="8bit"
+			if not message[field]:
+				message[field]="8bit"
 
 		field="From"
 
