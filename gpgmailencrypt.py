@@ -300,7 +300,7 @@ class gme:
 		self._SMTPD_FORCETLS=False
 		self._USEPDF=False
 		self._PDFPASSWORDMODE=self.pdf_sender
-		self._PDFPASSWORDSCRIPT="/home/horst/mailscript.sh"
+		self._PDFPASSWORDSCRIPT="~/mailscript.sh"
 		self._PDFSECUREZIPCONTAINER=False
 		self._PDFPASSWORDLENGTH=10
 		self._PDFPASSWORDLIFETIME=48*60*60
@@ -3453,13 +3453,23 @@ class gme:
 				if k != "Content-Type" and k!="MIME-Version":
 					newmsg.add_header(k,p)
 
-		self.debug("payload is instance str %s"%isinstance(message.get_payload(),str))
+		self.debug("payload is instance str %s"%isinstance(
+								message.get_payload(),str))
 		msgpl=message.get_payload()
 
-		if isinstance(msgpl,list):
+		if contenttype=="multipart/alternative":
+			alternative=MIMEMultipart(_subtype="alternative")
+
+			for pl in msgpl:
+				alternative.attach(pl)
+
+			newmsg.attach(alternative)
+
+		elif isinstance(msgpl,list):
 
 			for pl in msgpl:
 				newmsg.attach(pl)
+
 		elif isinstance(msgpl,str):
 			pl=self._change_stringpayload_to_multipartpayload(message)
 			newmsg.attach(pl)
@@ -5340,6 +5350,9 @@ class gme:
 		send_mails(myemailtext,['agentj@mib','agentk@mib'])
 		"""
 
+		if self._debug_keepmail(mailtext): #DEBUG
+			self._store_temporaryfile(mailtext)
+
 		if isinstance(recipients,str):
 			recipients=[recipients]
 
@@ -5367,9 +5380,6 @@ class gme:
 				self.log("NOSPAMCHECKER")
 
 		try:
-
-			if self._debug_keepmail(mailtext): #DEBUG
-				self._store_temporaryfile(mailtext)
 
 			if self._SMIMEAUTOMATICEXTRACTKEYS:
 				self.debug("_SMIMEAUTOMATICEXTRACTKEYS")
