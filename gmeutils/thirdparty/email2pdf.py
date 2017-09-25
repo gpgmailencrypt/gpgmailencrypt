@@ -44,7 +44,7 @@ HEADER_MAPPING = {'Author': 'From',
                   'Title': 'Subject',
                   'X-email2pdf-To': 'To'}
 
-FORMATTED_HEADERS_TO_INCLUDE = frozenset(['Subject', 'From', 'To', 'Date'])
+FORMATTED_HEADERS_TO_INCLUDE = [ 'From', 'To', 'Date','Subject']
 
 MIME_TYPES_BLACKLIST = frozenset(['text/html', 'text/plain'])
 
@@ -120,6 +120,9 @@ def main(argv, syslog_handler, syserr_handler):
         remote_links=False
     else:
         remote_links=True
+
+    defaultheader="""<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+"""
     	
     if args.body:
         payload = remove_invalid_urls(payload,use_externallinks=remote_links)
@@ -129,9 +132,9 @@ def main(argv, syslog_handler, syserr_handler):
             logger.info("Header info is: " + header_info)
 
             if payload!=None:
-            	payload = header_info + payload
+                payload = defaultheader+header_info + payload
             else:
-            	payload=header_info
+                payload=defaultheader+header_info
 
         logger.debug("Final payload before output_body_pdf: " + payload)
         output_body_pdf(input_email,
@@ -329,9 +332,7 @@ def get_modified_output_file_name(output_file_name, append):
 
 def handle_message_body(args, input_email):
     logger = logging.getLogger("email2pdf")
-
     cid_parts_used = set()
-
     part = find_part_by_content_type(input_email, "text/html")
 
     if part is None:
@@ -345,7 +346,6 @@ def handle_message_body(args, input_email):
         (payload, cid_parts_used) = handle_html_message_body(input_email, part)
 
     return (payload, cid_parts_used)
-
 
 def handle_plain_message_body(part):
     logger = logging.getLogger("email2pdf")
@@ -372,7 +372,6 @@ def handle_plain_message_body(part):
 
     return payload
 
-
 def handle_html_message_body(input_email, part):
     logger = logging.getLogger("email2pdf")
     cid_parts_used = set()
@@ -387,7 +386,12 @@ def handle_html_message_body(input_email, part):
     if not is_text:
     	payload = html.escape(part.get_payload())
     else:
-    	payload=part.get_payload(decode=True)
+
+       if part['Content-Transfer-Encoding'] == '8bit':
+            payload=part.get_payload(decode=False)
+            payload=payload.encode("UTF8")
+       else:
+            payload=part.get_payload(decode=True)
 
     def cid_replace(cid_parts_used, matchobj):
         cid = matchobj.group(1)
@@ -416,7 +420,6 @@ def handle_html_message_body(input_email, part):
 
 def output_body_pdf(input_email, payload, output_file_name):
     logger = logging.getLogger("email2pdf")
-
     wkh2p_process = Popen([WKHTMLTOPDF_EXTERNAL_COMMAND, 
     						'-q', 
     						'--load-error-handling', 'ignore',
@@ -437,12 +440,12 @@ def output_body_pdf(input_email, payload, output_file_name):
     stripped_error = stripped_error.rstrip()
 
     if wkh2p_process.returncode > 0 and original_error == '':
-        raise FatalException("wkhtmltopdf failed with exit code " + str(wkh2p_process.returncode) + ", no error output.")
+        logger.debug("wkhtmltopdf failed with exit code " + str(wkh2p_process.returncode) + ", no error output.")
     elif wkh2p_process.returncode > 0 and stripped_error != '':
-        raise FatalException("wkhtmltopdf failed with exit code " + str(wkh2p_process.returncode) + ", stripped error: " +
+        logger.debug("wkhtmltopdf failed with exit code " + str(wkh2p_process.returncode) + ", stripped error: " +
                              str(stripped_error, 'utf-8'))
     elif stripped_error != '':
-        raise FatalException("wkhtmltopdf exited with rc = 0 but produced unknown stripped error output " + stripped_error)
+        logger.debug("wkhtmltopdf exited with rc = 0 but produced unknown stripped error output " + stripped_error)
 
     add_metadata_obj = {}
 
