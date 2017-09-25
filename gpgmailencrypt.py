@@ -1127,6 +1127,12 @@ class gme:
 	@_dbg
 	def try_repair_email(self,message):
 
+		if isinstance(message,str):
+			message = email.message_from_bytes( message.encode("utf8") )
+
+		if message["Content-Type"]==None:
+			message["Content-Type"]="text/plain; charset=\"UTF-8\""
+
 		if not message.is_multipart():
 			field="Content-Transfer-Encoding"
 
