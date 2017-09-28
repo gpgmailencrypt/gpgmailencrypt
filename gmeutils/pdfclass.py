@@ -82,7 +82,7 @@ class _PDF(_gmechild):
 		_result=0
 
 		try:
-			email2pdf.main(self._createpdfcommand_fromfile(f.name),None,None)
+			email2pdf.main(self._createpdfcommand_fromfile(f.name),None,None,self.parent)
 		except:
 			_result=1
 			self.log_traceback()
