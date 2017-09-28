@@ -1688,6 +1688,124 @@ class gme:
 			self.debug("result==False")
 			return None
 
+	#_handle_mail
+	@_dbg
+	def _handle_mail(self,message,newmsg,tempdir):
+		attachments=0
+
+		for m in message.get_payload():
+				attachments+=self._handle_part(m,newmsg,tempdir)
+
+		return attachments
+
+	#_handle_part
+	@_dbg
+	def _handle_part(self,part,newmsg,tempdir):
+		contenttype=part.get_content_type()
+		self.debug("_handle_partContenttype=%s"%contenttype)
+		attachments=0
+
+		if (part.get_param('attachment',None,'Content-Disposition') is not None
+		or (part.get_param('inline',
+						 None,
+						'Content-Disposition' ) is not None
+			and part.get_content_maintype() not in ("text",) )):
+
+			filename = part.get_filename()
+			filecounter=0
+
+			if filename==None:
+				count=""
+
+				if filecounter>0:
+					count="%i"%filecounter
+
+				f=localedb(self,"file")
+				filename=('%s%s.'%(f,count))+guess_fileextension(contenttype)
+				filecounter+=1
+
+			self.debug("Content-Type=%s"%contenttype)
+			payload=part.get_payload(decode=True)
+			self.debug("Open write: %s/%s"%(tempdir,filename))
+			newfilename=os.path.join(tempdir,filename)
+			f1,ext=os.path.splitext(newfilename)
+			fncount=0
+
+			while os.path.exists(newfilename):
+				fncount+=1
+				newfilename=os.path.join(tempdir,f1+str(fncount)+ext)
+
+			fp=open(newfilename,mode="wb")
+
+			try:
+				fp.write(payload)
+			except:
+				self.log("File '%s' could not be written"%filename)
+				self.log_traceback()
+
+			fp.close()
+			attachments+=1
+		elif (part.get_content_maintype()!="multipart"):
+			#add all none-attachment payloads
+			self.debug("contenttype not multipart (%s)"%type(part.get_payload()))
+			newmsg.attach(part)
+		elif part.get_content_type()=="multipart/alternative":
+			self.debug("contenttype multipart alternative ")
+
+			alternative=MIMEMultipart(_subtype="alternative")
+
+			for pl in part.get_payload():
+
+				ct=pl.get_content_type()
+				self.debug("ct %s"%ct)
+
+				if pl.get_param( 'inline',
+									None,
+									'Content-Disposition' ) is not None:
+					self.debug("handle inline payload 1")
+					attachments+=self._handle_mail(pl,newmsg,tempdir)
+				elif ct=="multipart/related":
+					self.debug("handle multipartrelated payload")
+
+					for pl2 in pl.walk():
+						self.debug("multipart/relaed payload")
+						self.debug("is string %s"% isinstance(pl2,str))
+
+						if not isinstance(pl2,str):
+
+							if pl2.get_content_type()=="multipart/related":
+								self.debug("multipart/related continue")
+								continue
+
+						if (not isinstance(pl2,str)) and pl2.get_param( 'inline',
+											None,
+											'Content-Disposition' ) is not None:
+							self.debug("handle inline")
+							attachments+=self._handle_part(pl2,newmsg,tempdir)
+						else:
+							self.debug("add non inline attachment ")
+							alternative.attach(pl2)
+
+				else:
+					self.debug("attach alternative payload")
+					alternative.attach(pl)
+
+			newmsg.attach(alternative)
+
+		elif part.get_content_type()=="multipart/mixed":
+			self.debug("multipart/mixed")
+			attachments+=self._handle_mail(part,newmsg,tempdir)
+
+		elif part.get_content_type()=="multipart/related":
+			self.debug("multipart/related2")
+			attachments+=self._handle_mail(part,newmsg,tempdir)
+
+		else:
+			self.debug("ignore payload")
+
+		return attachments
+
+
 	###############################
 	# zip_attachments_one_container
 	###############################
@@ -1737,62 +1855,17 @@ class gme:
 				message=self._make_multipart_mixed_message(message)
 				
 		if not message.is_multipart():
+			self.debug("message is not multipart return")
 			return message
 		
-		for m in message.get_payload():
-
-			contenttype=m.get_content_type()
-
-			if (m.get_param('attachment',None,'Content-Disposition') is not None
-			or (m.get_param('inline',
-							 None,
-							'Content-Disposition' ) is not None 
-				and m.get_content_maintype() not in ("text") )):
-
-				filename = m.get_filename()
-
-				if filename==None:
-					count=""
-
-					if filecounter>0:
-						count="%i"%filecounter
-
-					f=localedb(self,"file")
-					filename=('%s%s.'%(f,count))+guess_fileextension(contenttype)
-					filecounter+=1
-
-				self.debug("Content-Type=%s"%contenttype)
-				payload=m.get_payload(decode=True)
-				self.debug("Open write: %s/%s"%(tempdir,filename))
-				newfilename=os.path.join(tempdir,filename)
-				f1,ext=os.path.splitext(newfilename)
-				fncount=0
-
-				while os.path.exists(newfilename):
-					fncount+=1
-					newfilename=os.path.join(tempdir,f1+str(fncount)+ext)
-
-				fp=open(newfilename,mode="wb")
-
-				try:
-					fp.write(payload)
-				except:
-					self.log("File '%s' could not be written"%filename)
-					self.log_traceback()
-
-				fp.close()
-				attachments+=1
-			elif (m.get_content_maintype()!="multipart" 
-				or m.get_content_type()=="multipart/alternative" ):
-				#add all none-attachment payloads
-				newmsg.attach(m)
-				self.debug("payload Type %s"%type(m.get_payload()))
+		attachments+=self._handle_mail(message,newmsg,tempdir)
 
 		if attachments<1:
 			self.debug("no attachment")
 			return message
 
 		result,zipfile=Zip.create_zipfile(tempdir)
+		self.debug("create_zipfile result=%s"%str(result))
 
 		if result==True:
 
@@ -1820,6 +1893,7 @@ class gme:
 		if not self._pdfencryptheader in newmsg:
 			newmsg.add_header(self._pdfencryptheader,self._encryptgpgcomment)
 
+		#save_txtfile("~/01.eml",newmsg.as_string())
 		return newmsg
 
 	################
@@ -3405,14 +3479,23 @@ class gme:
 			pass
 
 		if maintype == 'text':
-			charset=message.get_charset()
+			charset=message.get_param("charset")
 
 			if charset==None:
+				self.debug("charset==None")
 				charset="UTF8"
 
+			self.debug("charset %s"%charset)
 			self.debug("maintype==text")
-			msg = MIMEText(message.get_payload(decode=True).decode(charset,
-														unicodeerror),
+
+			if message['Content-Transfer-Encoding'] == '8bit':
+				content=message.get_payload(decode=False).encode("UTF8")
+
+			else:
+				content=message.get_payload(decode=True).decode(charset,
+														unicodeerror)
+
+			msg = MIMEText(content,
 					_subtype=subtype,_charset=charset)
 		elif maintype == 'image':
 			self.debug("maintype==image")
@@ -3425,10 +3508,10 @@ class gme:
 			msg = MIMEBase(maintype, subtype)
 			msg.set_payload(message.get_payload(decode=True))
 
-		email.encoders.encode_base64(msg)
-
 		if is_attachment:
-			 msg.add_header('Content-Disposition', 'attachment', 
+
+			 if 'Content-Disposition' not in msg:
+				msg.add_header('Content-Disposition', 'attachment',
 			 				filename=filename)
 
 		return msg
@@ -3585,12 +3668,15 @@ class gme:
 									None,
 									'Content-Disposition' )
 			is None):
+				self.debug("inline change header to attachment")
 				payload.add_header('Content-Disposition', 'attachment;"')
 
 			if payload.get_content_maintype() == 'multipart':
+				self.debug("multipart continue")
 				continue
 
 			if  isinstance( payload.get_payload() , list ):
+				self.debug("list continue")
 				continue
 			else:
 				self.debug("in schleife for _encrypt payload %s" %type(payload))
