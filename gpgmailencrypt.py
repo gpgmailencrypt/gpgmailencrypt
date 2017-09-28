@@ -3510,9 +3510,9 @@ class gme:
 
 		if is_attachment:
 
-			 if 'Content-Disposition' not in msg:
-				msg.add_header('Content-Disposition', 'attachment',
-			 				filename=filename)
+				if 'Content-Disposition' not in msg:
+					msg.add_header('Content-Disposition', 'attachment',
+					filename=filename)
 
 		return msg
 
