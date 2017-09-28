@@ -26,6 +26,7 @@ import base64
 import configparser
 import datetime
 import email
+import email.encoders
 import email.message
 import email.mime
 import email.utils
@@ -1150,7 +1151,58 @@ class gme:
 			message[field]=""
 		
 		return message
-	
+
+	###################
+	#try_repack_payload
+	###################
+
+	@_dbg
+	def try_repack_payload(self,message):
+		for payload in message.walk():
+
+			if payload.is_multipart():
+				continue
+
+			is_text=payload.get_content_maintype()=="text"
+
+			if not is_text:
+				continue
+
+			cte=payload["Content-Transfer-Encoding"]
+			charset=payload.get_param("charset",header="Content-Type")
+
+			if not cte:
+				cte="8bit"
+
+			if charset!=None:
+				try:
+					"test".encode(charset)
+				except:
+					charset="UTF-8"
+
+			if charset==None or charset.upper()=="ASCII" or len(charset)==0:
+				charset="UTF-8"
+
+			raw_payload=decodetxt(payload.get_payload(),cte,charset)
+			payload.del_param("charset")
+			payload.set_param("charset",charset)
+			_encoder=None
+
+			if cte=="8bit" or cte=="7bit":
+				_encoder=email.encoders.encode_7or8bit
+			elif cte=="base64":
+				_encoder=email.encoders.encode_base64
+			elif cte=="quoted-printable":
+				_encoder=email.encoders.encode_quopri
+			else:
+				raise Exception("Could not find decoder for %s"% cte,"")
+
+			raw_payload=raw_payload.replace("\r\n","\n").replace("\n","\r\n")
+			payload.set_payload(raw_payload)
+			_encoder(payload)
+
+		return message
+
 	######################
 	#_read_smtpcredentials
 	######################
@@ -5623,12 +5675,22 @@ class gme:
 					f=open(self._INFILE,mode="rb")
 					m=email.message_from_binary_file(f)
 					m=self.try_repair_email(m)
-					raw=m.as_string()
 					f.close()
 				except:
 					self.log("Could not open Inputfile '%s'"%self._INFILE,"e")
 					self.log_traceback()
 					exit(2)
+				try:
+					raw=m.as_string()
+				except:
+					self.log("charset problem within payloads, try to repair","w")
+					m=self.try_repack_payload(m)
+					try:
+						raw=m.as_string()
+					except:
+						self.log("Could not use input file, give up","e")
+						self.log_traceback()
+						exit(2)
 
 			else:
 				sys.stdin = TextIOWrapper(sys.stdin.buffer,
