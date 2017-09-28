@@ -367,19 +367,19 @@ def handle_plain_message_body(part,parent):
         logger.info("Email is pre-decoded because Content-Transfer-Encoding is 8bit")
     else:
         is_text=part.get_content_maintype()=="text"
-        cte=part["Content-Transfer-Encoding"]
         payload = part.get_payload(decode=False)
-        charset = part.get_content_charset()
+    cte=part["Content-Transfer-Encoding"]
+    charset = part.get_content_charset()
 
-        if not charset:
-            charset = 'utf-8'
-            logger.info("Determined email is plain text, defaulting to charset utf-8")
-        else:
-            logger.info("Determined email is plain text with charset " + str(charset))
+    if not charset:
+        charset = 'utf-8'
+        logger.info("Determined email is plain text, defaulting to charset utf-8")
+    else:
+        logger.info("Determined email is plain text with charset " + str(charset))
 
-        payload=decodetxt(payload,cte,charset)
-        payload = "<html><head><meta charset=\""+charset+ \
-        "\"/></head><body><pre>\n" + payload + "\n</pre></body></html>"
+    payload=decodetxt(payload,cte,charset)
+    payload = "<html><head><meta charset=\""+charset+ \
+    "\"/></head><body><pre>\n" + payload + "\n</pre></body></html>"
 
     return payload
 
