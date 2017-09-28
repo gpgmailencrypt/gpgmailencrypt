@@ -852,15 +852,25 @@ _LOCALEDB={
 		"file":"Datei",
 		"content":"Inhalt",
 		"attachment":"Anhang",
+		"attachments":"Anhänge",
 		"passwordfor":"Passwort für",
 		"bouncemail":"Email konnte nicht versandt werden",
+		"from":"Von",
+		"to":"An",
+		"subject":"Betreff",
+		"date":"Datum",
 		},
 "EN":{	"appointment":"appointment",
 		"file":"file",
 		"content":"content",
 		"attachment":"attachment",
+		"attachments":"attachments",
 		"passwordfor":"Password for",
 		"bouncemail":"E-mail could not be sent",
+		"from":"From",
+		"to":"To",
+		"subject":"Subject",
+		"date":"Date",
 		},
 "ES":{	"appointment":"cita",
 		"file":"fichero",
@@ -954,3 +964,21 @@ def localedb(parent,value):
 
 	return value
 
+#############
+#save_txtfile
+#############
+
+def save_txtfile(filename, content):
+
+	fncount=0
+	newfilename=os.path.expanduser(filename)
+	f1,ext=os.path.splitext(newfilename)
+
+	while os.path.exists(newfilename):
+		fncount+=1
+		newfilename=f1+str(fncount)+ext
+
+	with open(os.path.expanduser(filename),"w") as f:
+		f.write(content)
+
+	

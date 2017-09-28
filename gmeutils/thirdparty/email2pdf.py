@@ -61,7 +61,7 @@ WKHTMLTOPDF_ERRORS_IGNORE = frozenset(
 WKHTMLTOPDF_EXTERNAL_COMMAND = 'wkhtmltopdf'
 
 
-def main(argv, syslog_handler, syserr_handler):
+def main(argv, syslog_handler, syserr_handler,parent):
     logger = logging.getLogger('email2pdf')
     warning_count_filter = WarningCountFilter()
     logger.addFilter(warning_count_filter)
@@ -112,7 +112,7 @@ def main(argv, syslog_handler, syserr_handler):
     logger.debug("Email input data is: " + input_data)
 
     input_email = get_input_email(input_data)
-    (payload, parts_already_used) = handle_message_body(args, input_email)
+    (payload, parts_already_used) = handle_message_body(args, input_email,parent)
     logger.debug("Payload after handle_message_body: " + str(payload))
 
     if args.no_remote_links:
@@ -128,7 +128,7 @@ def main(argv, syslog_handler, syserr_handler):
         payload = remove_invalid_urls(payload,use_externallinks=remote_links)
 
         if args.headers:
-            header_info = get_formatted_header_info(input_email)
+            header_info = get_formatted_header_info(input_email,parent)
             logger.info("Header info is: " + header_info)
 
             if payload!=None:
@@ -330,7 +330,7 @@ def get_modified_output_file_name(output_file_name, append):
     return partial_name
 
 
-def handle_message_body(args, input_email):
+def handle_message_body(args, input_email,parent):
     logger = logging.getLogger("email2pdf")
     cid_parts_used = set()
     part = find_part_by_content_type(input_email, "text/html")
@@ -341,13 +341,24 @@ def handle_message_body(args, input_email):
         if part is None:
             return (None, cid_parts_used)
         else:
-            payload = handle_plain_message_body(part)
+            payload = handle_plain_message_body(part,parent)
     else:
-        (payload, cid_parts_used) = handle_html_message_body(input_email, part)
+        (payload, cid_parts_used) = handle_html_message_body(input_email, part,parent)
 
-    return (payload, cid_parts_used)
+    attachmentnames=get_all_attachmentnames(input_email,[],parent)  
+    attachment=""
+    if len(attachmentnames)>0:
+    	aname="attachment"
+    	if len(attachmentnames)>1:
+    		aname="attachments"
+    	
+    	attachment="<br><br><b><u>%s:</u></b><br><ul>"%localedb(parent,aname)
+    	for a in attachmentnames:
+    		attachment+="<li>%s</li>"%a
+    	attachment+="</ul>"  
+    return (payload+attachment, cid_parts_used)
 
-def handle_plain_message_body(part):
+def handle_plain_message_body(part,parent):
     logger = logging.getLogger("email2pdf")
 
     if part['Content-Transfer-Encoding'] == '8bit':
@@ -372,7 +383,7 @@ def handle_plain_message_body(part):
 
     return payload
 
-def handle_html_message_body(input_email, part):
+def handle_html_message_body(input_email, part,parent):
     logger = logging.getLogger("email2pdf")
     cid_parts_used = set()
     is_text=part.get_content_maintype()=="text"
@@ -509,6 +520,31 @@ def can_url_fetch(src,use_externallinks):
     except:
         return False
 
+def get_all_attachmentnames(input_email, parts_to_ignore,parent):
+    attachments=[]
+    parts = find_all_attachments(input_email, parts_to_ignore)
+    counter=0
+    
+    for part in parts:
+        filename = extract_part_filename(part)
+
+        if not filename:
+
+            if not filename:
+                filename = localedb(parent,"file")
+                if counter>0:
+                    filename+=str(counter)
+                counter+=1
+
+            extension = get_type_extension(part.get_content_type())
+
+            if extension:
+                filename = filename + extension
+
+        attachments.append(filename)
+        attachments.sort()
+
+    return attachments
 
 def handle_attachments(input_email, output_directory, add_prefix_date, ignore_floating_attachments, parts_to_ignore):
     logger = logging.getLogger("email2pdf")
@@ -698,14 +734,14 @@ def filter_filenamed_parts(parts):
     return new_parts
 
 
-def get_formatted_header_info(input_email):
+def get_formatted_header_info(input_email,parent):
     header_info = ""
 
     for header in FORMATTED_HEADERS_TO_INCLUDE:
 
         if input_email[header]:
             decoded_string = get_utf8_header(input_email[header])
-            header_info = header_info + '<b>' + header + '</b>: ' + decoded_string + '<br/>'
+            header_info = header_info + '<b>' + localedb(parent,header.lower()) + '</b>: ' + decoded_string + '<br/>'
 
     return header_info + '<br/>'
 
