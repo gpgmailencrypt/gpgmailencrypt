@@ -1150,6 +1150,14 @@ class gme:
 		if not message[field]:
 			message[field]=""
 		
+		for p in message.walk():
+
+			if p.is_multipart():
+				continue
+
+			if p.get_param("charset",header="Content-Type")==None:
+				p.set_param("charset","UTF8")
+
 		return message
 
 	###################
@@ -1286,6 +1294,17 @@ class gme:
 		"""logs as error message. When logging is disabled,
 		this will log to stderr"""
 		self.log(msg,infotype="e",lineno=lineno,filename=filename,force=True)
+
+	########
+	#warning
+	########
+
+	def warning(self,
+				msg,
+				lineno=0,
+				filename=""):
+		"""logs as warning message."""
+		self.log(msg,infotype="w",lineno=lineno,filename=filename,force=False)
 
 	############
 	#set_logging
