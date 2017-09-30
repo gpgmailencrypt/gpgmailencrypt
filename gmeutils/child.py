@@ -68,6 +68,17 @@ class _gmechild:
 		this will log to stderr"""
 		self.log(msg,infotype="e",lineno=lineno,filename=filename,force=True)
 
+	########
+	#warning
+	########
+
+	def warning(self,
+				msg,
+				lineno=0,
+				filename=""):
+		"""logs as warning message."""
+		self.log(msg,infotype="w",lineno=lineno,filename=filename,force=False)
+
 	######
 	#debug
 	######
