@@ -12,6 +12,7 @@ import argparse
 import email
 import functools
 import html
+import icalendar
 import io
 import locale
 import logging
@@ -289,15 +290,6 @@ def get_input_data(args):
 
 def get_input_email(input_data):
     input_email = email.message_from_string(input_data)
-
-    defects = input_email.defects
-
-    for part in input_email.walk():
-        defects.extend(part.defects)
-
-    #if len(defects) > 0:
-    #    raise FatalException("Defects parsing email: " + pprint.pformat(defects))
-
     return input_email
 
 
@@ -338,12 +330,24 @@ def handle_message_body(args, input_email,parent):
     if part is None:
         part = find_part_by_content_type(input_email, "text/plain")
 
-        if part is None:
-            return (None, cid_parts_used)
-        else:
+        if part is not None:
             payload = handle_plain_message_body(part,parent)
+        else:
+            payload=""
     else:
         (payload, cid_parts_used) = handle_html_message_body(input_email, part,parent)
+
+    appointments=""
+
+    for a in input_email.walk():
+
+        if a.is_multipart():
+            continue
+
+        if a.get_content_type()!="text/calendar":
+            continue
+
+        appointments+=handle_calendar_body(a,parent)
 
     attachmentnames=get_all_attachmentnames(input_email,[],parent)  
     attachment=""
@@ -356,7 +360,94 @@ def handle_message_body(args, input_email,parent):
     	for a in attachmentnames:
     		attachment+="<li>%s</li>"%a
     	attachment+="</ul>"  
-    return (payload+attachment, cid_parts_used)
+    return (payload+appointments+attachment, cid_parts_used)
+
+def handle_calendar_body(part,parent):
+    logger = logging.getLogger("email2pdf")
+    charset = part.get_content_charset()
+    if charset==None:
+       part.set_charset("utf8")
+
+    if part['Content-Transfer-Encoding'] == '8bit':
+        payload = part.get_payload(decode=False)
+        assert isinstance(payload, str)
+        logger.info("Email is pre-decoded because Content-Transfer-Encoding is 8bit")
+    else:
+        is_text=part.get_content_maintype()=="text"
+        payload = part.get_payload(decode=False)
+    cte=part["Content-Transfer-Encoding"]
+    charset = part.get_content_charset()
+
+    if not charset:
+        charset = 'utf-8'
+        logger.info("Determined email is plain text, defaulting to charset utf-8")
+    else:
+        logger.info("Determined email is plain text with charset " + str(charset))
+
+    payload=decodetxt(payload,cte,charset)
+    cal = icalendar.Calendar.from_ical(payload)
+    tbl=""
+
+    for event in cal.walk("VEVENT"):
+        organizer=""
+        description=""
+        summary=""
+        t_from=""
+        t_to=""
+        attendees=[]
+
+        try:
+            organizer=event.decoded("ORGANIZER").lower().replace("mailto:","")
+        except:
+            pass
+        try:
+            summary=event["Summary"]
+        except:
+            pass
+        try:
+            description=event["Description"]
+        except:
+            pass
+        try:
+            location=event["Location"]
+        except:
+            pass
+        try:
+            datetime="{%(date)s %(time)s}"%{"date":localedb(parent,"_date"),"time":localedb(parent,"_time")}
+            t_from=datetime.format(event["DTSTART"].from_ical(event["DTSTART"].to_ical().decode("utf8")))
+            t_to=datetime.format(event["DTEND"].from_ical(event["DTSTART"].to_ical().decode("utf8")))
+        except:
+            pass
+
+        try:
+            if isinstance(event.decoded("ATTENDEE"),str):
+                attendees.append(event.decoded("ATTENDEE").lower().replace("mailto:",""))
+            else:
+                for a in event.decoded("ATTENDEE"):
+                    attendees.append(a.to_ical().decode("utf8").lower().replace("mailto:",""))
+        except:
+            pass
+
+        row=("<tr><td style=\"vertical-align:top;background-color: #E6E6FA\">"
+        "%(desc)s:</td><td style=\"vertical-align:top;\">%(content)s</td></tr>")
+        rowsummary=row%{"desc":localedb(parent,"title"),"content":summary}
+        rowdescription=row%{"desc":localedb(parent,"description"),"content":description}
+        rowlocation=row%{"desc":localedb(parent,"location"),"content":location}
+        rowwhen=row%{"desc":localedb(parent,"when"),"content":"%s - %s</td></tr>"%(t_from,t_to)}
+        roworganizer=row%{"desc":localedb(parent,"organizer"),"content":organizer}
+        rowattendees=row%{"desc":localedb(parent,"attendees"),"content":"%s </td></tr>"%",<br>".join(attendees)}
+        rowone="<tr style=\"border: 1px solid blue;text-align: center; bgcolor:#E6E6FA;padding: 0px;margin: 0px\"><td colspan=2 bgcolor=\"#E6E6FA\" style=\"padding: 0px;margin: 0px\">%(appointment)s</td></tr>"%{"appointment":localedb(parent,"appointment")}
+        tbl+=("<table style=\"width:60%; border: 1px solid blue;"
+              "text-align: left;padding: 0px;\">"+
+                rowone+
+                rowsummary+
+                rowdescription+
+                rowlocation+
+                rowwhen+
+                roworganizer+
+                rowattendees+
+              "</table>")
+    return tbl
 
 def handle_plain_message_body(part,parent):
     logger = logging.getLogger("email2pdf")
