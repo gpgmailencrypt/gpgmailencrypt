@@ -11,6 +11,7 @@ from gmeutils.helpers import *
 import argparse
 import email
 import functools
+import datetime
 import html
 import icalendar
 import io
@@ -351,15 +352,20 @@ def handle_message_body(args, input_email,parent):
 
     attachmentnames=get_all_attachmentnames(input_email,[],parent)  
     attachment=""
+
     if len(attachmentnames)>0:
     	aname="attachment"
+
     	if len(attachmentnames)>1:
     		aname="attachments"
     	
     	attachment="<br><br><b><u>%s:</u></b><br><ul>"%localedb(parent,aname)
+
     	for a in attachmentnames:
     		attachment+="<li>%s</li>"%a
+
     	attachment+="</ul>"  
+
     return (payload+appointments+attachment, cid_parts_used)
 
 def handle_calendar_body(part,parent):
@@ -394,6 +400,8 @@ def handle_calendar_body(part,parent):
         summary=""
         t_from=""
         t_to=""
+        t_tzname=""
+        t_tzoffset="0"
         attendees=[]
 
         try:
@@ -413,11 +421,25 @@ def handle_calendar_body(part,parent):
         except:
             pass
         try:
-            datetime="{%(date)s %(time)s}"%{"date":localedb(parent,"_date"),"time":localedb(parent,"_time")}
-            t_from=datetime.format(event["DTSTART"].from_ical(event["DTSTART"].to_ical().decode("utf8")))
-            t_to=datetime.format(event["DTEND"].from_ical(event["DTSTART"].to_ical().decode("utf8")))
+            datetimefmt="{%(date)s %(time)s}"%{"date":localedb(parent,"_date"),"time":localedb(parent,"_time")}
+            t_from=datetimefmt.format(event["DTSTART"].from_ical(event["DTSTART"].to_ical().decode("utf8")))
+            t_to=datetimefmt.format(event["DTEND"].from_ical(event["DTSTART"].to_ical().decode("utf8")))
         except:
             pass
+
+        try:
+            t_tzname=event['DTSTART'].dt.tzinfo
+        except:
+            pass
+
+        try:
+            t_tzoffset=event['DTSTART'].dt.tzinfo.utcoffset(event['DTSTART'].dt)
+            if t_tzoffset>datetime.timedelta(seconds=0):
+                t_tzoffset="+%s"%t_tzoffset
+            else:
+                t_tzoffset=str(t_tzoffset)
+        except:
+            raise
 
         try:
             if isinstance(event.decoded("ATTENDEE"),str):
@@ -429,21 +451,23 @@ def handle_calendar_body(part,parent):
             pass
 
         row=("<tr><td style=\"vertical-align:top;background-color: #E6E6FA\">"
-        "%(desc)s:</td><td style=\"vertical-align:top;\">%(content)s</td></tr>")
+        "%(desc)s:</td><td style=\"vertical-align:top;\">%(content)s</td></tr>\n")
         rowsummary=row%{"desc":localedb(parent,"title"),"content":summary}
         rowdescription=row%{"desc":localedb(parent,"description"),"content":description}
         rowlocation=row%{"desc":localedb(parent,"location"),"content":location}
-        rowwhen=row%{"desc":localedb(parent,"when"),"content":"%s - %s</td></tr>"%(t_from,t_to)}
+        rowwhen=row%{"desc":localedb(parent,"when"),"content":"%s - %s"%(t_from,t_to)}
+        rowtimezone=row%{"desc":localedb(parent,"timezone"),"content":"%s (UTC %s)"%(t_tzname,t_tzoffset)}
         roworganizer=row%{"desc":localedb(parent,"organizer"),"content":organizer}
-        rowattendees=row%{"desc":localedb(parent,"attendees"),"content":"%s </td></tr>"%",<br>".join(attendees)}
-        rowone="<tr style=\"border: 1px solid blue;text-align: center; bgcolor:#E6E6FA;padding: 0px;margin: 0px\"><td colspan=2 bgcolor=\"#E6E6FA\" style=\"padding: 0px;margin: 0px\">%(appointment)s</td></tr>"%{"appointment":localedb(parent,"appointment")}
+        rowattendees=row%{"desc":localedb(parent,"attendees"),"content":"%s"%",<br>".join(attendees)}
+        rowone="<tr style=\"border: 1px solid blue;text-align: center; bgcolor:#E6E6FA;padding: 0px;margin: 0px\"><td colspan=2 bgcolor=\"#E6E6FA\" style=\"padding: 0px;margin: 0px\">%(appointment)s</td></tr>\n"%{"appointment":localedb(parent,"appointment")}
         tbl+=("<table style=\"width:60%; border: 1px solid blue;"
-              "text-align: left;padding: 0px;\">"+
+              "text-align: left;padding: 0px;\">\n"+
                 rowone+
                 rowsummary+
                 rowdescription+
                 rowlocation+
                 rowwhen+
+                rowtimezone+
                 roworganizer+
                 rowattendees+
               "</table>")
