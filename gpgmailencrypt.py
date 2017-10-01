@@ -1776,13 +1776,17 @@ class gme:
 		self.debug("_handle_partContenttype=%s"%contenttype)
 		attachments=0
 
-		if (part.get_param('attachment',None,'Content-Disposition') is not None
+		if ((part.get_param('attachment',None,'Content-Disposition') is not None
 		or (part.get_param('inline',
 						 None,
 						'Content-Disposition' ) is not None
-			and part.get_content_maintype() not in ("text",) )):
+			and part.get_content_maintype() not in ("text",)) )
+		or part.get_content_type()=="text/calendar") :
 
-			filename = part.get_filename()
+			if part.get_content_type()=="text/calendar":
+				filename="%s.ics"%localedb(self,"appointment")
+			else:
+				filename = part.get_filename()
 			filecounter=0
 
 			if filename==None:
