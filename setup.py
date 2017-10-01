@@ -141,6 +141,7 @@ setup(
 	install_requires=[	"pypdf2",
 						"beautifulsoup4",
 						"html5lib",
+						"icalendar",
 						"python-magic",
 						"requests",
 						"lxml",
