@@ -371,6 +371,7 @@ def handle_message_body(args, input_email,parent):
 def handle_calendar_body(part,parent):
     logger = logging.getLogger("email2pdf")
     charset = part.get_content_charset()
+
     if charset==None:
        part.set_charset("utf8")
 
@@ -423,7 +424,7 @@ def handle_calendar_body(part,parent):
         try:
             datetimefmt="{%(date)s %(time)s}"%{"date":localedb(parent,"_date"),"time":localedb(parent,"_time")}
             t_from=datetimefmt.format(event["DTSTART"].from_ical(event["DTSTART"].to_ical().decode("utf8")))
-            t_to=datetimefmt.format(event["DTEND"].from_ical(event["DTSTART"].to_ical().decode("utf8")))
+            t_to=datetimefmt.format(event["DTEND"].from_ical(event["DTEND"].to_ical().decode("utf8")))
         except:
             pass
 
@@ -439,7 +440,7 @@ def handle_calendar_body(part,parent):
             else:
                 t_tzoffset=str(t_tzoffset)
         except:
-            raise
+            pass
 
         try:
             if isinstance(event.decoded("ATTENDEE"),str):
@@ -456,11 +457,14 @@ def handle_calendar_body(part,parent):
         rowdescription=row%{"desc":localedb(parent,"description"),"content":description}
         rowlocation=row%{"desc":localedb(parent,"location"),"content":location}
         rowwhen=row%{"desc":localedb(parent,"when"),"content":"%s - %s"%(t_from,t_to)}
-        rowtimezone=row%{"desc":localedb(parent,"timezone"),"content":"%s (UTC %s)"%(t_tzname,t_tzoffset)}
+        if len(t_tzname)>0:
+            rowtimezone=row%{"desc":localedb(parent,"timezone"),"content":"%s (UTC %s)"%(t_tzname,t_tzoffset)}
+        else:
+            rowtimezone=""
         roworganizer=row%{"desc":localedb(parent,"organizer"),"content":organizer}
         rowattendees=row%{"desc":localedb(parent,"attendees"),"content":"%s"%",<br>".join(attendees)}
         rowone="<tr style=\"border: 1px solid blue;text-align: center; bgcolor:#E6E6FA;padding: 0px;margin: 0px\"><td colspan=2 bgcolor=\"#E6E6FA\" style=\"padding: 0px;margin: 0px\">%(appointment)s</td></tr>\n"%{"appointment":localedb(parent,"appointment")}
-        tbl+=("<table style=\"width:60%; border: 1px solid blue;"
+        tbl+=("<table style=\"width:60%; border: 1px solid black;"
               "text-align: left;padding: 0px;\">\n"+
                 rowone+
                 rowsummary+
@@ -646,7 +650,12 @@ def get_all_attachmentnames(input_email, parts_to_ignore,parent):
         if not filename:
 
             if not filename:
-                filename = localedb(parent,"file")
+
+                if part.get_content_type()=="text/calendar":
+                    filename=localedb(parent,"appointment")
+                else:
+                    filename = localedb(parent,"file")
+
                 if counter>0:
                     filename+=str(counter)
                 counter+=1
