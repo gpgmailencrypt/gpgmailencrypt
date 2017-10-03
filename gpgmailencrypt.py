@@ -3152,11 +3152,10 @@ class gme:
 		if isinstance(msg,email.message.Message):
 			msg=msg.as_string()
 
-		if self.is_pgpmimeencrypted(msg):
-			return False
+		cre = re.compile('^-----BEGIN PGP MESSAGE-----.*?'
+		'^-----END PGP MESSAGE-----', re.MULTILINE|re.DOTALL)
 
-		if ("\n-----BEGIN PGP MESSAGE-----" in msg
-			and "\n-----END PGP MESSAGE-----" in msg):
+		if cre.search(msg):
 			return True
 		else:
 			return False
@@ -3168,6 +3167,9 @@ class gme:
 	@_dbg
 	def is_pgpinlineencrypted(self,msg):
 		"returns whether or not the email is already PGPINLINE encrypted"
+
+		if self.is_pgpmimeencrypted(msg):
+			return False
 
 		if self._pgpinlineencrypted(msg):
 			return True
