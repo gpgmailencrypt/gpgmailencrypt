@@ -426,7 +426,6 @@ def handle_calendar_body(part,parent):
             datefmt="{%(date)s}"%{"date":localedb(parent,"_date"),}
             if len(event["DTSTART"].to_ical().decode("utf8"))<9:
                 s=event["DTSTART"]
-                s.dt=s.dt-datetime.timedelta(days=1)
                 t_from=datefmt.format(s.from_ical(s.to_ical().decode("utf8")))
             else:
                 t_from=datetimefmt.format(event["DTSTART"].from_ical(event["DTSTART"].to_ical().decode("utf8")))
