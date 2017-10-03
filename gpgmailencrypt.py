@@ -1158,6 +1158,19 @@ class gme:
 			if p.get_param("charset",header="Content-Type")==None:
 				p.set_param("charset","UTF8")
 
+		try:
+			message.as_string()
+		except:
+			self.log("charset problem within payloads, try to repair","w")
+			message=self.try_repack_payload(message)
+			try:
+				message.as_string()
+			except:
+				self.log("Could not use input file, give up","e")
+				self.log_traceback()
+				message=None
+
+
 		return message
 
 	###################
@@ -1765,7 +1778,9 @@ class gme:
 		attachments=0
 
 		for m in message.get_payload():
-				attachments+=self._handle_part(m,newmsg,tempdir)
+
+				if not isinstance(m,str):
+					attachments+=self._handle_part(m,newmsg,tempdir)
 
 		return attachments
 
@@ -5535,6 +5550,8 @@ class gme:
 			raw_message=mailtext
 
 		raw_message=self.try_repair_email(raw_message)
+			
+
 		from_addr = raw_message['From']
 
 		if self._SPAMCHECK and self._spam_checker==None:
@@ -5697,23 +5714,16 @@ class gme:
 				try:
 					f=open(self._INFILE,mode="rb")
 					m=email.message_from_binary_file(f)
-					m=self.try_repair_email(m)
 					f.close()
+					m=self.try_repair_email(m)
+					if m==None:
+						exit(2)
+					raw=m.as_string()
+					
 				except:
 					self.log("Could not open Inputfile '%s'"%self._INFILE,"e")
 					self.log_traceback()
 					exit(2)
-				try:
-					raw=m.as_string()
-				except:
-					self.log("charset problem within payloads, try to repair","w")
-					m=self.try_repack_payload(m)
-					try:
-						raw=m.as_string()
-					except:
-						self.log("Could not use input file, give up","e")
-						self.log_traceback()
-						exit(2)
 
 			else:
 				sys.stdin = TextIOWrapper(sys.stdin.buffer,
