@@ -1841,7 +1841,6 @@ class gme:
 			newmsg.attach(part)
 		elif part.get_content_type()=="multipart/alternative":
 			self.debug("contenttype multipart alternative ")
-
 			alternative=MIMEMultipart(_subtype="alternative")
 
 			for pl in part.get_payload():
@@ -1854,6 +1853,8 @@ class gme:
 									'Content-Disposition' ) is not None:
 					self.debug("handle inline payload 1")
 					attachments+=self._handle_mail(pl,newmsg,tempdir)
+				elif ct=="text/calendar":
+					attachments+=self._handle_part(pl,newmsg,tempdir)
 				elif ct=="multipart/related":
 					self.debug("handle multipartrelated payload")
 
