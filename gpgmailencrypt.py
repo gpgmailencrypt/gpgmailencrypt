@@ -3582,8 +3582,13 @@ class gme:
 				content=message.get_payload(decode=False).encode("UTF8")
 
 			else:
-				content=message.get_payload(decode=True).decode(charset,
-														unicodeerror)
+
+				is_text=message.get_content_maintype()=="text"
+				cte=message["Content-Transfer-Encoding"]
+				content = message.get_payload(decode=not is_text)
+
+				if is_text:
+					content=decodetxt(content,cte,charset)
 
 			msg = MIMEText(content,
 					_subtype=subtype,_charset=charset)
