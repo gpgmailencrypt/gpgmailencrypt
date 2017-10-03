@@ -423,8 +423,20 @@ def handle_calendar_body(part,parent):
             pass
         try:
             datetimefmt="{%(date)s %(time)s}"%{"date":localedb(parent,"_date"),"time":localedb(parent,"_time")}
-            t_from=datetimefmt.format(event["DTSTART"].from_ical(event["DTSTART"].to_ical().decode("utf8")))
-            t_to=datetimefmt.format(event["DTEND"].from_ical(event["DTEND"].to_ical().decode("utf8")))
+            datefmt="{%(date)s}"%{"date":localedb(parent,"_date"),}
+            if len(event["DTSTART"].to_ical().decode("utf8"))<9:
+                s=event["DTSTART"]
+                s.dt=s.dt-datetime.timedelta(days=1)
+                t_from=datefmt.format(s.from_ical(s.to_ical().decode("utf8")))
+            else:
+                t_from=datetimefmt.format(event["DTSTART"].from_ical(event["DTSTART"].to_ical().decode("utf8")))
+ 
+            if len(event["DTEND"].to_ical().decode("utf8"))<9:
+                s=event["DTEND"]
+                s.dt=s.dt-datetime.timedelta(days=1)
+                t_to=datefmt.format(s.from_ical(s.to_ical().decode("utf8")))
+            else:
+                t_to=datetimefmt.format(event["DTEND"].from_ical(event["DTEND"].to_ical().decode("utf8")))
         except:
             pass
 
@@ -457,14 +469,16 @@ def handle_calendar_body(part,parent):
         rowdescription=row%{"desc":localedb(parent,"description"),"content":description}
         rowlocation=row%{"desc":localedb(parent,"location"),"content":location}
         rowwhen=row%{"desc":localedb(parent,"when"),"content":"%s - %s"%(t_from,t_to)}
-        if len(t_tzname)>0:
+
+        if not isinstance(t_tzname,str):
             rowtimezone=row%{"desc":localedb(parent,"timezone"),"content":"%s (UTC %s)"%(t_tzname,t_tzoffset)}
         else:
             rowtimezone=""
+
         roworganizer=row%{"desc":localedb(parent,"organizer"),"content":organizer}
         rowattendees=row%{"desc":localedb(parent,"attendees"),"content":"%s"%",<br>".join(attendees)}
         rowone="<tr style=\"border: 1px solid blue;text-align: center; bgcolor:#E6E6FA;padding: 0px;margin: 0px\"><td colspan=2 bgcolor=\"#E6E6FA\" style=\"padding: 0px;margin: 0px\">%(appointment)s</td></tr>\n"%{"appointment":localedb(parent,"appointment")}
-        tbl+=("<table style=\"width:60%; border: 1px solid black;"
+        tbl+=("<br><table style=\"width:60%; border: 1px solid black;"
               "text-align: left;padding: 0px;\">\n"+
                 rowone+
                 rowsummary+
@@ -474,7 +488,7 @@ def handle_calendar_body(part,parent):
                 rowtimezone+
                 roworganizer+
                 rowattendees+
-              "</table>")
+              "</table>\n")
     return tbl
 
 def handle_plain_message_body(part,parent):
