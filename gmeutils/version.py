@@ -1,7 +1,7 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
-VERSION="3.4.0pre16"
-DATE="01.10.2017"
+VERSION="3.4.0pre17"
+DATE="04.10.2017"
 COPYRIGHTYEAR="2017"
 unicodeerror="replace"
 #340 pgpinline put attachments in zip container and add pdf content attachment
