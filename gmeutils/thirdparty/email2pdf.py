@@ -404,6 +404,7 @@ def handle_calendar_body(part,parent):
         t_tzname=""
         t_tzoffset="0"
         attendees=[]
+        location=""
 
         try:
             organizer=event.decoded("ORGANIZER").lower().replace("mailto:","")
