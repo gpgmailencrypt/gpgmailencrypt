@@ -602,6 +602,29 @@ def guess_fileextension(ct):
 	else:
 		return "bin"
 
+###############
+#decode_payload
+###############
+def decode_payload(part,parent):
+	charset = part.get_content_charset()
+	cte=part["Content-Transfer-Encoding"]
+	is_text=part.get_content_maintype()=="text"
+	payload=None
+
+	if charset==None:
+		part.set_charset("utf8")
+		charset = 'utf-8'
+
+	if part['Content-Transfer-Encoding'] == '8bit':
+		payload = part.get_payload(decode=False)
+	else:
+		payload = part.get_payload(decode=(not is_text))
+
+	if is_text:
+		payload=decodetxt(payload,cte,charset)
+
+	return payload
+
 ##########
 #decodetxt
 ##########
@@ -870,6 +893,12 @@ _LOCALEDB={
 		"attendees":"Teilnehmer",
 		"location":"Ort",
 		"timezone":"Zeitzone",
+		"caltype":"Typ",
+		"calcanceled":"abgesagt",
+		"calrequest":"Terminanfrage",
+		"calcounterproposal":"Gegenvorschlag",
+		"caldeclinecounterproposal":"Gegenvorschlag abgelehnt",
+		"calreply":"Antwort",
 		"_date":"0:%d.%m.%Y",
 		"_time":"%H:%M",
 		},
@@ -891,6 +920,12 @@ _LOCALEDB={
 		"attendees":"Attendees",
 		"location":"Location",
 		"timezone":"Timezone",
+		"caltype":"Type",
+		"calcanceled":"canceled",
+		"calrequest":"appointment request",
+		"calcounterproposal":"Counter proposal",
+		"caldeclinecounterproposal":"Counter proposal declined",
+		"calreply":"Reply",
 		"_date":"0:%d/%m/%Y",
 		"_time":"%H:%M",
 		},

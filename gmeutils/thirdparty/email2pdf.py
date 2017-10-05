@@ -394,6 +394,12 @@ def handle_calendar_body(part,parent):
     payload=decodetxt(payload,cte,charset)
     cal = icalendar.Calendar.from_ical(payload)
     tbl=""
+    method=""
+
+    try:
+        method=cal["method"]
+    except:
+        pass
 
     for event in cal.walk("VEVENT"):
         organizer=""
@@ -401,58 +407,101 @@ def handle_calendar_body(part,parent):
         summary=""
         t_from=""
         t_to=""
-        t_tzname=""
-        t_tzoffset="0"
+        t_tznamefrom=""
+        t_tzoffsetfrom="0"
+        t_tznameto=""
+        t_tzoffsetto="0"
         attendees=[]
         location=""
+        cancelled=""
+        recurrence=False
+
+        try:
+            t_tznamefrom=event['DTSTART'].dt.tzinfo
+        except:
+            pass
+
+        try:
+            t_tzoffsetfrom=event['DTSTART'].dt.tzinfo.utcoffset(event['DTSTART'].dt)
+            if t_tzoffsetfrom>datetime.timedelta(seconds=0):
+                t_tzoffsetfrom="+%s"%t_tzoffsetfrom
+            else:
+                t_tzoffsetfrom=str(t_tzoffsetfrom)
+        except:
+            pass
+
+        try:
+            t_tznameto=event['DTSTART'].dt.tzinfo
+        except:
+            pass
+
+        try:
+            t_tzoffsetto=event['DTEND'].dt.tzinfo.utcoffset(event['DTEND'].dt)
+
+            if t_tzoffsetto>datetime.timedelta(seconds=0):
+                t_tzoffsetto="+%s"%t_tzoffsetto
+            else:
+                t_tzoffsetto=str(t_tzoffsetto)
+
+        except:
+            pass
 
         try:
             organizer=event.decoded("ORGANIZER").lower().replace("mailto:","")
         except:
             pass
+
         try:
             summary=event["Summary"]
         except:
             pass
+
         try:
             description=event["Description"]
         except:
             pass
+
         try:
             location=event["Location"]
         except:
             pass
+
         try:
+            utcfrom=""
+            if len(t_tzoffsetfrom)>1:
+                utcfrom=" (UTC %s)"%t_tzoffsetfrom
+
             datetimefmt="{%(date)s %(time)s}"%{"date":localedb(parent,"_date"),"time":localedb(parent,"_time")}
-            datefmt="{%(date)s}"%{"date":localedb(parent,"_date"),}
+            datefmt="{%(date)s }"%{"date":localedb(parent,"_date"),}
+
             if len(event["DTSTART"].to_ical().decode("utf8"))<9:
                 s=event["DTSTART"]
                 t_from=datefmt.format(s.from_ical(s.to_ical().decode("utf8")))
             else:
                 t_from=datetimefmt.format(event["DTSTART"].from_ical(event["DTSTART"].to_ical().decode("utf8")))
  
+            t_from+="%s"%utcfrom
+            utcto=""
+
+            if len(t_tzoffsetto)>1:
+                utcto=" (UTC %s)"%t_tzoffsetto
+
             if len(event["DTEND"].to_ical().decode("utf8"))<9:
                 s=event["DTEND"]
                 s.dt=s.dt-datetime.timedelta(days=1)
                 t_to=datefmt.format(s.from_ical(s.to_ical().decode("utf8")))
             else:
                 t_to=datetimefmt.format(event["DTEND"].from_ical(event["DTEND"].to_ical().decode("utf8")))
+
+            t_to+="%s"%utcto
+        except:
+            parent.log_traceback()
+
+        try:
+            recurrence=(event["RRULE"]!=None)
         except:
             pass
 
-        try:
-            t_tzname=event['DTSTART'].dt.tzinfo
-        except:
-            pass
-
-        try:
-            t_tzoffset=event['DTSTART'].dt.tzinfo.utcoffset(event['DTSTART'].dt)
-            if t_tzoffset>datetime.timedelta(seconds=0):
-                t_tzoffset="+%s"%t_tzoffset
-            else:
-                t_tzoffset=str(t_tzoffset)
-        except:
-            pass
 
         try:
             if isinstance(event.decoded("ATTENDEE"),str):
@@ -470,18 +519,40 @@ def handle_calendar_body(part,parent):
         rowlocation=row%{"desc":localedb(parent,"location"),"content":location}
         rowwhen=row%{"desc":localedb(parent,"when"),"content":"%s - %s"%(t_from,t_to)}
 
-        if not isinstance(t_tzname,str):
-            rowtimezone=row%{"desc":localedb(parent,"timezone"),"content":"%s (UTC %s)"%(t_tzname,t_tzoffset)}
+        try:
+
+            if method.upper()=="CANCEL":
+                rowcalmethod=row%{"desc":localedb(parent,"caltype"),"content":localedb(parent,"calcanceled")}
+            elif method.upper()=="REQUEST":
+                rowcalmethod=row%{"desc":localedb(parent,"caltype"),"content":localedb(parent,"calrequest")}
+            elif method.upper()=="COUNTER":
+                rowcalmethod=row%{"desc":localedb(parent,"caltype"),"content":localedb(parent,"calcounterproposal")}
+            elif method.upper()=="REQUEST":
+                rowcalmethod=row%{"desc":localedb(parent,"caltype"),"content":localedb(parent,"caldeclinecounterproposal")}
+            elif method.upper()=="REPLY":
+                rowcalmethod=row%{"desc":localedb(parent,"caltype"),"content":localedb(parent,"calreply")}
+
+        except:
+                rowcalmethod=""
+
+        if not isinstance(t_tznamefrom,str):
+
+            if t_tznamefrom==t_tznameto:
+                rowtimezone=row%{"desc":localedb(parent,"timezone"),"content":"%s"%(t_tznamefrom,)}
+            else:
+                rowtimezone=row%{"desc":localedb(parent,"timezone"),"content":"%s/%s"%(t_tznamefrom,t_tznameto)}
+
         else:
             rowtimezone=""
 
         roworganizer=row%{"desc":localedb(parent,"organizer"),"content":organizer}
         rowattendees=row%{"desc":localedb(parent,"attendees"),"content":"%s"%",<br>".join(attendees)}
         rowone="<tr style=\"border: 1px solid blue;text-align: center; bgcolor:#E6E6FA;padding: 0px;margin: 0px\"><td colspan=2 bgcolor=\"#E6E6FA\" style=\"padding: 0px;margin: 0px\">%(appointment)s</td></tr>\n"%{"appointment":localedb(parent,"appointment")}
-        tbl+=("<br><table style=\"width:60%; border: 1px solid black;"
+        tbl+=("<br><table style=\"width:80%; border: 1px solid black;"
               "text-align: left;padding: 0px;\">\n"+
                 rowone+
                 rowsummary+
+                rowcalmethod+
                 rowdescription+
                 rowlocation+
                 rowwhen+
