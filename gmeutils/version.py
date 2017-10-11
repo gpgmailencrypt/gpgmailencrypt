@@ -1,9 +1,10 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
-VERSION="3.4.0"
-DATE="05.10.2017"
+VERSION="3.4.1dev"
+DATE="11.10.2017"
 COPYRIGHTYEAR="2017"
 unicodeerror="replace"
+#341 bugfix: doesn't add headers multiple times
 #340 pgpinline put attachments in zip container and add pdf content attachment
 #332
 #331 securitylevel=script and pdfpasswordmode=script, starting windows support 

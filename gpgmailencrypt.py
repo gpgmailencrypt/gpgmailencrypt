@@ -1918,8 +1918,14 @@ class gme:
 			return None
 
 		newmsg=MIMEMultipart()
+		keys=[]
 
 		for k in message.keys():
+
+			if k in keys:
+				continue
+			else:
+				keys.append(k)
 
 			for p in message.get_all(k):
 
