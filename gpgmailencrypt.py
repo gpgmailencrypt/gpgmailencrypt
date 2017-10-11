@@ -1918,19 +1918,7 @@ class gme:
 			return None
 
 		newmsg=MIMEMultipart()
-		keys=[]
-
-		for k in message.keys():
-
-			if k in keys:
-				continue
-			else:
-				keys.append(k)
-
-			for p in message.get_all(k):
-
-				if k != "Content-Type" and k!="MIME-Version":
-					newmsg.add_header(k,p)
+		self._copy_headers(message,newmsg)
 
 		attachments=0
 		tempdir = tempfile.mkdtemp()
@@ -3620,6 +3608,26 @@ class gme:
 
 		return msg
 
+	##############
+	#_copy_headers
+	##############
+
+	@_dbg
+	def _copy_headers(self, oldmessage,newmessage):
+		keys=[]
+
+		for k in oldmessage.keys():
+
+			if k in keys:
+				continue
+			else:
+				keys.append(k)
+
+			for p in oldmessage.get_all(k):
+
+				if k != "Content-Type" and k!="MIME-Version":
+					newmessage.add_header(k,p)
+
 	##############################
 	#_make_multipart_mixed_message
 	##############################
@@ -3639,14 +3647,7 @@ class gme:
 			return message
 
 		newmsg=MIMEMultipart()
-
-		for k in message.keys():
-
-			for p in message.get_all(k):
-
-				if k != "Content-Type" and k!="MIME-Version":
-					newmsg.add_header(k,p)
-
+		self._copy_headers(message,newmsg)
 		self.debug("payload is instance str %s"%isinstance(
 								message.get_payload(),str))
 		msgpl=message.get_payload()
