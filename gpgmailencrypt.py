@@ -1816,6 +1816,10 @@ class gme:
 
 			self.debug("Content-Type=%s"%contenttype)
 			payload=part.get_payload(decode=True)
+
+			if part.get_content_type()=="text/calendar":
+				payload=payload.replace(b"\r\n",b"\n").replace(b"\n",b"\r\n")
+
 			self.debug("Open write: %s/%s"%(tempdir,filename))
 			newfilename=os.path.join(tempdir,filename)
 			f1,ext=os.path.splitext(newfilename)
@@ -1912,17 +1916,10 @@ class gme:
 		if isinstance(message,str):
 			message=email.message_from_string(message)
 
-		header,body=self._split_msg(message)
-
-		if header==None:
-			return None
-
 		newmsg=MIMEMultipart()
 		self._copy_headers(message,newmsg)
-
 		attachments=0
 		tempdir = tempfile.mkdtemp()
-
 		contenttype=message.get_content_type()
 		self.debug("Message CONTENTTYPE %s"%contenttype)
 		filecounter=0
