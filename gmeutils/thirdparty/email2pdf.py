@@ -411,6 +411,12 @@ def handle_calendar_body(part,parent):
         t_tzoffsetfrom="0"
         t_tznameto=""
         t_tzoffsetto="0"
+        fromday=None
+        frommonth=None
+        fromyear=None
+        today=None
+        tomonth=None
+        toyear=None
         attendees=[]
         location=""
         cancelled=""
@@ -471,8 +477,16 @@ def handle_calendar_body(part,parent):
             if len(t_tzoffsetfrom)>1:
                 utcfrom=" (UTC %s)"%t_tzoffsetfrom
 
+            fromday=event["DTSTART"].dt.day
+            frommonth=event["DTSTART"].dt.month
+            fromyear=event["DTSTART"].dt.year
+            today=event["DTEND"].dt.day
+            tomonth=event["DTEND"].dt.month
+            toyear=event["DTEND"].dt.year
+
             datetimefmt="{%(date)s %(time)s}"%{"date":localedb(parent,"_date"),"time":localedb(parent,"_time")}
             datefmt="{%(date)s }"%{"date":localedb(parent,"_date"),}
+            timefmt="{0:%(time)s}"%{"time":localedb(parent,"_time"),}
 
             if len(event["DTSTART"].to_ical().decode("utf8"))<9:
                 s=event["DTSTART"]
@@ -480,18 +494,25 @@ def handle_calendar_body(part,parent):
             else:
                 t_from=datetimefmt.format(event["DTSTART"].from_ical(event["DTSTART"].to_ical().decode("utf8")))
  
-            t_from+="%s"%utcfrom
+            if not(fromday==today and frommonth==tomonth and fromyear==toyear):
+                t_from+="%s"%utcfrom
+
             utcto=""
 
             if len(t_tzoffsetto)>1:
                 utcto=" (UTC %s)"%t_tzoffsetto
+
 
             if len(event["DTEND"].to_ical().decode("utf8"))<9:
                 s=event["DTEND"]
                 s.dt=s.dt-datetime.timedelta(days=1)
                 t_to=datefmt.format(s.from_ical(s.to_ical().decode("utf8")))
             else:
-                t_to=datetimefmt.format(event["DTEND"].from_ical(event["DTEND"].to_ical().decode("utf8")))
+
+                if fromday==today and frommonth==tomonth and fromyear==toyear:
+                    t_to=timefmt.format(event["DTEND"].from_ical(event["DTEND"].to_ical().decode("utf8")))
+                else:
+                    t_to=datetimefmt.format(event["DTEND"].from_ical(event["DTEND"].to_ical().decode("utf8")))
 
             t_to+="%s"%utcto
         except:
@@ -518,6 +539,12 @@ def handle_calendar_body(part,parent):
         rowdescription=row%{"desc":localedb(parent,"description"),"content":description}
         rowlocation=row%{"desc":localedb(parent,"location"),"content":location}
         rowwhen=row%{"desc":localedb(parent,"when"),"content":"%s - %s"%(t_from,t_to)}
+        rowrecurrence=""
+        try:
+            recurrence=event["RRULE"]
+            rowrecurrence=row%{"desc":localedb(parent,"recurrence"),"content":"%s"%recurrence}
+        except:
+            pass
 
         try:
 
@@ -556,6 +583,7 @@ def handle_calendar_body(part,parent):
                 rowdescription+
                 rowlocation+
                 rowwhen+
+                rowrecurrence+
                 rowtimezone+
                 roworganizer+
                 rowattendees+
