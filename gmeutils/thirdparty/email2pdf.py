@@ -420,7 +420,6 @@ def handle_calendar_body(part,parent):
         attendees=[]
         location=""
         cancelled=""
-        recurrence=False
 
         try:
             t_tznamefrom=event['DTSTART'].dt.tzinfo
@@ -519,12 +518,6 @@ def handle_calendar_body(part,parent):
             parent.log_traceback()
 
         try:
-            recurrence=(event["RRULE"]!=None)
-        except:
-            pass
-
-
-        try:
             if isinstance(event.decoded("ATTENDEE"),str):
                 attendees.append(event.decoded("ATTENDEE").lower().replace("mailto:",""))
             else:
@@ -535,14 +528,41 @@ def handle_calendar_body(part,parent):
 
         row=("<tr><td style=\"vertical-align:top;background-color: #E6E6FA\">"
         "%(desc)s:</td><td style=\"vertical-align:top;\">%(content)s</td></tr>\n")
+        reprow=("<tr><td style=\"vertical-align:top;\">"
+        "%(desc)s:</td><td style=\"vertical-align:top;\">%(content)s</td></tr>\n")
+
         rowsummary=row%{"desc":localedb(parent,"title"),"content":summary}
         rowdescription=row%{"desc":localedb(parent,"description"),"content":description}
         rowlocation=row%{"desc":localedb(parent,"location"),"content":location}
         rowwhen=row%{"desc":localedb(parent,"when"),"content":"%s - %s"%(t_from,t_to)}
         rowrecurrence=""
+
         try:
             recurrence=event["RRULE"]
-            rowrecurrence=row%{"desc":localedb(parent,"recurrence"),"content":"%s"%recurrence}
+            freq=""
+            interval=""
+            byday=""
+            until=""
+
+            try:
+                r=[]
+
+                for a in recurrence["freq"]:
+                   r.append(localedb(parent,a.lower()))
+ 
+                freq=reprow%{"desc":localedb(parent,"frequency"),"content": ",".join(r)}
+            except:
+                pass
+
+            try:
+                until=reprow%{"desc":localedb(parent,"until"),"content":'{0:%d.%m.%Y %H:%M:%S}'.format(recurrence["until"][0])}
+            except:
+                pass
+
+            std=reprow%{"desc":localedb(parent,"Information"),"content":localedb(parent,"recurrencedefaultinfo")}
+
+            recurrence=freq+until+std 
+            rowrecurrence=row%{"desc":localedb(parent,"recurrence"),"content":"<table  border: 1px solid black; text-align: left;padding: 0px;>%s</table>"%recurrence}
         except:
             pass
 
