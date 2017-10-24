@@ -1772,7 +1772,10 @@ class gme:
 			self.debug("result==False")
 			return None
 
+	#############
 	#_handle_mail
+	#############
+
 	@_dbg
 	def _handle_mail(self,message,newmsg,tempdir):
 		attachments=0
@@ -1784,7 +1787,10 @@ class gme:
 
 		return attachments
 
+	#############
 	#_handle_part
+	#############
+
 	@_dbg
 	def _handle_part(self,part,newmsg,tempdir):
 		contenttype=part.get_content_type()
