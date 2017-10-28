@@ -938,7 +938,7 @@ _LOCALEDB={
 		"calcounterproposal":"Counter proposal",
 		"caldeclinecounterproposal":"Counter proposal declined",
 		"calreply":"Reply",
-		"calpublish":"published date",
+		"calpublish":"published event",
 		"recurrence":"Recurrence",
 		"frequency":"Frequency",
 		"until":"Until",
