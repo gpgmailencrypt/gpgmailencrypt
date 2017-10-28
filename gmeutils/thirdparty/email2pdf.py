@@ -354,17 +354,17 @@ def handle_message_body(args, input_email,parent):
     attachment=""
 
     if len(attachmentnames)>0:
-    	aname="attachment"
+        aname="attachment"
 
-    	if len(attachmentnames)>1:
-    		aname="attachments"
-    	
-    	attachment="<br><br><b><u>%s:</u></b><br><ul>"%localedb(parent,aname)
+        if len(attachmentnames)>1:
+            aname="attachments"
 
-    	for a in attachmentnames:
-    		attachment+="<li>%s</li>"%a
+        attachment="<div style=\"background-color: #FFFFFF\"><br><br><b><u>%s:</u></b><br><ul>"%localedb(parent,aname)
 
-    	attachment+="</ul>"  
+        for a in attachmentnames:
+            attachment+="<li>%s</li>"%a
+
+        attachment+="</ul></div>"
 
     return (payload+appointments+attachment, cid_parts_used)
 
@@ -527,15 +527,16 @@ def handle_calendar_body(part,parent):
             pass
 
         row=("<tr><td style=\"vertical-align:top;background-color: #E6E6FA\">"
-        "%(desc)s:</td><td style=\"vertical-align:top;\">%(content)s</td></tr>\n")
-        reprow=("<tr><td style=\"vertical-align:top;\">"
-        "%(desc)s:</td><td style=\"vertical-align:top;\">%(content)s</td></tr>\n")
+        "%(desc)s:</td><td style=\"vertical-align:top;background-color: #FFFFFF\">%(content)s</td></tr>\n")
+        reprow=("<tr><td style=\"vertical-align:top;background-color: #FFFFFF\">"
+        "%(desc)s:</td><td style=\"vertical-align:top;background-color: #FFFFFF\">%(content)s</td></tr>\n")
 
         rowsummary=row%{"desc":localedb(parent,"title"),"content":summary}
         rowdescription=row%{"desc":localedb(parent,"description"),"content":description}
         rowlocation=row%{"desc":localedb(parent,"location"),"content":location}
         rowwhen=row%{"desc":localedb(parent,"when"),"content":"%s - %s"%(t_from,t_to)}
         rowrecurrence=""
+        rowcalmethod=""
 
         try:
             recurrence=event["RRULE"]
@@ -578,9 +579,11 @@ def handle_calendar_body(part,parent):
                 rowcalmethod=row%{"desc":localedb(parent,"caltype"),"content":localedb(parent,"caldeclinecounterproposal")}
             elif method.upper()=="REPLY":
                 rowcalmethod=row%{"desc":localedb(parent,"caltype"),"content":localedb(parent,"calreply")}
+            elif method.upper()=="PUBLISH":
+                rowcalmethod=row%{"desc":localedb(parent,"caltype"),"content":localedb(parent,"calpublish")}
 
         except:
-                rowcalmethod=""
+                pass
 
         if not isinstance(t_tznamefrom,str):
 
@@ -595,7 +598,7 @@ def handle_calendar_body(part,parent):
         roworganizer=row%{"desc":localedb(parent,"organizer"),"content":organizer}
         rowattendees=row%{"desc":localedb(parent,"attendees"),"content":"%s"%",<br>".join(attendees)}
         rowone="<tr style=\"border: 1px solid blue;text-align: center; bgcolor:#E6E6FA;padding: 0px;margin: 0px\"><td colspan=2 bgcolor=\"#E6E6FA\" style=\"padding: 0px;margin: 0px\">%(appointment)s</td></tr>\n"%{"appointment":localedb(parent,"appointment")}
-        tbl+=("<br><table style=\"width:80%; border: 1px solid black;"
+        tbl+=("<div style=\"background-color: #FFFFFF\"><br><table style=\"width:80%; border: 1px solid black;background-color: #FFFFFF;"
               "text-align: left;padding: 0px;\">\n"+
                 rowone+
                 rowsummary+
@@ -607,7 +610,7 @@ def handle_calendar_body(part,parent):
                 rowtimezone+
                 roworganizer+
                 rowattendees+
-              "</table>\n")
+              "</table></div>\n")
     return tbl
 
 def handle_plain_message_body(part,parent):
