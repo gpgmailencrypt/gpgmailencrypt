@@ -977,7 +977,14 @@ def find_all_attachments(message, parts_to_ignore):
 
         if part not in parts_to_ignore and not part.is_multipart():
 
-            if part.get_content_type() not in MIME_TYPES_BLACKLIST:
+            isAttachment = part.get_param(   'attachment',
+                                            None,
+                                            'Content-Disposition' ) is not None
+            isInline=part.get_param( 'inline',
+                                    None,
+                                    'Content-Disposition' ) is not None
+
+            if isAttachment or (isInline and part.get_content_type() not in MIME_TYPES_BLACKLIST):
                 parts.add(part)
 
     return parts
