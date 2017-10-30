@@ -1862,14 +1862,19 @@ class gme:
 									None,
 									'Content-Disposition' ) is not None:
 					self.debug("handle inline payload 1")
-					attachments+=self._handle_mail(pl,newmsg,tempdir)
+
+					if pl.get_content_maintype()!="text":
+						attachments+=self._handle_mail(pl,newmsg,tempdir)
+					else:
+						alternative.attach(pl)
+
 				elif ct=="text/calendar":
 					attachments+=self._handle_part(pl,newmsg,tempdir)
 				elif ct=="multipart/related":
 					self.debug("handle multipartrelated payload")
 
 					for pl2 in pl.walk():
-						self.debug("multipart/relaed payload")
+						self.debug("multipart/related payload")
 						self.debug("is string %s"% isinstance(pl2,str))
 
 						if not isinstance(pl2,str):
