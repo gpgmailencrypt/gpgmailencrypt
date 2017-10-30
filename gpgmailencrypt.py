@@ -1898,16 +1898,8 @@ class gme:
 
 			newmsg.attach(alternative)
 
-		elif part.get_content_type()=="multipart/mixed":
-			self.debug("multipart/mixed")
-			attachments+=self._handle_mail(part,newmsg,tempdir)
-
-		elif part.get_content_type()=="multipart/related":
-			self.debug("multipart/related2")
-			attachments+=self._handle_mail(part,newmsg,tempdir)
-
 		elif part.get_content_maintype()=="multipart":
-			self.debug("other multipart parts")
+			self.debug("other multipart parts (%s)"%part.get_content_type())
 			attachments+=self._handle_mail(part,newmsg,tempdir)
 
 		else:
