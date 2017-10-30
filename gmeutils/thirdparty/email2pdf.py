@@ -531,12 +531,26 @@ def handle_calendar_body(part,parent):
         reprow=("<tr><td style=\"vertical-align:top;background-color: #FFFFFF\">"
         "%(desc)s:</td><td style=\"vertical-align:top;background-color: #FFFFFF\">%(content)s</td></tr>\n")
 
-        rowsummary=row%{"desc":localedb(parent,"title"),"content":summary}
-        rowdescription=row%{"desc":localedb(parent,"description"),"content":description}
-        rowlocation=row%{"desc":localedb(parent,"location"),"content":location}
-        rowwhen=row%{"desc":localedb(parent,"when"),"content":"%s - %s"%(t_from,t_to)}
+        rowsummary=""
+        rowdescription=""
+        rowlocation=""
+        rowwhen=""
         rowrecurrence=""
         rowcalmethod=""
+        roworganizer=""
+        rowattendees=""
+
+        if len(summary) >0:
+            rowsummary=row%{"desc":localedb(parent,"title"),"content":summary}
+
+        if len(description.strip()) >0:
+            rowdescription=row%{"desc":localedb(parent,"description"),"content":description}
+
+        if len(location) >0:
+            rowlocation=row%{"desc":localedb(parent,"location"),"content":location}
+
+        if len(t_from) >0:
+            rowwhen=row%{"desc":localedb(parent,"when"),"content":"%s - %s"%(t_from,t_to)}
 
         try:
             recurrence=event["RRULE"]
@@ -587,7 +601,9 @@ def handle_calendar_body(part,parent):
 
         if not isinstance(t_tznamefrom,str):
 
-            if t_tznamefrom==t_tznameto:
+            if t_tznamefrom==None:
+                rowtimezone=""
+            elif t_tznamefrom==t_tznameto:
                 rowtimezone=row%{"desc":localedb(parent,"timezone"),"content":"%s"%(t_tznamefrom,)}
             else:
                 rowtimezone=row%{"desc":localedb(parent,"timezone"),"content":"%s/%s"%(t_tznamefrom,t_tznameto)}
@@ -595,8 +611,12 @@ def handle_calendar_body(part,parent):
         else:
             rowtimezone=""
 
-        roworganizer=row%{"desc":localedb(parent,"organizer"),"content":organizer}
-        rowattendees=row%{"desc":localedb(parent,"attendees"),"content":"%s"%",<br>".join(attendees)}
+        if len(organizer)>0:
+            roworganizer=row%{"desc":localedb(parent,"organizer"),"content":organizer}
+        
+        if len(attendees)>0:
+            rowattendees=row%{"desc":localedb(parent,"attendees"),"content":"%s"%",<br>".join(attendees)}
+
         rowone="<tr style=\"border: 1px solid blue;text-align: center; bgcolor:#E6E6FA;padding: 0px;margin: 0px\"><td colspan=2 bgcolor=\"#E6E6FA\" style=\"padding: 0px;margin: 0px\">%(appointment)s</td></tr>\n"%{"appointment":localedb(parent,"appointment")}
         tbl+=("<div style=\"background-color: #FFFFFF\"><br><table style=\"width:80%; border: 1px solid black;background-color: #FFFFFF;"
               "text-align: left;padding: 0px;\">\n"+
