@@ -1906,6 +1906,10 @@ class gme:
 			self.debug("multipart/related2")
 			attachments+=self._handle_mail(part,newmsg,tempdir)
 
+		elif part.get_content_maintype()=="multipart":
+			self.debug("other multipart parts")
+			attachments+=self._handle_mail(part,newmsg,tempdir)
+
 		else:
 			self.debug("ignore payload")
 
