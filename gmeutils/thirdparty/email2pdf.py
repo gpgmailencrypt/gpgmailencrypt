@@ -366,7 +366,10 @@ def handle_message_body(args, input_email,parent):
 
         attachment+="</ul></div>"
 
-    return (payload+appointments+attachment, cid_parts_used)
+    mbody=payload+appointments+attachment
+    #save_txtfile("01.html",mbody)
+
+    return (mbody, cid_parts_used)
 
 def handle_calendar_body(part,parent):
     logger = logging.getLogger("email2pdf")
@@ -382,6 +385,7 @@ def handle_calendar_body(part,parent):
     else:
         is_text=part.get_content_maintype()=="text"
         payload = part.get_payload(decode=False)
+
     cte=part["Content-Transfer-Encoding"]
     charset = part.get_content_charset()
 
@@ -473,6 +477,7 @@ def handle_calendar_body(part,parent):
 
         try:
             utcfrom=""
+
             if len(t_tzoffsetfrom)>1:
                 utcfrom=" (UTC %s)"%t_tzoffsetfrom
 
@@ -501,7 +506,6 @@ def handle_calendar_body(part,parent):
             if len(t_tzoffsetto)>1:
                 utcto=" (UTC %s)"%t_tzoffsetto
 
-
             if len(event["DTEND"].to_ical().decode("utf8"))<9:
                 s=event["DTEND"]
                 s.dt=s.dt-datetime.timedelta(days=1)
@@ -521,8 +525,10 @@ def handle_calendar_body(part,parent):
             if isinstance(event.decoded("ATTENDEE"),str):
                 attendees.append(event.decoded("ATTENDEE").lower().replace("mailto:",""))
             else:
+
                 for a in event.decoded("ATTENDEE"):
                     attendees.append(a.to_ical().decode("utf8").lower().replace("mailto:",""))
+
         except:
             pass
 
@@ -643,6 +649,7 @@ def handle_plain_message_body(part,parent):
     else:
         is_text=part.get_content_maintype()=="text"
         payload = part.get_payload(decode=False)
+
     cte=part["Content-Transfer-Encoding"]
     charset = part.get_content_charset()
 
@@ -655,7 +662,6 @@ def handle_plain_message_body(part,parent):
     payload=decodetxt(payload,cte,charset)
     payload = "<html><head><meta charset=\""+charset+ \
     "\"/></head><body><pre>\n" + payload + "\n</pre></body></html>"
-
     return payload
 
 def handle_html_message_body(input_email, part,parent):
@@ -743,9 +749,9 @@ def output_body_pdf(input_email, payload, output_file_name):
     add_metadata_obj['Producer'] = 'email2pdf'
     add_update_pdf_metadata(output_file_name, add_metadata_obj)
 
-
 def remove_invalid_urls(payload,use_externallinks=True):
     logger = logging.getLogger("email2pdf")
+
     try:
         soup = BeautifulSoup(payload, "html5lib")
     except:
