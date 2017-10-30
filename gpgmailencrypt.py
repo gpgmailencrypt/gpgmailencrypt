@@ -3362,6 +3362,7 @@ class gme:
 		self.debug("_encrypt_payload: charset %s"%charset)
 
 		if charset!=None:
+
 			try:
 				"test".encode(charset)
 			except:
@@ -3374,17 +3375,22 @@ class gme:
 		gpg._set_counter(counter)
 		gpg.set_recipient(gpguser)
 		gpg.set_fromuser(from_addr)
-
 		raw_payload = payload.get_payload(decode=not is_text)
+		contenttype=payload.get_content_type()
+		self.debug("nach payload.get_content_typ")
+		self.debug("Content-Type:'%s'"%contenttype)
 
 		if is_text:
+
+			if contenttype=="text/html":
+
+				if "ascii" in charset.lower():
+					charset="UTF8"
+
 			raw_payload=decodetxt(raw_payload,cte,charset)
 			payload.del_param("charset")
 			payload.set_param("charset",charset)
 
-		contenttype=payload.get_content_type()
-		self.debug("nach payload.get_content_typ")
-		self.debug("Content-Type:'%s'"%contenttype)
 		fp=self._new_tempfile()
 		self.debug("_encrypt_payload _new_tempfile %s"%fp.name)
 		filename = payload.get_filename()
