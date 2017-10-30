@@ -227,7 +227,7 @@ class _htmldecode(html.parser.HTMLParser,_gmechild):
 			if self.in_keep>0:
 				self.data+=data
 			elif len(data.strip())>0:
-				self.data+=data.replace("\n","").replace("\r\n","")
+				self.data+=data.replace("\r\n"," ").replace("\n"," ")
 
 	def handle_charref(self, name):
 
