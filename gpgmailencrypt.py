@@ -1131,6 +1131,22 @@ class gme:
 		if isinstance(message,str):
 			message = email.message_from_bytes( message.encode("utf8") )
 
+		keys=[]
+
+		for k in message.keys():
+
+			if k in keys:
+				continue
+			else:
+				keys.append(k)
+
+			for p in message.get_all(k):
+
+				if isinstance(p,email.header.Header):
+					message.replace_header(k,p.__str__())
+					self.debug("repair header %s"%k)
+
+
 		if message["Content-Type"]==None:
 			message["Content-Type"]="text/plain; charset=\"UTF-8\""
 
@@ -3634,7 +3650,6 @@ class gme:
 				keys.append(k)
 
 			for p in oldmessage.get_all(k):
-
 				if k != "Content-Type" and k!="MIME-Version":
 					newmessage.add_header(k,p)
 
