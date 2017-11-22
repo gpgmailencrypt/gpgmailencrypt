@@ -687,6 +687,21 @@ def decodetxt( text,
 
 	return result.decode(charset,unicodeerror)
 
+##############
+#is_attachment
+##############
+
+def is_attachment(part):
+
+	if ((part.get_param('attachment',None,'Content-Disposition') is not None
+	or (part.get_param('inline',None,'Content-Disposition' ) is not None
+		and part.get_content_maintype() not in ("text",)) 
+	or part.get_content_type()=="text/calendar") 
+	or part.get_content_maintype() in ["image","application"]):
+		return True
+	else:
+ 		return False
+
 ################
 #encode_filename
 ################

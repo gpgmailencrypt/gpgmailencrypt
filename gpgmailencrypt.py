@@ -1623,10 +1623,8 @@ class gme:
 		for m in message.walk():
 			contenttype=m.get_content_type()
 
-			if (m.get_param('attachment',
-							None,
-							'Content-Disposition' ) is not None
-			) and self.is_compressable(contenttype,m.get_filename()):
+			if (is_attachment(m) ) and self.is_compressable(contenttype,
+															m.get_filename()):
 				is_text=m.get_content_maintype()=="text"
 				charset=m.get_param("charset",header="Content-Type")
 
@@ -1813,17 +1811,13 @@ class gme:
 		self.debug("_handle_partContenttype=%s"%contenttype)
 		attachments=0
 
-		if ((part.get_param('attachment',None,'Content-Disposition') is not None
-		or (part.get_param('inline',
-						 None,
-						'Content-Disposition' ) is not None
-			and part.get_content_maintype() not in ("text",)) )
-		or part.get_content_type()=="text/calendar") :
+		if is_attachment(part) :
 
 			if part.get_content_type()=="text/calendar":
 				filename="%s.ics"%localedb(self,"appointment")
 			else:
 				filename = part.get_filename()
+
 			filecounter=0
 
 			if filename==None:
@@ -1835,6 +1829,8 @@ class gme:
 				f=localedb(self,"file")
 				filename=('%s%s.'%(f,count))+guess_fileextension(contenttype)
 				filecounter+=1
+			else:
+				filename=decode_filename(filename)
 
 			self.debug("Content-Type=%s"%contenttype)
 			payload=part.get_payload(decode=True)
@@ -3406,6 +3402,10 @@ class gme:
 		fp=self._new_tempfile()
 		self.debug("_encrypt_payload _new_tempfile %s"%fp.name)
 		filename = payload.get_filename()
+
+		if filename:
+			filename=decode_filename(filename)
+
 		tencoding="7bit"
 
 		if contenttype=="text/html":
@@ -3582,6 +3582,9 @@ class gme:
 		subtype=message.get_content_subtype()
 		is_attachment=False
 		filename=message.get_filename()
+
+		if filename:
+			filename=decode_filename(filename)
 		
 		try:
 			cf=message["Content-Disposition"]

@@ -1003,9 +1003,7 @@ def find_all_attachments(message, parts_to_ignore):
 
         if part not in parts_to_ignore and not part.is_multipart():
 
-            isAttachment = part.get_param(   'attachment',
-                                            None,
-                                            'Content-Disposition' ) is not None
+            isAttachment = is_attachment(part)
             isInline=part.get_param( 'inline',
                                     None,
                                     'Content-Disposition' ) is not None
