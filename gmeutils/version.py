@@ -1,7 +1,7 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
-VERSION="3.4.1pre5"
-DATE="22.11.2017"
+VERSION="3.4.1"
+DATE="30.11.2017"
 COPYRIGHTYEAR="2017"
 unicodeerror="replace"
 #341 bugfix: doesn't add headers multiple times
