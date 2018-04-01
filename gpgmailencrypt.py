@@ -3972,7 +3972,7 @@ class gme:
 
 		if self._GPGMIME_ENCRYPTSUBJECT:
 			del newmsg["Subject"]
-			newmsg["Subject"]="Encrypted Subject"
+			newmsg["Subject"]=localedb(self,"encryptedsubject")
 
 		del newmsg["Content-Type"]
 		newmsg.set_type("multipart/encrypted")
