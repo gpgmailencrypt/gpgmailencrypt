@@ -326,6 +326,37 @@ class _GPG(_gmechild):
 							"directory '%s'?)"%self._keyhome,"e")
 			self.log_traceback()
 
+	########################
+	# get_armored_public_key
+	########################
+
+	@_dbg
+	def get_armored_public_key(self, user):
+		cmd = '%s --armor --export --homedir %s %s' % (
+					self.parent._GPGCMD,
+					self._keyhome.replace("%user",self._recipient),
+					user)
+		self.debug("_GPG.armored public key command: '%s'"%cmd)
+
+		try:
+			p = subprocess.Popen(   cmd.split(' '),
+									stdin=None,
+									stdout=subprocess.PIPE,
+									stderr=subprocess.PIPE )
+			p.wait()
+			key=[]
+
+			for line in p.stdout.readlines():
+				key.append(line.decode(self.parent._encoding,unicodeerror))
+		except:		
+			self.log("Error getting public key '%s'?)"%user,"e")
+			self.log_traceback()
+
+		if len(key)>0:
+			return ("").join(key)
+		else:
+			return None
+
 	#############
 	#encrypt_file
 	#############
