@@ -285,6 +285,7 @@ class gme:
 		self._SMTPD_SSL_CERTFILE=v["SMTPD_SSL_CERTFILE"]
 		self._GPGKEYEXTRACTDIR=os.path.join(self._GPGKEYHOME,"extract")
 		self._GPGAUTOMATICEXTRACTKEYS=False
+		self._GPGMIME_ENCRYPTSUBJECT=False
 		self._GPGINLINE_ZIPCONTAINER=False
 		self._GPGINLINE_CONTENTPDF=False
 		self._SMIMEKEYEXTRACTDIR=os.path.join(self._SMIMEKEYHOME,"extract")
@@ -567,6 +568,12 @@ class gme:
 				pass
 
 			try:
+				self._GPGMIME_ENCRYPTSUBJECT=_cfg.getboolean('gpg',
+															'encryptsubject')
+			except:
+				pass
+
+			try:
 				k=_cfg.get('gpg','keyextractdir')
 
 				if k!=None:
@@ -675,6 +682,7 @@ class gme:
 			try:
 				self._SMTPD_PORT=_cfg.getint('daemon','port')
 			except:
+				self.log_traceback()
 				pass
 
 			try:
@@ -3894,6 +3902,10 @@ class gme:
 		contenttransferencoding=None
 		contentdisposition=None
 		contentboundary=None
+		subject=None
+		msgid=None
+		msg_from=None
+		msg_to=None
 		c=newmsg.get("Content-Type")
 		f=newmsg.get_filename()
 		contentdisposition=newmsg.get("Content-Disposition")
@@ -3929,6 +3941,38 @@ class gme:
 		except:
 			self.log("contenttype and/or transerfencoding could not be found")
 			self.log_traceback()
+
+		try:
+			subject=newmsg["Subject"]
+			self.debug("Subject:'%s'"%str(subject))
+		except:
+			self.log("subject could not be found")
+			self.log_traceback()
+
+		try:
+			msgid=newmsg["Message-ID"]
+			self.debug("Message-ID:'%s'"%str(msgid))
+		except:
+			self.log("Message-ID could not be found")
+			self.log_traceback()
+
+		try:
+			msg_from=newmsg["From"]
+			self.debug("From:'%s'"%str(msg_from))
+		except:
+			self.log("From could not be found")
+			self.log_traceback()
+
+		try:
+			msg_to=newmsg["To"]
+			self.debug("To:'%s'"%str(msg_to))
+		except:
+			self.log("To could not be found")
+			self.log_traceback()
+
+		if self._GPGMIME_ENCRYPTSUBJECT:
+			del newmsg["Subject"]
+			newmsg["Subject"]="Encrypted Subject"
 
 		del newmsg["Content-Type"]
 		newmsg.set_type("multipart/encrypted")
@@ -3975,7 +4019,13 @@ class gme:
 		and len(contenttransferencoding)>0):
 			bodymsg["Content-Transfer-Encoding"]=contenttransferencoding
 
+		bodymsg["Subject"]=subject
 		rawpayload=raw_message.get_payload()
+		protectedheader=email.message.Message()
+		protectedheader["Content-Type"]="text/rfc822-headers; protected-headers=\"v1\""
+		protectedheader["Content-Disposition"]="inline"
+		pheader="""From: %s\r\nTo: %s\r\nSubject: %s\r\n""" %(newmsg["From"],newmsg["To"],subject)
+		protectedheader.set_payload(pheader)
 
 		if isinstance (rawpayload, str):
 			self.debug("Payload==String len=%i"%len(rawpayload))
@@ -3994,6 +4044,7 @@ class gme:
 			bdy=""
 			fname=""
 			params=[]
+			params.append("protected-headers=\"v1\"")
 
 			if contentboundary!=None:
 				bdy='boundary="%s"'%contentboundary
@@ -4027,9 +4078,36 @@ class gme:
 			if contentdisposition!=None:
 				msgheader+="Content-Disposition: %s\r\n"%contentdisposition
 
+			if subject!=None:
+				msgheader+="Subject: %s\r\n"%subject
+
+			if msg_from!=None:
+				msgheader+="From: %s\r\n"%msg_from
+
+			if msg_to!=None:
+				msgheader+="To: %s\r\n"%msg_to
+
+			if msgid!=None:
+				msgheader+="Message-ID: %s\r\n"%msgid
+
 			body=msgheader+"\r\n"+body
+
+			if self._GPGMIME_ENCRYPTSUBJECT:
+				m=self._make_multipart_mixed_message(body)
+				m.set_param("protected-headers","v1")
+				p=m.get_payload()
+				p.insert(0,protectedheader)
+
+				if 'MIME-Version' in m:
+					del m["MIME-Version"]
+
+				body=m.as_string()
+
 		else:
 			self.debug("Payload==Msg")
+
+			if self._GPGMIME_ENCRYPTSUBJECT:
+				bodymsg.attach(protectedheader)
 
 			for p in rawpayload:
 				bodymsg.attach(p)

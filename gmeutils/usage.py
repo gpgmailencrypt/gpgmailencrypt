@@ -188,6 +188,9 @@ def print_exampleconfig():
 	print ("gpgcommand = /usr/bin/gpg2")
 	print ("allowgpgcomment = yes".ljust(space)+
 	"#allow a comment string in the GPG file")
+	print ("encryptsubject = no".ljust(space)+
+	"#encrypt subject of the e-mail (PGPMIME only)"
+	"")
 	print ("inlinezipcontainer = no".ljust(space)+
 	"#if True and encryption is pgpinline then all attachments will be put in"
 	" one zip (gpgencrypted) archive")

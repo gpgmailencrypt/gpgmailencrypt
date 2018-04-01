@@ -1,9 +1,10 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
-VERSION="3.4.1"
-DATE="30.11.2017"
-COPYRIGHTYEAR="2017"
+VERSION="3.4.2dev"
+DATE="30.03.2018"
+COPYRIGHTYEAR="2018"
 unicodeerror="replace"
+#342 pgpmime: encrypt subject
 #341 bugfix: doesn't add headers multiple times
 #340 pgpinline put attachments in zip container and add pdf content attachment
 #332
