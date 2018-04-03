@@ -3970,7 +3970,7 @@ class gme:
 			self.log("To could not be found")
 			self.log_traceback()
 
-		if self._GPGMIME_ENCRYPTSUBJECT:
+		if self.pgpmime_do_encryptsubject(to_addr):
 			del newmsg["Subject"]
 			newmsg["Subject"]=localedb(self,"encryptedsubject")
 
@@ -4092,7 +4092,7 @@ class gme:
 
 			body=msgheader+"\r\n"+body
 
-			if self._GPGMIME_ENCRYPTSUBJECT:
+			if self.pgpmime_do_encryptsubject(to_addr):
 				m=self._make_multipart_mixed_message(body)
 				m.set_param("protected-headers","v1")
 				p=m.get_payload()
@@ -4106,7 +4106,7 @@ class gme:
 		else:
 			self.debug("Payload==Msg")
 
-			if self._GPGMIME_ENCRYPTSUBJECT:
+			if self.pgpmime_do_encryptsubject(to_addr):
 				bodymsg.attach(protectedheader)
 
 			for p in rawpayload:
@@ -5961,6 +5961,17 @@ class gme:
 			self.log_traceback()
 
 		alarm.stop()
+
+	@_dbg
+	def pgpmime_do_encryptsubject(self,user):
+		"returns True if the header fields like 'Subject' will be"
+		" also encrypted"
+		try:
+			do=self._backend.pgpmime_do_encryptsubject(user)
+		except:
+			return self._GPGMIME_ENCRYPTSUBJECT
+		
+		return do
 
 	############################
 	#pdf_additionalencryptionkey

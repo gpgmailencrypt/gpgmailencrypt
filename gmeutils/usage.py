@@ -404,6 +404,15 @@ def print_exampleconfig():
 	"#if True each mail will be encrypted not only for the receiver, but also")
 	print ("".ljust(space)+	
 			"#for additional keys delivered by 'gpgencryptionkeysql'")
+
+	print ("use_sqlencryptsubject=False".ljust(space)+
+	"#if True the subject of the e-mail will be also encrypted (PGPMIME only)")
+
+	print ("encryptsubjectsql=SELECT encryptsubject"
+						" FROM encryptionmap WHERE user=lower(?)")
+	print("".ljust(space)+
+	"#SQL command that returns 1 if the subject of the e-mail should "
+	"be encrypted ")
 	print ("gpgencryptionkeysql=SELECT encryptionkey"
 									" FROM gpgencryptionkeys WHERE user=lower(?)")
 	print("".ljust(space)+

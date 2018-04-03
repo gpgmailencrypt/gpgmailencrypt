@@ -197,8 +197,8 @@ def start_adminconsole(host,port):
 			+"creates a specific SQL table")
 			print("".ljust(space)+"allowed values:")
 			print("".ljust(space)+"     all/usermap/encryptionmap/smime/pdf/")
-			print("".ljust(space)+"     gpgencryptionkeys/smimeencryptionkeys/"
-			"pdfencryptionkeys")
+			print("".ljust(space)+"     gpgencryptionkeys/smimeencryptionkeys/")
+			print("".ljust(space)+"     encryptsubject/pdfencryptionkeys")
 
 #class taken from http://stackoverflow.com/questions/20625642/\
 #				 autocomplete-with-readline-in-python3

@@ -128,6 +128,15 @@ class _base_storage(_gmechild):
 		self.log("_base_storage pdf_additionalencryptionkey not implemented")
 		raise NotImplementedError
 
+	##########################
+	#pgpmime_do_encryptsubject
+	##########################
+
+	@_dbg
+	def pgpmime_do_encryptsubject(self,user):
+		self.log("pgpmime_do_encryptsubject not implemented")
+		raise NotImplementedError
+
 	#############################
 	#gpg_additionalencryptionkeys
 	#############################
@@ -198,6 +207,7 @@ class _TEXT_BACKEND(_base_storage):
 	def init(self):
 		self._addressmap = dict()
 		self._encryptionmap = dict()
+		self._pgpmimeencryptsubjectmap = dict()
 		self._smimeuser = dict()
 		self._pdfpasswords=dict()
 		self._PDF_PASSWORDFILE="/etc/gpgpdfpasswords.pw"
@@ -261,6 +271,16 @@ class _TEXT_BACKEND(_base_storage):
 
 					self._encryptionmap[name.lower()] = e
 
+		if cfg.has_section('pgpmimeencryptsubject'):
+
+			for (name, value) in cfg.items('pgpmimeencryptsubject'):
+					v=False
+
+					if value.lower() in ["1","yes","true","on"]:
+						v=True
+
+					self._pgpmimeencryptsubjectmap[name.lower()] = v
+		
 		if cfg.has_section('smimeuser'):
 			self._smimeuser = dict()
 			privatepath=None
@@ -363,6 +383,27 @@ class _TEXT_BACKEND(_base_storage):
 
 		self.debug("textbackend encryptionmap %s=>%s"%(user,encryption))
 		return encryption
+
+	##########################
+	#pgpmime_do_encryptsubject
+	##########################
+
+	@_dbg
+	def pgpmime_do_encryptsubject(self,user):
+		user=email.utils.parseaddr(user)[1]
+
+		try:
+			self.debug("get_pgpmime_do_encryptsubject %s"%user)
+			encryption=self._pgpmimeencryptsubjectmap[user.lower()]
+		except:
+			self.debug("No encryptsubject map for user '%s' found"%user)
+			raise KeyError(user)
+
+		self.debug("textbackend encryptisubject map %s=>%s"%(user,encryption))
+		return encryption
+
+
+
 
 	##########
 	#smimeuser
@@ -697,6 +738,7 @@ class _sql_backend(_base_storage):
 	def init(self):
 		self._DATABASE="gpgmailencrypt"
 		self._USERMAPSQL="SELECT mapuser FROM usermap WHERE user=lower(?)"
+		self._ENCRYPTSUBJECTSQL="SELECT encryptsubject FROM pgpencryptsubject WHERE user=lower(?)"
 		self._ENCRYPTIONMAPSQL="SELECT encrypt FROM encryptionmap WHERE user=lower(?)"
 		self._SMIMEUSERSQL=("SELECT publickey,cipher,privatekey FROM smimeuser "
 							"WHERE user=lower(?)")
@@ -744,6 +786,14 @@ class _sql_backend(_base_storage):
 		self._tabledefinition["encryptionmapindex"]=(
 					"create unique index eindex"
 					" on encryptionmap (\"user\");")
+
+		self._tabledefinition["pgpencryptsubject"]=("create table \"pgpencryptsubject\" ("
+					"\"user\" varchar (255) not null ,"
+					"\"encryptsubject\" tinyint);")
+		self._tabledefinition["pgpencryptsubjectindex"]=("create unique index esindex"
+					" on pgpencryptsubject (\"user\");")
+
+
 		self._tabledefinition["pdfpasswords"]=("create table \"pdfpasswords\" ("
 					"\"user\" varchar (255) not null ,"
 					"\"password\" varchar(255),"
@@ -832,6 +882,12 @@ class _sql_backend(_base_storage):
 			except:
 				pass
 
+
+			try:
+				self._ENCRYPTSUBJECTSQL=cfg.get('sql','encryptsubjectsql')
+			except:
+				pass
+
 			try:
 				self._ENCRYPTIONMAPSQL=cfg.get('sql','encryptionmapsql')
 			except:
@@ -874,6 +930,12 @@ class _sql_backend(_base_storage):
 
 			try:
 				self._USE_SQLUSERMAP=cfg.getboolean('sql','use_sqlusermap')
+			except:
+				pass
+
+			try:
+				self._USE_SQLENCRYPTSUBJECT=cfg.getboolean('sql',
+														'use_sqlencryptsubject')
 			except:
 				pass
 
@@ -1002,6 +1064,40 @@ class _sql_backend(_base_storage):
 			raise KeyError(user)
 
 		self.debug("sqlbackend %s usermap %s=>%s"%(self._backend,user,r[0]))
+		self.con_end()
+		return r[0]
+
+
+
+	##########################
+	#pgpmime_do_encryptsubject
+	##########################
+
+	@_dbg
+	def pgpmime_do_encryptsubject(self,user):
+		user=email.utils.parseaddr(user)[1]
+
+		if not self._USE_SQLENCRYPTSUBJECT:
+			return self._textbackend.pgpmime_do_encryptsubject(user)
+
+		self.debug(self._ENCRYPTSUBJECTSQL.replace("?",user.lower()))
+
+		if not self.execute(self._ENCRYPTSUBJECTSQL,user.lower()):
+			return ""
+
+		r=self._cursor.fetchone()
+
+		try:
+			self._cursor.fetchall()
+		except:
+			pass
+
+		if r==None or r[0]==None:
+			self.con_end()
+			self.debug("no such user '%s'"%user.lower())
+			raise KeyError(user)
+
+		self.debug("sqlbackend %s encryptsubject %s=>%s"%(self._backend,user,(r[0]==1)))
 		self.con_end()
 		return r[0]
 
@@ -1158,6 +1254,9 @@ class _sql_backend(_base_storage):
 				if not self.create_table("encryptionmap",logerror=logerror):
 					raise Exception
 
+				if not self.create_table("encryptsubject",logerror=logerror):
+					raise Exception
+
 				if not self.create_table("smime",logerror=logerror):
 					raise Exception
 
@@ -1183,6 +1282,15 @@ class _sql_backend(_base_storage):
 
 			if r==True:
 				return self.create_single_table("usermapindex",
+												logerror=logerror)
+			else:
+				return False
+
+		if table=="encryptsubject":
+			r=self.create_single_table("pgpencryptsubject",logerror=logerror)
+
+			if r==True:
+				return self.create_single_table("pgpencryptsubjectindex",
 												logerror=logerror)
 			else:
 				return False
