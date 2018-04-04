@@ -1,7 +1,7 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
 VERSION="3.4.2dev"
-DATE="30.03.2018"
+DATE="04.04.2018"
 COPYRIGHTYEAR="2018"
 unicodeerror="replace"
 #342 pgpmime: encrypt subject

@@ -761,6 +761,7 @@ class _sql_backend(_base_storage):
 		self._PORT=4711
 		self._USE_SQLUSERMAP=False
 		self._USE_SQLENCRYPTIONMAP=False
+		self._USE_SQLENCRYPTSUBJECT=False
 		self._USE_SQLSMIME=False
 		self._USE_SQLPDFPASSWORDS=False
 		self._USE_SQLGPGADDITIONALENCRYPTIONKEYS=False
