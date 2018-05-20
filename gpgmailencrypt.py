@@ -989,7 +989,11 @@ class gme:
 		if not self._use_pdf:
 			self.log("PDF support is not available","e")
 
-		self._backend.read_configfile(_cfg)
+		try:
+			self._backend.read_configfile(_cfg )
+		except:
+			self.error("Backend read_configfile error")
+			self.log_traceback()
 
 	###################
 	#_parse_commandline
