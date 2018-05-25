@@ -27,6 +27,12 @@ def is_networkfilesystem(dir):
 def has_app(appname):
 	return shutil.which(appname)!=None
 
+def has_pdf():
+	with gpgmailencrypt.gme() as gme:
+		gme.set_configfile("./gmetest.conf")
+		pdf=gme.pdf_factory()
+		return pdf.is_available()
+
 ############################################
 htmlbodycontent="test"
 htmlbody="<body>%s</body>"%htmlbodycontent
@@ -764,6 +770,8 @@ class gmetests(unittest.TestCase):
 			self.gme.get_preferredencryptionmethod(
 				"testaddress@gpgmailencry.pt")=="PGPMIME")
 
+	@unittest.skipIf(not has_app("7za"),
+		"archive programm 7z not installed")
 	def test_zipattachment(self):
 		f=open("./attachment.eml","r")
 		mail=f.read()
@@ -771,6 +779,8 @@ class gmetests(unittest.TestCase):
 		res=self.gme.zip_attachments(mail)
 		self.assertTrue("test.pdf.zip" in res.as_string())
 
+	@unittest.skipIf(not has_app("7za"),
+		"archive programm 7z not installed")
 	def test_zipattachment_msg(self):
 		f=open("./attachment.eml","r")
 		mail=f.read()
@@ -778,6 +788,8 @@ class gmetests(unittest.TestCase):
 		res=self.gme.zip_attachments(email.message_from_string(mail))
 		self.assertTrue("test.pdf.zip" in res.as_string())
 
+	@unittest.skipIf(not has_app("7za"),
+		"archive programm 7z not installed")
 	def test_zip_attachments_one_container(self):
 		f=open("./attachment.eml","r")
 		mail=f.read()
@@ -789,6 +801,8 @@ class gmetests(unittest.TestCase):
 											"testaddress@gpgmailencry.pt")
 		self.assertIsNotNone(result)
 
+	@unittest.skipIf(not has_app("7za"),
+		"archive programm 7z not installed")
 	def test_zip_attachments_one_container_msg(self):
 		f=open("./attachment.eml","r")
 		mail=f.read()
@@ -800,6 +814,8 @@ class gmetests(unittest.TestCase):
 											"testaddress@gpgmailencry.pt")
 		self.assertIsNotNone(result)
 
+	@unittest.skipIf(not has_app("7za"),
+		"archive programm 7z not installed")
 	def test_zip_attachments_one_container_noattachment(self):
 		result=self.gme.zip_attachments_one_container(
 											email_unencrypted,
@@ -808,6 +824,8 @@ class gmetests(unittest.TestCase):
 											"testaddress@gpgmailencry.pt")
 		self.assertEqual(result.as_string(),email_unencrypted)
 
+	@unittest.skipIf(not has_app("7za"),
+		"archive programm 7z not installed")
 	def test_zip_attachments_one_container_noattachment_msg(self):
 		result=self.gme.zip_attachments_one_container(
 											email.message_from_string(email_unencrypted),
@@ -816,6 +834,8 @@ class gmetests(unittest.TestCase):
 											"testaddress@gpgmailencry.pt")
 		self.assertEqual(result.as_string(),email_unencrypted)
 
+	@unittest.skipIf(not has_pdf(),
+		"pdf support not available")
 	def test_zip_attachments_one_container_noattachment_withpdfcontent_msg(self):
 		result=self.gme.zip_attachments_one_container(
 											email.message_from_string(email_unencrypted),
@@ -1522,6 +1542,8 @@ class gpgtests(unittest.TestCase):
 											"testaddress@gpgmailencry.pt")
 		self.assertIsNotNone(result)
 
+	@unittest.skipIf(not has_pdf(),
+		"pdf support not available")	
 	def test_encryptgpginline_withpdfcontent_msg(self):
 		result=self.gme.encrypt_pgpinline_mail(
 								email.message_from_string(email_unencrypted),
@@ -1749,11 +1771,6 @@ class smimetests(unittest.TestCase):
 #########
 #PDFTESTS
 #########
-def has_pdf():
-	with gpgmailencrypt.gme() as gme:
-		gme.set_configfile("./gmetest.conf")
-		pdf=gme.pdf_factory()
-		return pdf.is_available()
 ###################################
 
 @unittest.skipIf(not has_pdf(),
@@ -1873,19 +1890,27 @@ class archivetests(unittest.TestCase):
 	def tearDown(self):
 		self.gme.close()
 
+	@unittest.skipIf(not has_app("7za"),
+		"archive programm 7z not installed")
 	def test_zipcipher(self):
 		self.gme.set_zipcipher("aes128")
 		self.assertEqual(self.gme.get_zipcipher(),"AES128")
 
+	@unittest.skipIf(not has_app("7za"),
+		"archive programm 7z not installed")
 	def test_zipcipher2(self):
 		self.gme.set_zipcipher("ZipCrypto")
 		self.assertNotEqual(self.gme.get_zipcipher(),"AES128")
 
+	@unittest.skipIf(not has_app("7za"),
+		"archive programm 7z not installed")
 	def test_zipcipher3(self):
 		wrongcipher="aes1281"
 		self.gme.set_zipcipher(wrongcipher)
 		self.assertNotEqual(self.gme.get_zipcipher(),wrongcipher)
 
+	@unittest.skipIf(not has_app("7za"),
+		"archive programm 7z not installed")
 	def test_zipunzip(self):
 		ZIP=self.gme.zip_factory()
 		directory = tempfile.mkdtemp()
@@ -1916,6 +1941,8 @@ class archivetests(unittest.TestCase):
 
 		self.assertEqual(data,self.teststring)
 
+	@unittest.skipIf(not has_app("7za"),
+		"archive programm 7z not installed")
 	def test_7zun7z(self):
 		ZIP=self.gme.a7z_factory()
 		directory = tempfile.mkdtemp()
@@ -1946,6 +1973,8 @@ class archivetests(unittest.TestCase):
 
 		self.assertEqual(data,self.teststring)
 
+	@unittest.skipIf(not has_app("7za"),
+		"archive programm 7z not installed")
 	def test_7zuncompress(self):
 		self.assertTrue(try_uncompress("7z","source.txt",password="secret"))
 
