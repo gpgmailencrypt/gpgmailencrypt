@@ -1,8 +1,8 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
-VERSION="3.4.3dev"
-DATE="25.05.2018"
-COPYRIGHTYEAR="2018"
+VERSION="3.4.3"
+DATE="10.06.2019pre1"
+COPYRIGHTYEAR="2019"
 unicodeerror="replace"
 #342 pgpmime: encrypt subject
 #341 bugfix: doesn't add headers multiple times

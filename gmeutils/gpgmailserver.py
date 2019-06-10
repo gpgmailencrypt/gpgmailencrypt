@@ -248,7 +248,7 @@ class _hksmtpchannel(smtpd.SMTPChannel):
 				sslcertfile=None,
 				sslkeyfile=None,
 				sslversion=None):
-		smtpd.SMTPChannel.__init__(self, smtp_server, newsocket, fromaddr)
+		smtpd.SMTPChannel.__init__(self, smtp_server, newsocket, fromaddr, decode_data=True)
 		asynchat.async_chat.__init__(self, newsocket)
 		self.parent=parent
 		self.sslcertfile=sslcertfile
