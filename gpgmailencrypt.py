@@ -4784,6 +4784,7 @@ class gme:
 		fdomain= maildomain(from_addr)
 		tdomain= maildomain(from_addr)
 		new_toaddr=None
+		domain=fdomain
 
 		if len(fdomain)>0:
 			new_toaddr=from_addr
@@ -5498,7 +5499,7 @@ class gme:
 		if has_virus:
 				self._handle_virusmail(	virusinfo,
 										queue_id,
-										mailtext,
+										mailtext.as_string(),
 										from_addr,
 										to_addr)
 				return None
