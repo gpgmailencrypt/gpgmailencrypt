@@ -177,8 +177,12 @@ class _virus_check(_gmechild):
 
 	@_dbg
 	def unpack_attachment(self,payload,directory):
-			filename = payload.get_filename()
-			filename=re.sub(r"(/|\\| )","_",decode_filename(filename))
+			filename = decode_filename(payload.get_filename())
+
+			if not filename:
+				filename="nofilename"
+
+			filename=re.sub(r"(/|\\| )","_",filename)
 			fname=os.path.join(directory,filename)
 			contenttype = payload.get_content_type()
 
