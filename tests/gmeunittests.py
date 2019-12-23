@@ -1988,6 +1988,12 @@ class archivetests(unittest.TestCase):
 	def test_aruncompress(self):
 		self.assertTrue(try_uncompress("ar","source.txt"))
 
+	@unittest.skipIf(not has_app("cabextract"),
+		"archive programm cabextract not installed")
+	def test_cabuncompress(self):
+		self.assertTrue(try_uncompress("cab","source.txt"))
+
+
 	@unittest.skipIf(not has_app("arc"),
 		"archive programm arc not installed")
 	def test_arcuncompress(self):
