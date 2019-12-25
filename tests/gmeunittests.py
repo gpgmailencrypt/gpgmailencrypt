@@ -1988,6 +1988,11 @@ class archivetests(unittest.TestCase):
 	def test_cpiouncompress(self):
 		self.assertTrue(try_uncompress("cpio","source.txt"))
 
+	@unittest.skipIf(not has_app("unshar"),
+		"archive programm unshar not installed")
+	def test_sharuncompress(self):
+		self.assertTrue(try_uncompress("shar","source.txt"))
+
 #	@unittest.skipIf(not has_app("unfreeze"),
 #		"archive programm freeze not installed")
 #	def test_freezeuncompress(self):
