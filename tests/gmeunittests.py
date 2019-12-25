@@ -1983,16 +1983,25 @@ class archivetests(unittest.TestCase):
 	def test_xzuncompress(self):
 		self.assertTrue(try_uncompress("xz","test"))
 
+	@unittest.skipIf(not has_app("cpio"),
+		"archive programm cpio not installed")
+	def test_cpiouncompress(self):
+		self.assertTrue(try_uncompress("cpio","source.txt"))
+
+#	@unittest.skipIf(not has_app("unfreeze"),
+#		"archive programm freeze not installed")
+#	def test_freezeuncompress(self):
+#		self.assertTrue(try_uncompress("freeze","test.txt",alternateextension="txt.F"))
+
 	@unittest.skipIf(not has_app("ar"),
 		"archive programm ar not installed")
 	def test_aruncompress(self):
 		self.assertTrue(try_uncompress("ar","source.txt"))
 
-	@unittest.skipIf(not has_app("cabextract"),
-		"archive programm cabextract not installed")
-	def test_cabuncompress(self):
-		self.assertTrue(try_uncompress("cab","source.txt"))
-
+	@unittest.skipIf(not has_app("lha"),
+		"archive programm lha not installed")
+	def test_lhauncompress(self):
+		self.assertTrue(try_uncompress("lha","source.txt"))
 
 	@unittest.skipIf(not has_app("arc"),
 		"archive programm arc not installed")
@@ -2008,6 +2017,11 @@ class archivetests(unittest.TestCase):
 		"archive programm bzip2 not installed")
 	def test_bzip2uncompress(self):
 		self.assertTrue(try_uncompress("bzip2","test.out"))
+
+	@unittest.skipIf(not has_app("cabextract"),
+		"archive programm cabextract not installed")
+	def test_cabuncompress(self):
+		self.assertTrue(try_uncompress("cab","source.txt"))
 
 	@unittest.skipIf(not has_app("gzip"),
 		"archive programm gzip not installed")
