@@ -69,7 +69,7 @@ class _baseunpacker(_gmechild):
 		uncompresscmd=self.uncompresscommand(	filename,
 												directory,
 												password=password)
-		self.debug("uncompresscommand:'%s'"%uncompresscmd)
+		self.debug("uncompresscommand:'%s'"%" ".join(uncompresscmd))
 		_result = subprocess.call(" ".join(uncompresscmd), shell=True)
 
 		if self.chdir:
@@ -109,7 +109,7 @@ class _basedeleteunpacker(_baseunpacker):
 		uncompresscmd=self.uncompresscommand(	targetname,
 												directory,
 												password=password)
-		self.debug("uncompresscommand:'%s'"%uncompresscmd)
+		self.debug("uncompresscommand:'%s'"%' '.join(uncompresscmd))
 		_result = subprocess.call(' '.join(uncompresscmd), shell=True)
 
 		if self.chdir:
@@ -468,8 +468,9 @@ class _FREEZE(_basedeleteunpacker):
 							directory,
 							password=None):
 		cmd=[   self.cmd,
+				"-c",
 				"\"%s\""%sourcefile,
-				">/dev/null"]
+				">"+"/"+os.path.splitext(sourcefile)[0]]
 		return cmd
 
 ######
@@ -573,8 +574,7 @@ class _LHA(_baseunpacker):
 							directory,
 							password=None):
 		cmd=[   self.cmd,
-				"-w=%s"%directory,
-				"-e",
+				"ew=%s"%directory,
 				"\"%s\""%sourcefile,
 				">/dev/null"]
 		return cmd
