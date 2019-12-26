@@ -105,7 +105,7 @@ class _basedeleteunpacker(_baseunpacker):
 
 		origdir,fname=os.path.split(filename)
 		targetname=os.path.join(directory,fname)
-		shutil.move(filename,targetname)
+		shutil.copyfile(filename,targetname)
 		uncompresscmd=self.uncompresscommand(	targetname,
 												directory,
 												password=password)
