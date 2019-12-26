@@ -1998,10 +1998,10 @@ class archivetests(unittest.TestCase):
 	def test_zpaquncompress(self):
 		self.assertTrue(try_uncompress("zpaq","source.txt"))
 
-#	@unittest.skipIf(not has_app("unfreeze"),
-#		"archive programm freeze not installed")
-#	def test_freezeuncompress(self):
-#		self.assertTrue(try_uncompress("freeze","test.txt",alternateextension="txt.F"))
+	@unittest.skipIf(not has_app("unfreeze"),
+		"archive programm freeze not installed")
+	def test_freezeuncompress(self):
+		self.assertTrue(try_uncompress("freeze","test.txt",alternateextension="txt.F"))
 
 	@unittest.skipIf(not has_app("ar"),
 		"archive programm ar not installed")
