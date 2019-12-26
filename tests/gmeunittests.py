@@ -2008,6 +2008,11 @@ class archivetests(unittest.TestCase):
 	def test_aruncompress(self):
 		self.assertTrue(try_uncompress("ar","source.txt"))
 
+	@unittest.skipIf(not has_app("unace"),
+		"archive programm unace not installed")
+	def test_aceuncompress(self):
+		self.assertTrue(try_uncompress("ace","source.txt"))
+
 	@unittest.skipIf(not has_app("lha"),
 		"archive programm lha not installed")
 	def test_lhauncompress(self):
