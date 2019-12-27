@@ -1781,7 +1781,7 @@ def get_archivetype(filename,filetype):
 							stderr=subprocess.PIPE)
 		result=p.communicate()[0].decode("UTF-8",unicodeerror).lower()
 
-		if result[0]!="application/octet-stream":
+		if result[0]!="application/octet-stream" and  "/" in result:
 			filetype=result
 
 	maintype,subtype=filetype.lower().split("/")

@@ -1890,6 +1890,18 @@ class archivetests(unittest.TestCase):
 	def tearDown(self):
 		self.gme.close()
 
+	def test_archivetype_ace(self):
+		r=gmeutils.archivemanagers.get_archivetype("archives/test.ace","test/unknown")
+		self.assertEqual(r,"ACE")
+
+	def test_archivetype_noarchive(self):
+		r=gmeutils.archivemanagers.get_archivetype("archives/source.txt","test/unknown")
+		self.assertEqual(r,None)
+
+	def test_archivetype_nofile(self):
+		r=gmeutils.archivemanagers.get_archivetype("test.pdf","application/zip")
+		self.assertEqual(r,"ZIP")
+
 	@unittest.skipIf(not has_app("7za"),
 		"archive programm 7z not installed")
 	def test_zipcipher(self):
