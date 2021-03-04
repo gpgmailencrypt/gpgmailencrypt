@@ -1,9 +1,10 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
-VERSION="3.4.5dev"
-DATE="23.11.2019"
-COPYRIGHTYEAR="2019"
+VERSION="3.4.5"
+DATE="04.03.2021"
+COPYRIGHTYEAR="2021"
 unicodeerror="replace"
+#345 bugfix: doesn't crash any more when virus scanner is not available
 #342 pgpmime: encrypt subject
 #341 bugfix: doesn't add headers multiple times
 #340 pgpinline put attachments in zip container and add pdf content attachment
