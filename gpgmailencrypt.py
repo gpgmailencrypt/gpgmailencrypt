@@ -2243,7 +2243,18 @@ class gme:
 					smtp = smtplib.SMTP(_HOST, _PORT)
 
 				smtp.ehlo_or_helo_if_needed()
+			except:
+				self.debug("smtplib.SMTPxxx failed")
+				self.log_traceback()
+				if store_deferred:
+					self._store_temporaryfile(  message,
+												add_deferred=True,
+												fromaddr=from_addr,
+												toaddr=to_addr)
+					self._remove_mail_from_queue(m_id)
+				return False
 
+			try:
 				try:
 
 					if smtp.has_extn("starttls"):
