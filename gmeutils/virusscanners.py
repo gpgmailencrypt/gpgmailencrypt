@@ -425,6 +425,7 @@ def get_virusscanner(scanner,parent):
 	except:
 		parent.log("Virusscanner %s crashed while trying to init"%scanner,
 					"w")
+		parent.log_traceback()
 
 	return None
 

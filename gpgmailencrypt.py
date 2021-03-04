@@ -5767,11 +5767,16 @@ class gme:
 				raw_message["Subject"]=subject
 
 
-			if 	(self._VIRUSCHECK==True and self._virus_checker==None):
-				self._virus_checker=_virus_check(parent=self)
+			try:
+				if 	(self._VIRUSCHECK==True and self._virus_checker==None):
+					self._virus_checker=_virus_check(parent=self)
 
-			if (self._VIRUSCHECK==True and self._virus_checker!=None):
-				has_virus,virusinfo=self._virus_checker.has_virus(mailtext)
+				if (self._VIRUSCHECK==True and self._virus_checker!=None):
+					has_virus,virusinfo=self._virus_checker.has_virus(mailtext)
+			except:
+				self.error("Error loading virus checker")
+				self.log_traceback()
+
 
 			for to_addr in recipients:
 				self.debug("encrypt_mail for user '%s'"%to_addr)
