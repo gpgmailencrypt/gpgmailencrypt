@@ -5681,15 +5681,19 @@ class gme:
 		from_addr = raw_message['From']
 
 		if self._SPAMCHECK and self._spam_checker==None:
-			self._spam_checker=spamscanners.get_spamscanner(self._SPAMSCANNER,
-												parent=self,
-												leveldict=self._spam_leveldict)
+			try:
+				self._spam_checker=spamscanners.get_spamscanner(self._SPAMSCANNER,
+													parent=self,
+													leveldict=self._spam_leveldict)
 
-			if self._spam_checker!=None:
-				self.log("SPAMCHECKER '%s' activated"%self._SPAMSCANNER)
-			else:
-				self.log("NOSPAMCHECKER")
-
+				if self._spam_checker!=None:
+					self.log("SPAMCHECKER '%s' activated"%self._SPAMSCANNER)
+				else:
+					self.log("NOSPAMCHECKER")
+			except:
+				self.error("Error loading spam checker")
+				self.log_traceback()
+		
 		try:
 
 			if self._SMIMEAUTOMATICEXTRACTKEYS:
