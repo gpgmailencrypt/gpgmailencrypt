@@ -321,11 +321,20 @@ class _TEXT_BACKEND(_base_storage):
 				pass
 
 			try:
+				a=open(os.path.expanduser(self._PDF_PASSWORDFILE),"w+")
+				a.close()
+			except:
+				self.log("File '%s' could not be created."
+						%self._PDF_PASSWORDFILE)
+				self.log_traceback()
+
+			try:
 				self._read_pdfpasswordfile(self._PDF_PASSWORDFILE)
 			except:
 				self.log("File '%s' could not be opened."
 						%self._PDF_PASSWORDFILE)
 				self.log_traceback()
+						    	
 
 		if cfg.has_section('daemon'):
 

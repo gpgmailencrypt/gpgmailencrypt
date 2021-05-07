@@ -1,9 +1,10 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
-VERSION="3.4.5.1"
+VERSION="3.4.6-dev"
 DATE="04.03.2021"
 COPYRIGHTYEAR="2021"
 unicodeerror="replace"
+#346 restart checking for virusscanners if no virus scanner was found
 #345 bugfix: doesn't crash any more when virus scanner is not available
 #342 pgpmime: encrypt subject
 #341 bugfix: doesn't add headers multiple times
