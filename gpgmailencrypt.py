@@ -2276,7 +2276,7 @@ class gme:
 
 					return False
 
-				if usessl:
+				if usessl and len(self._SMTP_CERTFINGERPRINTS)>0:
 					cert=ssl.DER_cert_to_PEM_cert(smtp.sock.getpeercert(True))
 					fingerprint=get_certfingerprint(cert,self)
 					self.debug("CERT fingerprint='%s'"%fingerprint)
@@ -5785,6 +5785,9 @@ class gme:
 			try:
 				if 	(self._VIRUSCHECK==True and self._virus_checker==None):
 					self._virus_checker=_virus_check(parent=self)
+
+					if self._virus_checker.count_scanners()==0:
+						self._virus_checker=None
 
 				if (self._VIRUSCHECK==True and self._virus_checker!=None):
 					has_virus,virusinfo=self._virus_checker.has_virus(mailtext)

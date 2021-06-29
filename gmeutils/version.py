@@ -1,7 +1,7 @@
 #License GPL v3
 #Author Horst Knorr <gpgmailencrypt@gmx.de>
-VERSION="3.4.6-dev"
-DATE="04.03.2021"
+VERSION="3.4.6"
+DATE="29.06.2021"
 COPYRIGHTYEAR="2021"
 unicodeerror="replace"
 #346 restart checking for virusscanners if no virus scanner was found

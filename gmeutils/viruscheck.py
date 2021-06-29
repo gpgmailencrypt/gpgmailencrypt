@@ -74,6 +74,13 @@ class _virus_check(_gmechild):
 		if len(self.virusscanner)==0:
 			self.log("No virusscanners available!","e")
 
+	#####################
+	#count_scanners
+	#####################
+	@_dbg
+	def count_scanners(self):
+		return len(self.virusscanner)
+
 	#######################
 	#_search_archivemanager
 	#######################
