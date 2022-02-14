@@ -237,9 +237,9 @@ class _GPG(_gmechild):
 									stdin=None,
 									stdout=subprocess.PIPE,
 									stderr=subprocess.PIPE )
-			p.wait()
+			outs, errs = p.communicate()
 
-			for line in p.stdout.readlines():
+			for line in outs.split(b'\n'):
 				res=line.decode(self.parent._encoding,unicodeerror).split(":")
 
 				if (res[0]=="pub"
